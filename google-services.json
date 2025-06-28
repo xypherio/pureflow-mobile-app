@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "817474825207",
+    "project_id": "pureflow-system",
+    "storage_bucket": "pureflow-system.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:817474825207:android:0be98cc3362f80b0575cf2",
+        "android_client_info": {
+          "package_name": "com.anonymous.pureflowmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCcrWxgO0wRa0-QL0DTLdExN01tbQrzhY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

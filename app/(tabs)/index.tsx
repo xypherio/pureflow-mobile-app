@@ -1,11 +1,29 @@
-import React from "react";
+import { collection, getDocs } from "firebase/firestore";
+import React, { useEffect } from "react";
 import { Image, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { db } from "../../firebase";
+
 
 const LOGO_PATH = require('../../assets/images/pureflow-logo-1.png');
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const testFirebase = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "test"));
+        querySnapshot.forEach((doc) => {
+          console.log("Document:", doc.id, "=>", doc.data());
+        });
+      } catch (err) {
+        console.error("Firebase connection error:", err);
+      }
+    };
+
+    testFirebase();
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-[#e6fbff]">
