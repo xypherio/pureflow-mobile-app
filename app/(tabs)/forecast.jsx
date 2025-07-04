@@ -1,6 +1,6 @@
-import React from "react";
 import { Image, SafeAreaView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { globalStyles } from "../globalStyles";
 
 const LOGO_PATH = require('../../assets/images/pureflow-logo-1.png');
 
@@ -14,11 +14,12 @@ export default function HomeScreen() {
           paddingBottom: 110,
           paddingTop: insets.top + 8
         }}>
+
         {/* Header */}
         <View className="mb-.1 items-start">
           <Image
             source={LOGO_PATH}
-            style={{ width: 200, height: 80, resizeMode: 'contain' }}
+            style={globalStyles.logo}
             accessibilityLabel="app_logo"
           />
         </View>
