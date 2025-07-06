@@ -11,9 +11,11 @@ export default function GlobalWrapper({ children }) {
         contentContainerStyle={{
           paddingTop: insets.top + 8,
           paddingBottom: 110,
+          paddingHorizontal: 16,
+          paddingBottom: 100
         }}
       >
-        {children}
+          {children}
       </ScrollView>
     </SafeAreaView>
   );

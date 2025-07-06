@@ -5,13 +5,12 @@ export default function OverviewBox({ children }) {
   return (
     <View
       style={{
-        backgroundColor: "white",
+        backgroundColor: "#f6fafd",
         borderRadius: 16,
         padding: 16,
-        height: 184, // ~11.5rem for chart
-        marginHorizontal: 16,
+        height: 200,
         marginBottom: 28,
-        justifyContent: "center",
+        justifyContent: "left",
         ...globalStyles.boxShadow,
       }}
     >

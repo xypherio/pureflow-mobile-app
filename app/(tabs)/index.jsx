@@ -1,8 +1,8 @@
-import SegmentedFilter from "@components/filterParameter";
+import StatusCard from "@components/datmStatusCard.jsx";
 import GlobalWrapper from "@components/globalWrapper";
 import PureFlowLogo from "@components/pureflowLogo";
 import RealTimeData from "@components/realtimeData";
-import TopCard from "@components/topCard";
+import SegmentedFilter from "@components/segmentedFilter";
 
 import { useState } from "react";
 import { Text, View } from "react-native";
@@ -14,10 +14,16 @@ export default function HomeScreen() {
   return (
     <GlobalWrapper className="flex-1 bg-[#e6fbff] font-poppins">
       <View className="mb-4 items-start">
-        <PureFlowLogo />
+        <PureFlowLogo
+          weather={{
+            label: "Light Rain",
+            temp: "30°C",
+            icon: "partly",
+          }}
+        />
       </View>
 
-      <TopCard status="Active" battery="Low" />
+      <StatusCard status="Active" battery="Low" />
       <RealTimeData />
 
       <OverviewBox>

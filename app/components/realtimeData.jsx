@@ -6,7 +6,7 @@ const parameters = [
     label: "pH Level",
     value: "7.2",
     unit: "pH",
-    icon: <Droplet size={30} color="#007bff" />,
+    icon: <Gauge size={30} color="#007bff" />,
     color: "#007bff",
   },
   {
@@ -20,7 +20,7 @@ const parameters = [
     label: "TDS",
     value: "500",
     unit: "ppm",
-    icon: <Gauge size={30} color="#28a745" />,
+    icon: <Droplet size={30} color="#28a745" />,
     color: "#28a745",
   },
   {
@@ -40,7 +40,6 @@ export default function RealTimeData() {
         padding: 16,
         borderRadius: 16,
         marginBottom: 24,
-        marginHorizontal: 16,
       }}
     >
       <View
@@ -56,7 +55,7 @@ export default function RealTimeData() {
           <View
             key={index}
             style={{
-              backgroundColor: "white",
+              backgroundColor: "#f6fafd",
               borderRadius: 12,
               padding: 12,
               height: 150,

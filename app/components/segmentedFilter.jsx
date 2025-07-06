@@ -40,14 +40,14 @@ export default function SegmentedFilter({
               onPress={() => setActiveFilter(filter)}
               style={{
                 flex: 1,
-                backgroundColor: isActive ? "#1c5c88" : "white",
+                backgroundColor: isActive ? "#1c5c88" : "#f6fafd",
                 paddingVertical: 10,
                 alignItems: "center",
               }}
             >
               <Text
                 style={{
-                  color: isActive ? "white" : "#1c5c88",
+                  color: isActive ? "#f6fafd" : "#1c5c88",
                   fontWeight: "600",
                   fontSize: 14,
                   fontFamily: "Poppins",

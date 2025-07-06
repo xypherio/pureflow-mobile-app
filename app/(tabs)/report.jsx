@@ -10,7 +10,13 @@ export default function HomeScreen() {
     <GlobalWrapper className="flex-1 bg-[#e6fbff]">
         {/* Header */}
         <View className="mb-4 items-start">
-          <PureFlowLogo />
+          <PureFlowLogo
+            weather={{
+              label: "Light Rain",
+              temp: "30°C",
+              icon: "partly",
+            }}
+          />
         </View>
     </GlobalWrapper>
   );

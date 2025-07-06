@@ -4,24 +4,24 @@ import {
   Droplet,
   Gauge,
   Thermometer,
-  Waves,
-  X,
+  Waves
 } from 'lucide-react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-// Icon and color mapping
+// Icon and default color mapping
 const parameterIcons = {
-  ph: { icon: Gauge, color: '#007bff' },
-  temperature: { icon: Thermometer, color: '#e83e8c' },
-  tds: { icon: Droplet, color: '#28a745' },
-  salinity: { icon: Waves, color: '#17a2b8' },
+  ph: { icon: Gauge },
+  temperature: { icon: Thermometer },
+  tds: { icon: Droplet },
+  salinity: { icon: Waves },
 };
 
 const NotificationCard = ({
-  type = 'status', // 'status' or 'suggestion'
+  type = 'status',
   title,
   message,
-  parameter = null, // 'ph', 'temperature', 'tds', 'salinity'
+  parameter = null, 
+  alertLevel = { bg: '#F3F4F6', iconColor: '#007AFF' },
   onClose,
   onPrimaryAction,
   onSecondaryAction,
@@ -32,37 +32,40 @@ const NotificationCard = ({
 
   const renderIcon = () => {
     if (parameter && parameterIcons[parameter]) {
-      const { icon: IconComponent, color } = parameterIcons[parameter];
-      return <IconComponent size={24} color={color} />;
+      const IconComponent = parameterIcons[parameter].icon;
+      return <IconComponent size={24} color={alertLevel.iconColor} />;
     }
     return <AlertCircle size={24} color="#FF3B30" />;
   };
 
   return (
-    <View style={{
-      flexDirection: 'row',
-      backgroundColor: 'white',
-      borderRadius: 16,
-      padding: 16,
-      marginVertical: 8,
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 8,
-      elevation: 3,
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-    }}>
-      {/* Icon */}
-      <View style={{
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        backgroundColor: '#F3F4F6',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-      }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 16,
+        marginVertical: 8,
+        shadowColor: '#1a2e51',
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+      }}
+    >
+      {/* Icon container with dynamic background */}
+      <View
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 12,
+          backgroundColor: alertLevel.bg,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        }}
+      >
         {renderIcon()}
       </View>
 
@@ -71,12 +74,13 @@ const NotificationCard = ({
         <Text style={{ fontWeight: '600', fontSize: 16, color: '#111' }}>{title}</Text>
         <Text style={{ fontSize: 14, color: '#4B5563', marginTop: 4 }}>{message}</Text>
 
+        {/* Suggestion Buttons */}
         {type === 'suggestion' && (
           <View style={{ flexDirection: 'row', marginTop: 12 }}>
             <TouchableOpacity
               onPress={onPrimaryAction}
               style={{
-                backgroundColor: '#FF6B00',
+                backgroundColor: '#375996',
                 paddingHorizontal: 16,
                 paddingVertical: 8,
                 borderRadius: 24,
@@ -100,11 +104,6 @@ const NotificationCard = ({
           </View>
         )}
       </View>
-
-      {/* Close Button */}
-      <TouchableOpacity onPress={onClose} style={{ marginLeft: 8 }}>
-        <X size={18} color="#9CA3AF" />
-      </TouchableOpacity>
     </View>
   );
 };

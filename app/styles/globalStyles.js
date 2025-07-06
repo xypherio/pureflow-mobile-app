@@ -13,8 +13,7 @@ export const globalStyles = StyleSheet.create({
   },
 
   boxShadow: {
-    shadowColor: "midnightblue",
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: "#1a2e51",
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 5, // Android shadow

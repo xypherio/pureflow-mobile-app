@@ -2,7 +2,7 @@ import { BatteryFull, BatteryLow, Timer, Wifi, WifiOff } from "lucide-react-nati
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
-export default function TopCard({ status = "Active", battery = "Normal" }) {
+export default function StatusCard({ status = "Active", battery = "Normal" }) {
   const isActive = status === "Active";
   const isBatteryLow = battery === "Low";
 
@@ -20,10 +20,9 @@ export default function TopCard({ status = "Active", battery = "Normal" }) {
     <View
       style={{
         height: 64,
-        backgroundColor: "white",
+        backgroundColor: "#f6fafd",
         borderRadius: 12,
         marginBottom: 16,
-        marginHorizontal: 16,
         paddingHorizontal: 16,
         flexDirection: "row",
         alignItems: "center",
