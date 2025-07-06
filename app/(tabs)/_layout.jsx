@@ -1,6 +1,12 @@
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_700Bold,
+} from "@expo-google-fonts/poppins";
+import { useFonts } from "expo-font";
 import { Tabs } from "expo-router";
 import { Bell, FileText, Flame, Home } from "lucide-react-native";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "twrnc";
 
@@ -9,16 +15,33 @@ const TAB_ICON_SIZE = 22;
 const _layout = () => {
   const insets = useSafeAreaInsets();
 
+  // ⏳ Load Poppins font
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#1c5c88" />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
+        tabBarPressColor: "transparent",
+        tabBarPressOpacity: 1,
         tabBarStyle: [
           tw`bg-white rounded-3xl h-18 absolute left-0 right-0 shadow-lg px-4`,
           {
             marginHorizontal: 16,
-            marginBottom: 24 + insets.bottom,
+            marginBottom: 15 + insets.bottom,
             borderTopWidth: 0,
             elevation: 8,
             shadowColor: "midnightblue",
@@ -28,7 +51,10 @@ const _layout = () => {
             paddingTop: 8,
           },
         ],
-        tabBarLabelStyle: tw`text-xs mt-0.5`,
+        tabBarLabelStyle: {
+          fontFamily: "Poppins_500Medium",
+          fontSize: 12,
+        },
         tabBarActiveTintColor: "#007aff",
         tabBarInactiveTintColor: "#7f8c8d",
         tabBarIcon: ({ color }) => {

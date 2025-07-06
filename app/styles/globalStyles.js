@@ -1,20 +1,24 @@
 import { StyleSheet } from "react-native";
 
 export const globalStyles = StyleSheet.create({
-  body: {
+  pageBackground: {
     flex: 1,
-    backgroundColor: "#c7d8f0",
+    backgroundColor: "#e5f0f9",
   },
+
   logo: {
-    width: 130,
-    height: 50,
+    width: 150,
+    height: 65,
     resizeMode: "contain",
   },
+
   boxShadow: {
     shadowColor: "midnightblue",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 12,
-  }
+    shadowRadius: 6,
+    elevation: 5, // Android shadow
+  },
 });
 
-export default globalStyles
+export default globalStyles;
