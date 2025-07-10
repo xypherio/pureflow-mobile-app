@@ -1,4 +1,10 @@
-import { BatteryFull, BatteryLow, Timer, Wifi, WifiOff } from "lucide-react-native";
+import {
+  BatteryFull,
+  BatteryLow,
+  Timer,
+  Wifi,
+  WifiOff,
+} from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
@@ -46,8 +52,7 @@ export default function StatusCard({ status = "Active", battery = "Normal" }) {
       </Text>
 
       <View style={{ flexDirection: "row", gap: 8 }}>
-
-                {/* Timer Pill */}
+        {/* Timer Pill */}
         <View
           style={{
             flexDirection: "row",
@@ -94,8 +99,7 @@ export default function StatusCard({ status = "Active", battery = "Normal" }) {
               color: isActive ? "#28a745" : "#e53935",
               fontFamily: "Poppins",
             }}
-          >
-          </Text>
+          ></Text>
         </View>
 
         {/* Battery Status Pill */}
@@ -103,19 +107,18 @@ export default function StatusCard({ status = "Active", battery = "Normal" }) {
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: isBatteryLow ? "#fff3cd" : "#d4f8e8",
+            backgroundColor: isBatteryLow ? "#f9d2d4" : "#d4f8e8",
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 999,
           }}
         >
           {isBatteryLow ? (
-            <BatteryLow size={18} color="#ff9800" style={{ marginRight: 6 }} />
+            <BatteryLow size={18} color="#c42d46" style={{ marginRight: 6 }} />
           ) : (
             <BatteryFull size={18} color="#28a745" style={{ marginRight: 6 }} />
           )}
         </View>
-
       </View>
     </View>
   );

@@ -15,7 +15,6 @@ const TAB_ICON_SIZE = 22;
 const _layout = () => {
   const insets = useSafeAreaInsets();
 
-  // ⏳ Load Poppins font
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,

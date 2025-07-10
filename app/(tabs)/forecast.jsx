@@ -4,6 +4,7 @@ import ForecastLineChart from "@components/forecastLineChart";
 import GlobalWrapper from "@components/globalWrapper";
 import PureFlowLogo from "@components/pureflowLogo";
 import WeatherBanner from "@components/weatherBanner";
+import globalStyles from "@styles/globalStyles";
 
 import { ScrollView, View } from "react-native";
 
@@ -21,18 +22,18 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Weather Summary */}
+      {/* Weather Summary Toggle*/}
       <WeatherBanner forecast="Light rain expected at 4PM. Humidity: 82%, Temp: 30°C." />
 
-      {/* Forecast Cards */}
+      {/* Forecast Cards Section*/}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <ForecastCard title="pH" value="7.3" trend="rising" />
+        <ForecastCard style={{...globalStyles.boxShadow}} title="pH" value="7.3" trend="rising" />
         <ForecastCard title="Temperature" value="29.5°C" trend="falling" />
         <ForecastCard title="Turbidity" value="12 NTU" trend="rising" />
       </ScrollView>
 
-      {/* Forecast Chart */}
-      <ForecastLineChart />
+      {/* Chart Section*/}
+      <ForecastLineChart style={{...globalStyles.boxShadow}} />
 
       <ForecastInsights
         type="warning"

@@ -69,7 +69,7 @@ export default function RealTimeData() {
               <View style={{ flexDirection: "row", alignItems: "flex-end", marginTop: 8 }}>
                 <Text
                   style={{
-                    fontSize: 32,
+                    fontSize: 50,
                     fontWeight: "bold",
                     color: param.color,
                     marginRight: 4,
@@ -81,6 +81,7 @@ export default function RealTimeData() {
                   style={{
                     fontSize: 20,
                     fontWeight: "bold",
+                    paddingBottom: 10,
                     color: param.color,
                   }}
                 >
@@ -90,9 +91,9 @@ export default function RealTimeData() {
             </View>
             <Text
               style={{
-                color: "#6cc9f5",
-                fontSize: 16,
-                marginTop: 4,
+                color: "#224882",
+                fontSize: 13,
+                marginTop: 2,
               }}
             >
               {param.label}
