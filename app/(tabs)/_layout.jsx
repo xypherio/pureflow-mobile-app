@@ -1,9 +1,3 @@
-import {
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
-import { useFonts } from "expo-font";
 import { Tabs } from "expo-router";
 import { Bell, FileText, Flame, Home } from "lucide-react-native";
 import { ActivityIndicator, View } from "react-native";
@@ -15,13 +9,11 @@ const TAB_ICON_SIZE = 22;
 const _layout = () => {
   const insets = useSafeAreaInsets();
 
-  const [fontsLoaded] = useFonts({
-    Poppins_400Regular,
-    Poppins_500Medium,
-    Poppins_700Bold,
-  });
+  // If you're not loading fonts anymore, you can remove this conditional.
+  // Assuming some other async check might go here:
+  const isLoading = false;
 
-  if (!fontsLoaded) {
+  if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#1c5c88" />
@@ -51,59 +43,30 @@ const _layout = () => {
           },
         ],
         tabBarLabelStyle: {
-          fontFamily: "Poppins_500Medium",
           fontSize: 12,
         },
         tabBarActiveTintColor: "#007aff",
         tabBarInactiveTintColor: "#7f8c8d",
         tabBarIcon: ({ color }) => {
-          let IconComponent;
-
           switch (route.name) {
             case "index":
-              IconComponent = <Home size={TAB_ICON_SIZE} color={color} />;
-              break;
+              return <Home size={TAB_ICON_SIZE} color={color} />;
             case "forecast":
-              IconComponent = <Flame size={TAB_ICON_SIZE} color={color} />;
-              break;
+              return <Flame size={TAB_ICON_SIZE} color={color} />;
             case "report":
-              IconComponent = <FileText size={TAB_ICON_SIZE} color={color} />;
-              break;
+              return <FileText size={TAB_ICON_SIZE} color={color} />;
             case "notifications":
-              IconComponent = <Bell size={TAB_ICON_SIZE} color={color} />;
-              break;
+              return <Bell size={TAB_ICON_SIZE} color={color} />;
             default:
-              IconComponent = <View />;
+              return <View />;
           }
-
-          return IconComponent;
         },
       })}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-        }}
-      />
-      <Tabs.Screen
-        name="forecast"
-        options={{
-          title: "Forecast",
-        }}
-      />
-      <Tabs.Screen
-        name="report"
-        options={{
-          title: "Report",
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: "Alerts",
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Home" }} />
+      <Tabs.Screen name="forecast" options={{ title: "Forecast" }} />
+      <Tabs.Screen name="report" options={{ title: "Report" }} />
+      <Tabs.Screen name="notifications" options={{ title: "Alerts" }} />
     </Tabs>
   );
 };
