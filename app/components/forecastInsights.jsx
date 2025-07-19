@@ -1,5 +1,5 @@
-import { View, Text } from 'react-native';
-import { Info, AlertTriangle, Lightbulb } from 'lucide-react-native';
+import { AlertTriangle, Info, Lightbulb } from 'lucide-react-native';
+import { Text, View } from 'react-native';
 
 export default function ForecastInsights({ message, type = 'info' }) {
   // Icon and color themes
@@ -65,7 +65,7 @@ export default function ForecastInsights({ message, type = 'info' }) {
           color: textColor,
           lineHeight: 22,
           fontWeight: '500',
-        }}
+        }}z
       >
         {message || 'No significant forecast risks detected. All systems are stable for now.'}
       </Text>

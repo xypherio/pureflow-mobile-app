@@ -14,9 +14,10 @@ export const globalStyles = StyleSheet.create({
 
   boxShadow: {
     shadowColor: "#1a2e51",
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5, // Android shadow
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
   },
 });
 

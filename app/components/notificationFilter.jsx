@@ -32,7 +32,7 @@ const NotificationFilter = ({
           key={filter.value}
           onPress={() => onSelect(filter.value)}
           style={{
-            backgroundColor: isActive ? '#224882' : '#f3f4f6',
+            backgroundColor: isActive ? '#2455a9' : '#f3f4f6',
             paddingHorizontal: 16,
             paddingVertical: 8,
             borderRadius: 999,

@@ -4,7 +4,7 @@ export default function WeatherBanner({ forecast }) {
   return (
     <View
       style={{
-        backgroundColor: "#224882",
+        backgroundColor: "#2455a9",
         borderRadius: 16,
         paddingVertical: 12,
         paddingHorizontal: 16,

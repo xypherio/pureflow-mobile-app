@@ -32,7 +32,7 @@ const _layout = () => {
           tw`bg-white rounded-3xl h-18 absolute left-0 right-0 shadow-lg px-4`,
           {
             marginHorizontal: 16,
-            marginBottom: 15 + insets.bottom,
+            marginBottom: 5 + insets.bottom,
             borderTopWidth: 0,
             elevation: 8,
             shadowColor: "midnightblue",

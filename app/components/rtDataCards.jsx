@@ -27,8 +27,8 @@ const parameters = [
     label: "Salinity",
     value: "35",
     unit: "ppt",
-    icon: <Waves size={30} color="#17a2b8" />,
-    color: "#17a2b8",
+    icon: <Waves size={30} color="#8b5cf6" />,
+    color: "#8b5cf6",
   },
 ];
 
@@ -36,7 +36,7 @@ export default function RealTimeData() {
   return (
     <View
       style={{
-        backgroundColor: "#224882",
+        backgroundColor: "#2455a9",
         padding: 16,
         borderRadius: 16,
         marginBottom: 24,

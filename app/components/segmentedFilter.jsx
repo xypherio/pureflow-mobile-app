@@ -9,45 +9,44 @@ export default function SegmentedFilter({
 }) {
   return (
     <View style={{ marginBottom: 16 }}>
-      {/* Label above filter */}
-      <Text
-        style={{
-          fontSize: 20,
-          fontWeight: "bold",
-          color: "#1c5c88",
-          marginBottom: 8,
-          fontFamily: "Poppins",
-        }}
-      >
-        Overview Chart
-      </Text>
-
       <View
         style={{
           flexDirection: "row",
           borderWidth: 1,
-          borderColor: "#1c5c88",
-          borderRadius: 8,
-          overflow: "hidden",
+          borderColor: "#2455a9",
+          borderRadius: 15,
+          backgroundColor: "#f6fafd",
+          padding: 3,
         }}
       >
         {options.map((filter, index) => {
           const isActive = activeFilter === filter;
-
           return (
             <TouchableOpacity
               key={index}
               onPress={() => setActiveFilter(filter)}
               style={{
                 flex: 1,
-                backgroundColor: isActive ? "#1c5c88" : "#f6fafd",
+                backgroundColor: isActive ? "#2455a9" : "transparent",
                 paddingVertical: 10,
                 alignItems: "center",
+                borderRadius: isActive ? 12 : 12,
+                marginHorizontal: isActive ? 2 : 0,
+                // Add a subtle shadow for the active pill (optional)
+                ...(isActive
+                  ? {
+                      shadowColor: "midnightblue",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 2,
+                      elevation: 4,
+                    }
+                  : {}),
               }}
             >
               <Text
                 style={{
-                  color: isActive ? "#f6fafd" : "#1c5c88",
+                  color: isActive ? "#f6fafd" : "#2455a9",
                   fontWeight: "600",
                   fontSize: 14,
                   fontFamily: "Poppins",

@@ -1,19 +1,15 @@
 import StatusCard from "@components/datmStatusCard.jsx";
 import GlobalWrapper from "@components/globalWrapper";
+import LineChartCard from "@components/linechartCard";
 import PureFlowLogo from "@components/pureflowLogo";
-import RealTimeData from "@components/realtimeData";
-import SegmentedFilter from "@components/segmentedFilter";
+import RealTimeData from "@components/rtDataCards";
 
-import { useState } from "react";
 import { Text, View } from "react-native";
-import OverviewBox from "../components/realtimeChart";
 
 export default function HomeScreen() {
-  const [activeFilter, setActiveFilter] = useState("");
-
   return (
-    <GlobalWrapper className="flex-1 bg-[#e6fbff] font-poppins">
-      <View className="mb-4 items-start">
+    <GlobalWrapper style={{ flex: 1, backgroundColor: '#e6fbff' }}>
+      <View style={{ alignItems: 'flex-start' }}>
         <PureFlowLogo
           weather={{
             label: "Light Rain",
@@ -23,20 +19,24 @@ export default function HomeScreen() {
         />
       </View>
 
-      <StatusCard status="Active" battery="Low" />
-      <RealTimeData />
+      {/* System Status Section */}
+      <View>
+        <StatusCard status="Active" battery="Low" />
+      </View>
 
-      <OverviewBox>
-        <SegmentedFilter
-          activeFilter={activeFilter}
-          setActiveFilter={setActiveFilter}
-        />
+      {/* Real-Time Data Section */}
+      <View style={{ marginBottom: 5 }}>
+        <Text style={{ fontSize: 12, color: '#1a2d51', marginBottom: 8 }}>Real-Time Data</Text>
+        <RealTimeData />
+      </View>
 
-        <Text className="text-center text-gray-400 font-poppins">
-          Chart for {activeFilter}
-        </Text>
-      </OverviewBox>
+      {/* Historical Trends Section */}
+      <View style={{ marginBottom: 5 }}>
+        <Text style={{ fontSize: 12, color: '#1a2d51', marginBottom: -8 }}>Historical Trends</Text>
+        <LineChartCard>
+        </LineChartCard>
+      </View>
+
     </GlobalWrapper>
   );
 }
-
