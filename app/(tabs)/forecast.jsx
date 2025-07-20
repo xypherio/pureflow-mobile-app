@@ -1,17 +1,56 @@
-import ForecastCard from "@components/forecastCard";
-import ForecastInsights from "@components/forecastInsights";
-import GlobalWrapper from "@components/globalWrapper";
-import LineChartCard from "@components/linechartCard";
-import PureFlowLogo from "@components/pureflowLogo";
-import WeatherBanner from "@components/weatherBanner";
+import ForecastCard from "@components/forecast-card";
+import GlobalWrapper from "@components/global-wrapper";
+import InsightsCard from "@components/insights-card";
+import LineChartCard from "@components/linechart-card";
+import PureFlowLogo from "@components/ui-header";
+import WeatherBanner from "@components/weather-banner";
 
 import { ScrollView, Text, View } from "react-native";
 
 export default function HomeScreen() {
+  
+  const insights = [
+    {
+      type: "positive",
+      title: "AI Forecast: Optimal Water Quality Maintained",
+      description:
+        "ML predicts stable conditions for 48h. pH (7.2-7.4), DO (6.8-7.2 mg/L) optimal. No action needed.",
+      suggestion: "Continue current maintenance schedule. Monitor for any sudden changes.",
+      timestamp: "Updated 15 min ago",
+    },
+    {
+      type: "warning",
+      title: "AI Alert: Potential Turbidity Spike Predicted",
+      description:
+        "ML detects 23% turbidity increase in 6-8h. 87% accuracy. Recommend filter maintenance.",
+      suggestion: "Schedule filter replacement within 4 hours. Increase monitoring frequency to hourly.",
+      action: "View AI Analysis",
+      timestamp: "Updated 1 hour ago",
+    },
+    {
+      type: "info",
+      title: "AI Insights: Seasonal Pattern Detected",
+      description:
+        "Neural network shows rainfall-conductivity correlation. Monitor salinity during weather events.",
+      suggestion: "Prepare backup filtration systems. Stock up on treatment chemicals.",
+      action: "View Pattern Analysis",
+      timestamp: "Updated 3 hours ago",
+    },
+    {
+      type: "warning",
+      title: "AI Warning: pH Drift Pattern Identified",
+      description:
+        "RNN detects pH drift. Predicts drop to 6.8 in 12h. 91% accuracy. Consider pH adjustment.",
+      suggestion: "Add pH buffer solution within 6 hours. Monitor pH every 2 hours.",
+      action: "View Trend Analysis",
+      timestamp: "Updated 6 hours ago",
+    },
+  ];
+
   return (
-    <GlobalWrapper style={{ flex: 1, backgroundColor: '#e6fbff' }}>
+    <GlobalWrapper style={{ flex: 1, backgroundColor: "#e6fbff" }}>
       {/* Header */}
-      <View style={{ alignItems: 'flex-start' }}>
+      <View style={{ alignItems: "flex-start" }}>
         <PureFlowLogo
           weather={{
             label: "Light Rain",
@@ -27,8 +66,10 @@ export default function HomeScreen() {
       </View>
 
       {/* Forecast Parameters Section */}
-      <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, color: '#1a2d51', marginBottom: 5 }}>Forecast Parameters</Text>
+      <View style={{ marginBottom: 24 }}>
+        <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 10 }}>
+          Forecast Parameters
+        </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <ForecastCard title="pH" value="7.3" trend="rising" />
           <ForecastCard title="Temperature" value="29.5°C" trend="falling" />
@@ -39,22 +80,40 @@ export default function HomeScreen() {
 
       {/* Forecast Trends Section */}
       <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, color: '#1a2d51', marginBottom: -8 }}>Forecast Trends</Text>
+        <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: -10 }}>
+          Forecast Trends
+        </Text>
         <LineChartCard></LineChartCard>
       </View>
 
       {/* Forecast Insights Section */}
-      <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, color: '#1a2d51', marginBottom: -8 }}>Forecast Insights</Text>
-        <ForecastInsights
-          type="warning"
-          message="Turbidity levels are expected to increase at midnight. Consider enabling filtration protocol."
-        />
+      <View>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ fontSize: 12, color: "#1a2d51" }}>
+            Insights & Suggestions
+          </Text>
+        </View>
 
-        <ForecastInsights
-          type="suggestion"
-          message="Stable water conditions detected. This is a good time to recalibrate your sensors."
-        />
+        {insights.map((insight, index) => (
+          <InsightsCard
+            key={index}
+            type={insight.type}
+            title={insight.title}
+            description={insight.description}
+            suggestion={insight.suggestion}
+            action={insight.action}
+            onActionPress={() => {
+              console.log("button pressed");
+            }}
+            timestamp={insight.timestamp}
+          />
+        ))}
       </View>
     </GlobalWrapper>
   );

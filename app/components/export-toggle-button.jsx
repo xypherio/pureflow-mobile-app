@@ -1,7 +1,7 @@
+import { globalStyles } from '@styles/globalStyles';
 import { FileSpreadsheet, FileText, Share } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { globalStyles } from '@styles/globalStyles';
 
 const EXPORT_OPTIONS = [
   {
@@ -111,7 +111,7 @@ export default function ExportToggleButton({ onExportAction }) {
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: '#2563EB',
+          backgroundColor: '#2455a9',
           alignItems: 'center',
           justifyContent: 'center',
           ...globalStyles.boxShadow,

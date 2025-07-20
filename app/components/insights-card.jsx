@@ -1,31 +1,39 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 const INSIGHT_TYPES = {
   positive: {
     icon: CheckCircle,
-    bgColor: '#D1FAE5',
+    bgColor: '#ECFDF5',
     iconColor: '#059669',
-    borderColor: '#10B981'
+    borderColor: '#10B981',
+    gradientColors: ['#D1FAE5', '#A7F3D0'],
+    shadowColor: '#10B981'
   },
   warning: {
     icon: AlertCircle,
-    bgColor: '#FEF3C7',
+    bgColor: '#FFFBEB',
     iconColor: '#D97706',
-    borderColor: '#F59E0B'
+    borderColor: '#F59E0B',
+    gradientColors: ['#FEF3C7', '#FDE68A'],
+    shadowColor: '#F59E0B'
   },
   critical: {
     icon: AlertTriangle,
-    bgColor: '#FEE2E2',
+    bgColor: '#FEF2F2',
     iconColor: '#DC2626',
-    borderColor: '#EF4444'
+    borderColor: '#EF4444',
+    gradientColors: ['#FEE2E2', '#FECACA'],
+    shadowColor: '#EF4444'
   },
   info: {
     icon: Info,
-    bgColor: '#DBEAFE',
+    bgColor: '#EFF6FF',
     iconColor: '#2563EB',
-    borderColor: '#3B82F6'
+    borderColor: '#3B82F6',
+    gradientColors: ['#DBEAFE', '#BFDBFE'],
+    shadowColor: '#3B82F6'
   }
 };
 
@@ -33,6 +41,7 @@ export default function InsightsCard({
   type = 'info', 
   title, 
   description, 
+  suggestion,
   action, 
   onActionPress,
   timestamp 
@@ -43,78 +52,107 @@ export default function InsightsCard({
   return (
     <View style={{
       backgroundColor: '#fff',
-      borderRadius: 16,
-      padding: 16,
-      marginVertical: 8,
-      shadowColor: '#000',
-      shadowOpacity: 0.06,
-      shadowRadius: 4,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 2,
-      borderLeftWidth: 4,
-      borderLeftColor: config.borderColor,
+      borderRadius: 20,
+      padding: 20,
+      marginVertical: 10,
+      shadowColor: config.shadowColor,
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: config.borderColor,
+      position: 'relative',
+      overflow: 'hidden',
     }}>
+      {/* Gradient overlay */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 4,
+        backgroundColor: config.borderColor,
+        opacity: 0.3,
+      }} />
+      
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <View style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
           backgroundColor: config.bgColor,
           alignItems: 'center',
           justifyContent: 'center',
-          marginRight: 12,
+          marginRight: 16,
+          shadowColor: config.iconColor,
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 3,
         }}>
           <IconComponent
-            size={20}
+            size={24}
             color={config.iconColor}
           />
         </View>
         
         <View style={{ flex: 1 }}>
           <Text style={{ 
-            fontSize: 16, 
-            fontWeight: '700', 
+            fontSize: 18, 
+            fontWeight: '800', 
             color: '#111827',
-            marginBottom: 4
+            marginBottom: 8,
+            letterSpacing: -0.5,
           }}>
             {title}
           </Text>
           
           <Text style={{ 
-            fontSize: 14, 
-            color: '#6B7280',
-            lineHeight: 20,
-            marginBottom: 8
+            fontSize: 15, 
+            color: '#4B5563',
+            lineHeight: 22,
+            marginBottom: 8,
+            fontWeight: '400',
           }}>
             {description}
           </Text>
           
-          {action && (
-            <TouchableOpacity
-              onPress={onActionPress}
-              style={{
-                backgroundColor: config.iconColor,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 20,
-                alignSelf: 'flex-start',
-              }}
-            >
-              <Text style={{ 
-                color: '#fff', 
+          {suggestion && (
+            <View style={{
+              backgroundColor: config.bgColor,
+              padding: 12,
+              borderRadius: 12,
+              marginBottom: 12,
+              borderLeftWidth: 3,
+              borderLeftColor: config.iconColor,
+            }}>
+              <Text style={{
+                fontSize: 13,
+                color: config.iconColor,
                 fontWeight: '600',
-                fontSize: 12
+                marginBottom: 4,
               }}>
-                {action}
+                💡 AI Suggestion
               </Text>
-            </TouchableOpacity>
+              <Text style={{
+                fontSize: 14,
+                color: '#374151',
+                lineHeight: 20,
+                fontWeight: '500',
+              }}>
+                {suggestion}
+              </Text>
+            </View>
           )}
           
           {timestamp && (
             <Text style={{ 
               fontSize: 12, 
               color: '#9CA3AF',
-              marginTop: 8
+              fontWeight: '500',
+              fontStyle: 'italic',
+              marginTop: 8,
             }}>
               {timestamp}
             </Text>

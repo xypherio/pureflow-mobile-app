@@ -2,10 +2,10 @@ import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import GlobalWrapper from "@components/globalWrapper";
-import NotificationCard from "@components/notificationCard";
-import NotificationFilter from "@components/notificationFilter";
-import PureFlowLogo from "@components/pureflowLogo";
+import NotificationFilter from "@components/alerts-filter";
+import GlobalWrapper from "@components/global-wrapper";
+import NotificationCard from "@components/notification-card";
+import PureFlowLogo from "@components/ui-header";
 
 const alertLevels = {
   red: { bg: "#fee2e2", iconColor: "#ef4444" },

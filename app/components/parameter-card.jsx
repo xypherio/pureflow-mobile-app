@@ -35,59 +35,66 @@ const ICON_MAP = {
 export default function ParameterCard({ icon, label, value, unit, status, location }) {
   const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.normal;
   // Dynamic title: e.g., 'High pH Level', 'Moderate pH Level', 'Normal pH Level'
-  const title = `${statusStyle.title} ${label}`;
+  const title = `${statusStyle.title} ${label || 'Parameter'}`;
   // Dynamic description: e.g., 'Detected pH level of 9.1 in Pond B.'
-  const description = `Detected ${label.toLowerCase()} of ${value}${unit ? ' ' + unit : ''}${location ? ' in ' + location : ''}.`;
+  const description = `Detected ${(label || 'parameter').toLowerCase()} of ${value}${unit ? ' ' + unit : ''}${location ? ' in ' + location : ''}.`;
 
   return (
     <View style={{
-      flexDirection: 'row',
-      alignItems: 'center',
       backgroundColor: '#fff',
-      borderRadius: 16,
-      padding: 16,
-      marginVertical: 8,
+      borderRadius: 12,
+      padding: 12,
       shadowColor: '#000',
       shadowOpacity: 0.08,
-      shadowRadius: 6,
+      shadowRadius: 4,
       shadowOffset: { width: 0, height: 2 },
       elevation: 2,
-      minHeight: 80,
       position: 'relative',
+      minHeight: 100,
     }}>
       {/* Status Pill */}
       <View style={{
         position: 'absolute',
-        top: 12,
-        right: 16,
+        top: 8,
+        right: 8,
         backgroundColor: statusStyle.backgroundColor,
-        borderRadius: 14,
-        paddingHorizontal: 12,
-        paddingVertical: 3,
+        borderRadius: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
         zIndex: 2,
-        alignSelf: 'flex-start',
       }}>
-        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{statusStyle.label}</Text>
+        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 10 }}>{statusStyle.label}</Text>
       </View>
+      
       {/* Icon Circle */}
       <View style={{
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         backgroundColor: statusStyle.backgroundColor,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginBottom: 8,
+        alignSelf: 'center',
       }}>
         <MaterialCommunityIcons
           name={ICON_MAP[icon] || 'flask'}
-          size={28}
+          size={20}
           color="#fff"
         />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#222', marginBottom: 2 }}>{title}</Text>
-        <Text style={{ fontSize: 14, color: '#555' }}>{description}</Text>
+      
+      {/* Content */}
+      <View style={{ alignItems: 'center' }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 4, textAlign: 'center' }}>
+          {label}
+        </Text>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: statusStyle.backgroundColor, marginBottom: 2 }}>
+          {value}{unit}
+        </Text>
+        <Text style={{ fontSize: 11, color: '#666', textAlign: 'center' }}>
+          {statusStyle.title}
+        </Text>
       </View>
     </View>
   );

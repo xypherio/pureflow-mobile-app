@@ -28,7 +28,6 @@ export default function StatusCard({ status = "Active", battery = "Normal" }) {
         height: 64,
         backgroundColor: "#f6fafd",
         borderRadius: 12,
-        marginBottom: 16,
         paddingHorizontal: 16,
         flexDirection: "row",
         alignItems: "center",
