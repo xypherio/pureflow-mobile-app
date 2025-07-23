@@ -1,38 +1,42 @@
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-const parameters = [
-  {
-    label: "pH Level",
-    value: "7.2",
-    unit: "pH",
-    icon: <Gauge size={30} color="#007bff" />,
-    color: "#007bff",
-  },
-  {
-    label: "Temperature",
-    value: "25",
-    unit: "°C",
-    icon: <Thermometer size={30} color="#e83e8c" />,
-    color: "#e83e8c",
-  },
-  {
-    label: "TDS",
-    value: "500",
-    unit: "ppm",
-    icon: <Droplet size={30} color="#28a745" />,
-    color: "#28a745",
-  },
-  {
-    label: "Salinity",
-    value: "35",
-    unit: "ppt",
-    icon: <Waves size={30} color="#8b5cf6" />,
-    color: "#8b5cf6",
-  },
-];
+export default function RealTimeData({ data = [] }) {
+  
+  console.log(data);
+  const latest = data[data.length - 1] || {};
 
-export default function RealTimeData() {
+  const parameters = [
+    {
+      label: "pH Level",
+      value: latest.ph !== undefined ? String(latest.ph) : "-",
+      unit: "pH",
+      icon: <Gauge size={30} color="#007bff" />, 
+      color: "#007bff",
+    },
+    {
+      label: "Temperature",
+      value: latest.temperature !== undefined ? String(latest.temperature) : "-",
+      unit: "°C",
+      icon: <Thermometer size={30} color="#e83e8c" />, 
+      color: "#e83e8c",
+    },
+    {
+      label: "TDS",
+      value: latest.tds !== undefined ? String(latest.tds) : "-",
+      unit: "ppm",
+      icon: <Droplet size={30} color="#28a745" />, 
+      color: "#28a745",
+    },
+    {
+      label: "Salinity",
+      value: latest.salinity !== undefined ? String(latest.salinity) : "-",
+      unit: "ppt",
+      icon: <Waves size={30} color="#8b5cf6" />, 
+      color: "#8b5cf6",
+    },
+  ];
+
   return (
     <View
       style={{

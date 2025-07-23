@@ -23,7 +23,6 @@ export default function PureFlowLogo({
         alignItems: "center",
         width: "100%",
         paddingHorizontal: 8,
-        marginBottom: 8,
       }}
     >
       {/* PureFlow Logo */}

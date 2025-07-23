@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from "react";
+import { AlertProvider } from "../contexts/AlertContext";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -29,12 +30,16 @@ export default function RootLayout() {
     return null; // Let Expo handle the splash screen
   }
 
-  return <Stack>
-    <Stack.Screen
-      name="(tabs)"
-      options={{
-        headerShown: false,
-      }}
-    />
-  </Stack>;
+  return (
+    <AlertProvider>
+      <Stack>
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack>
+    </AlertProvider>
+  );
 }

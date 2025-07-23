@@ -1,3 +1,4 @@
+import { globalStyles } from "@styles/globalStyles";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
@@ -34,19 +35,17 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
 
   return (
     <View
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 16,
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
-        minHeight: 140,
-        width: "100%",
-      }}
+      style={[
+        {
+          backgroundColor: "#fff",
+          borderRadius: 20,
+          padding: 20,
+          marginBottom: 16,
+          minHeight: 140,
+          width: "100%",
+        },
+        globalStyles.boxShadow,
+      ]}
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         {/* Gauge section (left) */}

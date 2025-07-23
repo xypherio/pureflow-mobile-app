@@ -1,12 +1,10 @@
 import { Platform } from 'react-native';
 
-// Chart styles that work across platforms
 export const chartStyles = {
   container: {
     borderRadius: 12,
-    // Remove any web-specific properties that might cause warnings
     ...(Platform.OS === 'web' && {
-      transform: 'none', // Override any transform properties on web
+      transform: 'none',
     }),
   },
   chartConfig: {
