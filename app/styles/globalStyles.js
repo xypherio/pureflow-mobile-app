@@ -13,9 +13,9 @@ export const globalStyles = StyleSheet.create({
   },
 
   boxShadow: {
-    shadowColor: "#1a2e51",
+    shadowColor: "#2569d0",
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 0 },
     elevation: 2,
   },

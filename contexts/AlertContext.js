@@ -1,14 +1,14 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { getAlertsFromSensorData } from "../app/utils/alertLogicHandler";
-import { useFirestoreCollection } from "../hooks/useFirestoreCollection";
-import { addAlert, getAllAlerts } from "../services/alertsService";
+import { useFirestoreCollection } from "../backend/hooks/useFirestoreCollection";
+import { addAlert, getAllAlerts } from "../backend/services/alertsService";
+import { getAlertsFromSensorData } from "../utils/alertLogicHandler";
 
 const AlertContext = createContext();
 
 export function AlertProvider({ children }) {
-  const { data, loading, error } = useFirestoreCollection("datm_data");
-  const [alerts, setAlerts] = useState([]); // current (live) alerts
-  const [history, setHistory] = useState([]); // persistent alert history
+  const { data } = useFirestoreCollection("datm_data");
+  const [alerts, setAlerts] = useState([]);
+  const [history, setHistory] = useState([]);
   const prevAlertKeys = useRef(new Set());
 
   // Fetch alert history from Firestore on mount
@@ -16,22 +16,29 @@ export function AlertProvider({ children }) {
     getAllAlerts().then(setHistory);
   }, []);
 
-  // Watch for new alerts and persist them
+  // Watch for new data and generate alerts
   useEffect(() => {
-    const currentAlerts = getAlertsFromSensorData(data);
+    const currentAlerts = getAlertsFromSensorData(data); // checks all parameters
     setAlerts(currentAlerts);
 
-    // Persist new alerts to Firestore
+    // For each alert, check if it's new (not in prevAlertKeys)
     currentAlerts.forEach(alert => {
+      // Add value and threshold to alert object for Firestore
       const key = `${alert.parameter}-${alert.type}-${alert.title}`;
       if (!prevAlertKeys.current.has(key)) {
-        addAlert({ ...alert, timestamp: new Date() });
+        addAlert({
+          ...alert,
+          timestamp: new Date(),
+          value: alert.value, // ensure value is included
+          threshold: alert.threshold, // ensure threshold is included
+          acknowledged: false
+        });
         prevAlertKeys.current.add(key);
       }
     });
   }, [data]);
 
-  // For notifications tab: merge live alerts and history, remove duplicates
+  // Merge live alerts and history, remove duplicates
   const allAlerts = React.useMemo(() => {
     const map = new Map();
     history.forEach(a => {
@@ -46,7 +53,7 @@ export function AlertProvider({ children }) {
   }, [alerts, history]);
 
   return (
-    <AlertContext.Provider value={{ alerts, allAlerts, loading, error, sensorData: data }}>
+    <AlertContext.Provider value={{ alerts, allAlerts, sensorData: data }}>
       {children}
     </AlertContext.Provider>
   );

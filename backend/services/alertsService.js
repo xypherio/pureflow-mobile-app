@@ -1,12 +1,11 @@
+import { firebaseApp } from '@backend/firebase/config';
 import { addDoc, collection, deleteDoc, doc, getDocs, getFirestore } from 'firebase/firestore';
-import { firebaseApp } from '../firebase/config';
 
 const db = getFirestore(firebaseApp);
 const ALERTS_COLLECTION = 'alerts';
 
 // Add a new alert to Firestore
 export async function addAlert(alert) {
-  // alert should be an object with { parameter, type, title, message }
   return await addDoc(collection(db, ALERTS_COLLECTION), alert);
 }
 

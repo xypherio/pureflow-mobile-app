@@ -1,8 +1,8 @@
+import { useFirestoreCollection } from "@hooks/useFirestoreCollection";
 import { globalStyles } from "@styles/globalStyles";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Dimensions, Text, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import { useFirestoreCollection } from "../../hooks/useFirestoreCollection";
 import SegmentedFilter from "./segmented-filters";
 
 const filterFieldMap = {

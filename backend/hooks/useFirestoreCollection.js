@@ -1,6 +1,6 @@
+import { fetchAllDocuments } from "@backend/firebase/firestore";
 import { useEffect, useState } from "react";
-import { formatSensorData } from "../app/utils/formatSensorData";
-import { fetchAllDocuments } from "../firebase/firestore";
+import { formatSensorData } from "../../utils/formatSensorData";
 
 export function useFirestoreCollection(collectionName, intervalMs = 30000) {
   const [data, setData] = useState([]);
@@ -24,7 +24,7 @@ export function useFirestoreCollection(collectionName, intervalMs = 30000) {
       }
     }
 
-    getData(); // Initial fetch
+    getData(); 
     intervalId = setInterval(getData, intervalMs);
 
     return () => clearInterval(intervalId);

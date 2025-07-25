@@ -5,7 +5,7 @@ import GlobalWrapper from "@components/global-wrapper";
 import LineChartCard from "@components/linechart-card";
 import RealTimeData from "@components/realtime-data-cards";
 import PureFlowLogo from "@components/ui-header";
-import { useAlerts } from "../../contexts/AlertContext";
+import { useAlerts } from "@contexts/AlertContext";
 
 import { globalStyles } from "@styles/globalStyles";
 import { ScrollView, Text, View } from "react-native";
@@ -17,6 +17,7 @@ const sectionLabelStyle = {
 };
 
 export default function HomeScreen() {
+  
   const { alerts, loading, error, sensorData } = useAlerts();
 
   return (

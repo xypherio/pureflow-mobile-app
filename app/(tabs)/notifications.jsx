@@ -78,7 +78,7 @@ export default function Alerts() {
                 marginBottom: 8,
               }}
             >
-              All Clear, Boyaks!
+              All Clear!
             </Text>
             <Text
               style={{ fontSize: 14, color: "#6b7280", textAlign: "center" }}

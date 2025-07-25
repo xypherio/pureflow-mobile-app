@@ -1,22 +1,23 @@
-import { getWaterQualityThresholds } from "../../constants/thresholds";
+import { getWaterQualityThresholds } from "../constants/thresholds";
 
 // Map parameter to readable name (for title)
 const parameterNames = {
   ph: "pH",
-  temperature: "Temperature",
-  tds: "TDS",
-  salinity: "Salinity",
+  temperature: "temperature",
+  tds: "turbidty",
+  salinity: "salinity",
 };
 
 export function getAlertsFromSensorData(sensorData) {
   if (!sensorData || !Array.isArray(sensorData)) return [];
   if (!getWaterQualityThresholds) return [];
 
-  const latest = sensorData[sensorData.length - 1]; 
+  const latest = sensorData[sensorData.length - 1];
   if (!latest) return [];
 
   const alerts = [];
 
+  // Check water quality parameters
   Object.keys(getWaterQualityThresholds).forEach((parameter) => {
     const value = latest[parameter];
     const t = getWaterQualityThresholds[parameter];
@@ -24,7 +25,9 @@ export function getAlertsFromSensorData(sensorData) {
 
     let type = "success";
     let title = `${parameterNames[parameter] || parameter} Normal`;
-    let message = `${parameterNames[parameter] || parameter} is within the safe range.`;
+    let message = `${
+      parameterNames[parameter] || parameter
+    } is within the safe range.`;
 
     if (t.min !== undefined && value < t.min) {
       type = "error";
@@ -36,10 +39,22 @@ export function getAlertsFromSensorData(sensorData) {
       message = `${parameterNames[parameter]} is above normal.`;
     }
 
-   if (type !== "success") {
-      alerts.push({ parameter, type, title, message });
+    if (type !== "success") {
+      alerts.push({ parameter, type, title, message, value, threshold: t });
     }
   });
+
+  // Check isRaining field
+  if (latest.isRaining === true) {
+    alerts.push({
+      parameter: "rain",
+      type: "info",
+      title: "Rain Detected",
+      message: "It is currently raining. Please take necessary precautions.",
+      value: true,
+      threshold: null
+    });
+  }
 
   return alerts;
 }

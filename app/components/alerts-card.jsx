@@ -42,10 +42,8 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
   console.log("alerts", alerts);
   const [current, setCurrent] = useState(0);
 
-  // If alerts is empty or all alerts have empty parameter, show "normal" alert
   const hasAlertsWithParameter = Array.isArray(alerts) && alerts.some(a => a && a.parameter);
 
-  // If no alerts or all alerts have empty parameter, show a default "normal" alert
   const displayAlerts = hasAlertsWithParameter
     ? alerts.filter(a => a && a.parameter)
     : [

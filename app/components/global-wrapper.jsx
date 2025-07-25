@@ -21,10 +21,10 @@ export default function GlobalWrapper({ children }) {
       {/* Subtle bottom gradient overlay */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 80, pointerEvents: 'none' }}>
         <LinearGradient
-          colors={["transparent", "#98d2f8"]} // adjust "#fff" to match your background if needed
-          style={{ flex: 2 }}
+          colors={["transparent", "#98d2f8"]}
+          style={{ flex: 1 }}
           start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 2 }}
+          end={{ x: 0.5, y: 1 }}
         />
       </View>
     </SafeAreaView>
