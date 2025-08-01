@@ -92,26 +92,17 @@ export function DataProvider({ children, initialData = null }) {
         console.error('❌ Failed to fetch real-time data:', realtimeDataResult.reason);
       }
       
-      // Generate alerts from both sensor data and real-time data
-      if (isMountedRef.current) {
+      // Generate alerts only from real-time data to sync with real-time cards
+      if (isMountedRef.current && realtimeDataForAlerts && realtimeDataForAlerts.timestamp) {
         try {
-          // Combine sensor data and real-time data for alert processing
-          let combinedDataForAlerts = [...sensorDataForAlerts];
-          
-          // Add real-time data as the most recent entry if available
-          if (realtimeDataForAlerts && realtimeDataForAlerts.timestamp) {
-            combinedDataForAlerts.push({
-              ...realtimeDataForAlerts,
-              // Ensure real-time data has the correct format for alert processing
-              datetime: realtimeDataForAlerts.timestamp,
-            });
-          }
-          
-          // Process alerts with combined data
-          const alertResult = await alertManager.processAlertsFromSensorData(combinedDataForAlerts);
+          // Process alerts only from the most recent real-time data
+          const alertResult = await alertManager.processAlertsFromSensorData([{
+            ...realtimeDataForAlerts,
+            datetime: realtimeDataForAlerts.timestamp,
+          }]);
           
           if (alertResult.newAlerts.length > 0) {
-            console.log(`🚨 ${alertResult.newAlerts.length} new alerts generated (including real-time data)`);
+            console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
           }
           
           if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
@@ -130,7 +121,7 @@ export function DataProvider({ children, initialData = null }) {
           }, 0);
           
         } catch (error) {
-          console.error('❌ Error processing alerts from combined data:', error);
+          console.error('❌ Error processing alerts from real-time data:', error);
         }
       }
       
@@ -160,12 +151,42 @@ export function DataProvider({ children, initialData = null }) {
       // If we have initial data, use it immediately
       if (initialData) {
         console.log('🚀 Using preloaded initial data');
-        await updateState(initialData.sensorData, initialData.alerts);
+        
+        // Initialize AlertManager with preloaded alerts to prevent reprocessing
+        if (initialData.alerts && initialData.alerts.length > 0) {
+          console.log(`📦 Initializing AlertManager with ${initialData.alerts.length} preloaded alerts`);
+          // Set the alerts directly in AlertManager to prevent regeneration
+          for (const alert of initialData.alerts) {
+            const signature = alertManager.generateAlertSignature(alert);
+            alertManager.activeAlerts.set(signature, alert);
+          }
+          // Mark the sensor data as already processed
+          const dataSignature = alertManager.generateDataSignature(initialData.sensorData);
+          alertManager.alertHistory.add(dataSignature);
+        }
+        
+        // Set initial state with preloaded data
+        setSensorData(initialData.sensorData);
+        setAlerts(initialData.alerts || []);
+        setLastUpdate(Date.now());
         
         // Still fetch fresh real-time data even with preloaded data
         try {
           const freshRealtimeData = await realtimeDataService.getMostRecentData(false);
           setRealtimeData(freshRealtimeData);
+          
+          // Generate alerts immediately from real-time data to sync with real-time cards
+          if (freshRealtimeData && freshRealtimeData.timestamp) {
+            const realtimeAlerts = await alertManager.processAlertsFromSensorData([{
+              ...freshRealtimeData,
+              datetime: freshRealtimeData.timestamp,
+            }]);
+            
+            if (realtimeAlerts.newAlerts.length > 0) {
+              console.log(`🚨 ${realtimeAlerts.newAlerts.length} new alerts from real-time data`);
+              setAlerts(realtimeAlerts.alerts);
+            }
+          }
         } catch (error) {
           console.warn('Failed to fetch fresh real-time data:', error);
         }

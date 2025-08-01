@@ -96,6 +96,21 @@ class HistoricalAlertsService {
     if (filterParameter && filterParameter !== 'all') {
       filteredAlerts = filteredAlerts.filter(alert => alert.parameter === filterParameter);
     }
+    
+    // Remove duplicates by alert signature (parameter + type + title + value)
+    const uniqueAlerts = [];
+    const seenSignatures = new Set();
+    
+    for (const alert of filteredAlerts) {
+      const signature = `${alert.parameter}-${alert.type}-${alert.title}-${Math.round((alert.value || 0) * 100) / 100}`;
+      if (!seenSignatures.has(signature)) {
+        seenSignatures.add(signature);
+        uniqueAlerts.push(alert);
+      }
+    }
+    
+    filteredAlerts = uniqueAlerts;
+    console.log(`🔍 Filtered ${alerts.length} alerts to ${filteredAlerts.length} unique alerts`);
 
     // Process each alert for display
     const processedAlerts = filteredAlerts.map(alert => this.processAlertForDisplay(alert));

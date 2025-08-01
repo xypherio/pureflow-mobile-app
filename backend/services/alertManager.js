@@ -13,6 +13,8 @@ class AlertManager {
     this.lastProcessedTimestamp = null;
     this.pendingFirebaseAlerts = [];
     this.alertIdCounter = 0; // Counter to ensure unique IDs
+    this.isProcessing = false; // Lock to prevent concurrent processing
+    this.processedAlertIds = new Set(); // Track processed alert IDs to prevent duplicates
   }
 
   /**
@@ -56,12 +58,26 @@ class AlertManager {
   async processAlertsFromSensorData(sensorData) {
     return await performanceMonitor.measureAsync('alertManager.processAlerts', async () => {
       try {
+        // Prevent concurrent processing
+        if (this.isProcessing) {
+          console.log('🔒 Alert processing already in progress, skipping...');
+          return {
+            alerts: Array.from(this.activeAlerts.values()),
+            newAlerts: [],
+            skipped: true,
+            reason: 'concurrent-processing'
+          };
+        }
+        
+        this.isProcessing = true;
+        
         // Generate signature for current data
         const dataSignature = this.generateDataSignature(sensorData);
         
         // Check if we've already processed this exact dataset
         if (this.alertHistory.has(dataSignature)) {
           console.log('📦 Skipping alert processing - data already processed');
+          this.isProcessing = false;
           return {
             alerts: Array.from(this.activeAlerts.values()),
             newAlerts: [],
@@ -92,9 +108,20 @@ class AlertManager {
           } else {
             // Create new alert with additional metadata and guaranteed unique ID
             this.alertIdCounter++;
+            let alertId;
+            
+            // Generate a truly unique ID that hasn't been used before
+            do {
+              alertId = `alert_${Date.now()}_${this.alertIdCounter}_${Math.random().toString(36).substr(2, 9)}`;
+              this.alertIdCounter++; // Increment again if ID already exists
+            } while (this.processedAlertIds.has(alertId));
+            
+            // Track this ID to prevent future duplicates
+            this.processedAlertIds.add(alertId);
+            
             const enhancedAlert = {
               ...alert,
-              id: `alert_${Date.now()}_${this.alertIdCounter}_${Math.random().toString(36).substr(2, 9)}`,
+              id: alertId,
               createdAt: new Date().toISOString(),
               timestamp: currentTimestamp,
               lastSeen: currentTimestamp,
@@ -106,8 +133,10 @@ class AlertManager {
             this.activeAlerts.set(alertSignature, enhancedAlert);
             newAlerts.push(enhancedAlert);
             
-            // Queue new alert for Firebase sync (check for duplicates)
-            const isDuplicate = this.pendingFirebaseAlerts.some(existingAlert => existingAlert.id === enhancedAlert.id);
+            // Queue new alert for Firebase sync (check for duplicates by signature)
+            const isDuplicate = this.pendingFirebaseAlerts.some(existingAlert => 
+              this.generateAlertSignature(existingAlert) === alertSignature
+            );
             if (!isDuplicate) {
               this.pendingFirebaseAlerts.push(enhancedAlert);
             }
@@ -159,6 +188,9 @@ class AlertManager {
       } catch (error) {
         console.error('❌ Error processing alerts:', error);
         throw error;
+      } finally {
+        // Always release the processing lock
+        this.isProcessing = false;
       }
     });
   }

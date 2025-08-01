@@ -1,5 +1,6 @@
 import { fetchAllDocuments, fetchAllDocumentsBackend } from '../firebase/firestore';
 import { alertManager } from './alertManager';
+import { historicalAlertsService } from './historicalAlertsService';
 import { performanceMonitor } from '../../utils/performanceMonitor';
 
 /**
@@ -10,6 +11,7 @@ class DataPreloader {
     this.cache = {
       sensorData: null,
       alerts: null,
+      historicalAlerts: null,
       lastFetch: null,
     };
     this.isLoading = false;
@@ -31,6 +33,7 @@ class DataPreloader {
       return {
         sensorData: this.cache.sensorData,
         alerts: this.cache.alerts,
+        historicalAlerts: this.cache.historicalAlerts,
         fromCache: true,
       };
     }
@@ -56,8 +59,8 @@ class DataPreloader {
       try {
         console.log('🔄 Preloading Firebase data...');
         
-        // Fetch sensor data in parallel for better performance
-        const [sensorData] = await Promise.all([
+        // Fetch sensor data and historical alerts in parallel for better performance
+        const [sensorData, historicalAlertsData] = await Promise.all([
           performanceMonitor.measureAsync('fetchSensorData', () => 
             fetchAllDocuments("datm_data", { 
               limitCount: 1000, // Limit to prevent excessive data loading
@@ -68,8 +71,12 @@ class DataPreloader {
               return [];
             })
           ),
-          // Add more parallel data fetches here if needed
-          // fetchAllDocumentsBackend("other_collection").catch(() => []),
+          performanceMonitor.measureAsync('fetchHistoricalAlerts', () => 
+            historicalAlertsService.getHistoricalAlerts().catch(error => {
+              console.warn('Failed to fetch historical alerts:', error);
+              return { sections: [], totalCount: 0 };
+            })
+          ),
         ]);
 
         // Process alerts from sensor data using AlertManager
@@ -82,15 +89,18 @@ class DataPreloader {
         this.cache = {
           sensorData,
           alerts,
+          historicalAlerts: historicalAlertsData,
           lastFetch: Date.now(),
         };
 
         console.log(`✅ Data preloaded successfully`);
+        console.log(`📊 Preloaded: ${sensorData.length} sensor records, ${alerts.length} active alerts, ${historicalAlertsData.totalCount || 0} historical alerts`);
         performanceMonitor.logMemoryUsage();
 
         return {
           sensorData,
           alerts,
+          historicalAlerts: historicalAlertsData,
           fromCache: false,
         };
       } catch (error) {
