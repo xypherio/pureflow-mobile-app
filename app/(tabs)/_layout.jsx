@@ -52,7 +52,7 @@ const _layout = () => {
         tabBarShowLabel: true,
         tabBarPressColor: "transparent",
         tabBarPressOpacity: 1,
-        tabBarStyle: [styles.tabBar, { marginBottom: 5 + insets.bottom }],
+        tabBarStyle: [styles.tabBar, { marginBottom: 10 + insets.bottom }],
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarActiveTintColor: "#007aff",
         tabBarInactiveTintColor: "#7f8c8d",

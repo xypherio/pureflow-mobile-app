@@ -21,6 +21,7 @@
     "ajv": "^6.12.6",
     "ajv-keywords": "^3.5.2",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "expo": "53.0.20",
     "expo-blur": "~14.1.5",
     "expo-constants": "17.1.7",

@@ -1,56 +1,62 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useFirestoreCollection } from "../backend/hooks/useFirestoreCollection";
-import { addAlert, getAllAlerts } from "../backend/services/alertsService";
+import { addAlertToFirestore, fetchAllDocuments } from "../backend/firebase/firestore"; // <-- Import the fetch function
 import { getAlertsFromSensorData } from "../utils/alertLogicHandler";
 
 const AlertContext = createContext();
 
-export function AlertProvider({ children }) {
-  const { data } = useFirestoreCollection("datm_data");
-  const [alerts, setAlerts] = useState([]);
-  const [history, setHistory] = useState([]);
-  const prevAlertKeys = useRef(new Set());
+// Helper to generate a unique key for each alert
+function alertKey(alert) {
+  return `${alert.parameter}-${alert.type}-${alert.title}-${alert.value}`;
+}
 
-  // Fetch alert history from Firestore on mount
+export function AlertProvider({ children }) {
+  const [alerts, setAlerts] = useState([]);
+  const [data, setData] = useState([]);
+  const sentAlertKeysRef = useRef(new Set());
+
   useEffect(() => {
-    getAllAlerts().then(setHistory);
+    let isMounted = true;
+    const fetchData = () => {
+      fetchAllDocuments("datm_data")
+        .then(fetchedData => {
+          if (isMounted) {
+            setData(fetchedData);
+            const newAlerts = getAlertsFromSensorData(fetchedData);
+            setAlerts(newAlerts);
+
+            // Only send alerts that haven't been sent before
+            newAlerts.forEach(alert => {
+              const key = alertKey(alert);
+              if (!sentAlertKeysRef.current.has(key)) {
+                addAlertToFirestore(alert);
+                sentAlertKeysRef.current.add(key);
+              }
+            });
+
+            // Remove keys that are no longer in the current alerts
+            const currentKeys = new Set(newAlerts.map(alertKey));
+            sentAlertKeysRef.current.forEach(key => {
+              if (!currentKeys.has(key)) {
+                sentAlertKeysRef.current.delete(key);
+              }
+            });
+          }
+        })
+        .catch(error => {
+          if (isMounted) {
+            console.error("Error fetching sensor data:", error);
+          }
+        });
+    };
+    fetchData(); // initial fetch
+    const interval = setInterval(fetchData, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  // Watch for new data and generate alerts
-  useEffect(() => {
-    const currentAlerts = getAlertsFromSensorData(data); // checks all parameters
-    setAlerts(currentAlerts);
-
-    // For each alert, check if it's new (not in prevAlertKeys)
-    currentAlerts.forEach(alert => {
-      // Add value and threshold to alert object for Firestore
-      const key = `${alert.parameter}-${alert.type}-${alert.title}`;
-      if (!prevAlertKeys.current.has(key)) {
-        addAlert({
-          ...alert,
-          timestamp: new Date(),
-          value: alert.value, // ensure value is included
-          threshold: alert.threshold, // ensure threshold is included
-          acknowledged: false
-        });
-        prevAlertKeys.current.add(key);
-      }
-    });
-  }, [data]);
-
-  // Merge live alerts and history, remove duplicates
-  const allAlerts = React.useMemo(() => {
-    const map = new Map();
-    history.forEach(a => {
-      const key = `${a.parameter}-${a.type}-${a.title}`;
-      map.set(key, a);
-    });
-    alerts.forEach(a => {
-      const key = `${a.parameter}-${a.type}-${a.title}`;
-      map.set(key, a);
-    });
-    return Array.from(map.values());
-  }, [alerts, history]);
+  const allAlerts = alerts;
 
   return (
     <AlertContext.Provider value={{ alerts, allAlerts, sensorData: data }}>

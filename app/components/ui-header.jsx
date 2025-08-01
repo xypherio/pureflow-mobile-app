@@ -1,6 +1,6 @@
-import { View, Image, Text } from "react-native";
-import { CloudRain, Sun, CloudSun } from "lucide-react-native";
 import { globalStyles } from "@styles/globalStyles"; // Adjust path if needed
+import { CloudRain, CloudSun, Sun } from "lucide-react-native";
+import { Image, Text, View } from "react-native";
 
 const LOGO_PATH = require("../../assets/logo/pureflow-logo.png");
 

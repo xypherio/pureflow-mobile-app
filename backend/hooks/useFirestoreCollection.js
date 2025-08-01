@@ -1,34 +1,30 @@
-import { fetchAllDocuments } from "@backend/firebase/firestore";
+import { onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { formatSensorData } from "../../utils/formatSensorData";
 
-export function useFirestoreCollection(collectionName, intervalMs = 30000) {
+export const useFirestoreCollection = (query) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    let intervalId;
+    if (!query) return;
 
-    async function getData() {
-      try {
-        setLoading(true);
-        const docs = await fetchAllDocuments(collectionName);
-        const formatted = formatSensorData(docs);
-        setData(formatted);
-        setError(null);
-      } catch (err) {
+    const unsubscribe = onSnapshot(
+      query,
+      (snapshot) => {
+        const formattedData = formatSensorData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setData(formattedData);
+        setLoading(false);
+      },
+      (err) => {
         setError(err);
-      } finally {
         setLoading(false);
       }
-    }
+    );
 
-    getData(); 
-    intervalId = setInterval(getData, intervalMs);
-
-    return () => clearInterval(intervalId);
-  }, [collectionName, intervalMs]);
+    return () => unsubscribe();
+  }, [JSON.stringify(query)]);
 
   return { data, loading, error };
-}
+};

@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
 import { Text, View } from 'react-native';
 
 const STATUS_STYLES = {
@@ -32,11 +31,17 @@ const ICON_MAP = {
   EC: 'flash',
 };
 
-export default function ParameterCard({ icon, label, value, unit, status, location }) {
+export default function ParameterCard() {
+  // Dummy data for demonstration
+  const icon = "pH";
+  const label = "pH";
+  const value = 7.2;
+  const unit = "";
+  const status = "normal";
+  const location = "Pond A";
+
   const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.normal;
-  // Dynamic title: e.g., 'High pH Level', 'Moderate pH Level', 'Normal pH Level'
   const title = `${statusStyle.title} ${label || 'Parameter'}`;
-  // Dynamic description: e.g., 'Detected pH level of 9.1 in Pond B.'
   const description = `Detected ${(label || 'parameter').toLowerCase()} of ${value}${unit ? ' ' + unit : ''}${location ? ' in ' + location : ''}.`;
 
   return (

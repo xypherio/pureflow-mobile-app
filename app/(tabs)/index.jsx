@@ -5,10 +5,10 @@ import GlobalWrapper from "@components/global-wrapper";
 import LineChartCard from "@components/linechart-card";
 import RealTimeData from "@components/realtime-data-cards";
 import PureFlowLogo from "@components/ui-header";
-import { useAlerts } from "@contexts/AlertContext";
+import { useData } from "@contexts/DataContext";
 
 import { globalStyles } from "@styles/globalStyles";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View, RefreshControl } from "react-native";
 
 const sectionLabelStyle = {
   fontSize: 12,
@@ -17,14 +17,21 @@ const sectionLabelStyle = {
 };
 
 export default function HomeScreen() {
-  
-  const { alerts, loading, error, sensorData } = useAlerts();
+  const { alerts, sensorData, loading, error, refreshData, lastUpdate, getHomepageAlerts } = useData();
 
   return (
     <GlobalWrapper style={globalStyles.pageBackground}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={refreshData}
+            colors={['#4a90e2']}
+            tintColor="#4a90e2"
+          />
+        }
       >
         {/* Header */}
         <View style={{ marginBottom: 12 }}>
@@ -46,7 +53,7 @@ export default function HomeScreen() {
         {/* Critical Alerts Section */}
         <View style={{ marginBottom: 12 }}>
           <Text style={sectionLabelStyle}>Active Alerts</Text>
-          <AlertsCard alerts={alerts} />
+          <AlertsCard alerts={getHomepageAlerts()} />
         </View>
 
         {/* Real-Time Data Section */}
@@ -60,7 +67,7 @@ export default function HomeScreen() {
           <Text style={{ ...sectionLabelStyle, marginBottom: -10 }}>
             Historical Trends
           </Text>
-          <LineChartCard data={[]} />
+          <LineChartCard />
         </View>
 
         {/* Water Quality Gauge */}

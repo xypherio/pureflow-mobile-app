@@ -6,7 +6,8 @@ export function formatSensorData(docs) {
       temperature: doc.temperature,
       tds: doc.turbidity, 
       salinity: doc.salinity,
-      timestamp: doc.timestamp, 
+      timestamp: doc.timestamp,
+      isRaining: doc.isRaining,
     }))
     .sort((a, b) => {
 

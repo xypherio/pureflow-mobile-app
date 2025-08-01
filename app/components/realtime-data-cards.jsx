@@ -1,15 +1,32 @@
-import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
+import { Droplet, Gauge, Thermometer, Waves, Clock } from "lucide-react-native";
 import { Text, View } from "react-native";
+import { useData } from "@contexts/DataContext";
+import { useEffect, useState } from "react";
 
 export default function RealTimeData({ data = [] }) {
+  const { realtimeData } = useData();
+  const [displayData, setDisplayData] = useState(null);
   
-  console.log(data);
-  const latest = data[data.length - 1] || {};
+  // Use real-time data if available, otherwise fallback to latest from data array
+  useEffect(() => {
+    if (realtimeData) {
+      setDisplayData(realtimeData);
+      console.log('📊 Using real-time data:', realtimeData);
+    } else if (data && data.length > 0) {
+      const latest = data[data.length - 1];
+      setDisplayData(latest);
+      console.log('📊 Using fallback data:', latest);
+    } else {
+      setDisplayData(null);
+    }
+  }, [realtimeData, data]);
+  
+  const latest = displayData || {};
 
   const parameters = [
     {
       label: "pH Level",
-      value: latest.ph !== undefined ? String(latest.ph) : "-",
+      value: latest.pH !== undefined ? String(latest.pH) : "-",
       unit: "pH",
       icon: <Gauge size={30} color="#007bff" />, 
       color: "#007bff",
@@ -22,9 +39,9 @@ export default function RealTimeData({ data = [] }) {
       color: "#e83e8c",
     },
     {
-      label: "TDS",
-      value: latest.tds !== undefined ? String(latest.tds) : "-",
-      unit: "ppm",
+      label: "Turbidity",
+      value: latest.turbidity !== undefined ? String(latest.turbidity) : "-",
+      unit: "NTU",
       icon: <Droplet size={30} color="#28a745" />, 
       color: "#28a745",
     },

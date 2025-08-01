@@ -1,6 +1,5 @@
 import { globalStyles } from "@styles/globalStyles";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
-import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 const PARAMETER_CONFIG = {

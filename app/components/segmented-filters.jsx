@@ -1,3 +1,4 @@
+import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 const defaultOptions = ["pH", "Temp", "TDS", "Salinity"];
@@ -57,7 +58,13 @@ export default function SegmentedFilter({
             </TouchableOpacity>
           );
         })}
+        {/* Example inside SegmentedFilter */}
+        <TouchableOpacity onPress={() => setActiveFilter("Monthly")}>
+          <Text></Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
+
+const [activeFilter, setActiveFilter] = React.useState("Weekly");

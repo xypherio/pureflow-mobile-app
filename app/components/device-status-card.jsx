@@ -12,11 +12,11 @@ export default function StatusCard({ status = "Active", battery = "Normal" }) {
   const isActive = status === "Active";
   const isBatteryLow = battery === "Low";
 
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(30);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCountdown((prev) => (prev <= 1 ? 60 : prev - 1));
+      setCountdown((prev) => (prev <= 1 ? 30 : prev - 1));
     }, 1000);
 
     return () => clearInterval(interval);

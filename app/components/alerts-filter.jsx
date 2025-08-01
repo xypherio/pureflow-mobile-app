@@ -1,21 +1,19 @@
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-const alertFilters = [
-  { label: 'All', value: 'all' },
-  { label: 'Unread', value: 'unread' },
-  { label: 'Read', value: 'read' },
-  { label: 'Red Alert', value: 'red' },
-  { label: 'Yellow Alert', value: 'yellow' },
-  { label: 'Green Alert', value: 'green' },
-  { label: 'Blue Alert', value: 'blue' },
-];
-
 const parameterFilters = [
   { label: 'All Parameters', value: 'all' },
-  { label: 'pH', value: 'ph' },
-  { label: 'Temp', value: 'temperature' },
-  { label: 'TDS', value: 'tds' },
+  { label: 'pH', value: 'pH' },
+  { label: 'Temperature', value: 'temperature' },
+  { label: 'Turbidity', value: 'turbidity' },
   { label: 'Salinity', value: 'salinity' },
+];
+
+const severityFilters = [
+  { label: 'All Alerts', value: 'all' },
+  { label: 'Red Alerts', value: 'error' },
+  { label: 'Warning', value: 'warning' },
+  { label: 'Info', value: 'info' },
+  { label: 'Normal', value: 'normal' },
 ];
 
 const NotificationFilter = ({
@@ -55,10 +53,10 @@ const NotificationFilter = ({
   return (
     <View style={{ marginBottom: 12 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {renderPills(alertFilters, selectedAlert, onSelectAlert)}
+        {renderPills(parameterFilters, selectedAlert, onSelectAlert)}
       </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {renderPills(parameterFilters, selectedParam, onSelectParam)}
+        {renderPills(severityFilters, selectedParam, onSelectParam)}
       </ScrollView>
     </View>
   );

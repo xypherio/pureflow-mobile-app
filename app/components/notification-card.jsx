@@ -1,10 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
 import {
   AlertCircle,
+  AlertTriangle,
+  CheckCircle,
   Droplet,
   Gauge,
+  Info,
   Thermometer,
-  Waves
+  Waves,
+  XCircle
 } from 'lucide-react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
@@ -16,11 +20,19 @@ const parameterIcons = {
   salinity: { icon: Waves },
 };
 
+const alertIcons = {
+  "check-circle": CheckCircle,
+  "alert-triangle": AlertTriangle,
+  "x-circle": XCircle,
+  "info": Info,
+};
+
 const NotificationCard = ({
   type = 'status',
   title,
   message,
-  parameter = null, 
+  parameter = null,
+  icon = null, // <-- Accept icon prop
   alertLevel = { bg: '#F3F4F6', iconColor: '#007AFF' },
   onClose,
   onPrimaryAction,
@@ -31,11 +43,18 @@ const NotificationCard = ({
   const navigation = useNavigation();
 
   const renderIcon = () => {
-    if (parameter && parameterIcons[parameter]) {
-      const IconComponent = parameterIcons[parameter].icon;
+    // 1. Use alert icon if provided
+    if (icon && alertIcons[icon]) {
+      const IconComponent = alertIcons[icon];
       return <IconComponent size={24} color={alertLevel.iconColor} />;
     }
-    return <AlertCircle size={24} color="#FF3B30" />;
+    // 2. Use parameter icon if available
+    if (parameter && parameterIcons[parameter.toLowerCase()]) {
+      const IconComponent = parameterIcons[parameter.toLowerCase()].icon;
+      return <IconComponent size={24} color={alertLevel.iconColor} />;
+    }
+    // 3. Fallback
+    return <AlertCircle size={24} color={alertLevel.iconColor} />;
   };
 
   return (

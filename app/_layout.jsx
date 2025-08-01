@@ -1,37 +1,61 @@
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from "react";
-import { AlertProvider } from "../contexts/AlertContext";
+import { DataProvider } from "../contexts/DataContext";
+import SplashScreenComponent from "./components/splash-screen";
+import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
+  const [preloadedData, setPreloadedData] = useState(null);
+  
+  // Load fonts
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
 
   useEffect(() => {
-    const prepare = async () => {
-      try {
-        // Add any initialization logic here
-        // For example: load fonts, fetch initial data, etc.
-        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        setIsReady(true);
-        await SplashScreen.hideAsync();
-      }
-    };
+    if (fontsLoaded) {
+      // Hide the native splash screen once fonts are loaded
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
-    prepare();
-  }, []);
+  const handleDataLoaded = async (data) => {
+    try {
+      console.log('✅ Data preloading completed:', {
+        sensorDataCount: data.sensorData?.length || 0,
+        alertsCount: data.alerts?.length || 0,
+        fromCache: data.fromCache,
+        loadTime: data.loadTime,
+      });
+      
+      setPreloadedData(data);
+      
+      // Small delay for smooth transition
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setIsAppReady(true);
+    } catch (error) {
+      console.error('Error handling preloaded data:', error);
+      // Continue anyway to prevent app from being stuck
+      setIsAppReady(true);
+    }
+  };
 
-  if (!isReady) {
-    return null; // Let Expo handle the splash screen
+  // Show custom splash screen while loading fonts and data
+  if (!fontsLoaded || !isAppReady) {
+    return (
+      <SplashScreenComponent onDataLoaded={handleDataLoaded} />
+    );
   }
 
   return (
-    <AlertProvider>
+    <DataProvider initialData={preloadedData}>
       <Stack>
         <Stack.Screen
           name="(tabs)"
@@ -40,6 +64,6 @@ export default function RootLayout() {
           }}
         />
       </Stack>
-    </AlertProvider>
+    </DataProvider>
   );
 }
