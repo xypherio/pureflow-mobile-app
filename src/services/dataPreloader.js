@@ -1,7 +1,7 @@
-import { fetchAllDocuments, fetchAllDocumentsBackend } from '../firebase/firestore';
-import { alertManager } from './alertManager';
-import { historicalAlertsService } from './historicalAlertsService';
-import { performanceMonitor } from '../../utils/performanceMonitor';
+import { fetchAllDocuments, fetchAllDocumentsBackend } from '@services/firebase/firestore.js';
+import { alertManager } from './alertManager.js';
+import { historicalAlertsService } from './historicalAlertsService.js';
+import { performanceMonitor } from '@utils/performance-monitor.js';
 
 /**
  * Data preloader service for efficiently loading Firebase data during app startup

@@ -1,11 +1,11 @@
-import ExportToggleButton from "@components/export-toggle-button";
-import GlobalWrapper from "@components/global-wrapper";
-import InsightsCard from "@components/insights-card";
-import LineChartCard from "@components/linechart-card";
-import ParameterGridCard from "@components/parameter-grid-card";
-import SegmentedFilter from "@components/segmented-filters";
-import PureFlowLogo from "@components/ui-header";
-import WaterQualitySummaryCard from "@components/water-quality-summary-card";
+import ExportToggleButton from "@forms/export-toggle-button";
+import GlobalWrapper from "@ui/global-wrapper";
+import InsightsCard from "@data-display/insights-card";
+import LineChartCard from "@data-display/linechart-card";
+import ParameterGridCard from "@data-display/parameter-grid-card";
+import SegmentedFilter from "@navigation/segmented-filters";
+import PureFlowLogo from "@ui/ui-header";
+import WaterQualitySummaryCard from "@data-display/water-quality-summary-card";
 
 import { format } from 'date-fns';
 import { useEffect, useState } from "react";

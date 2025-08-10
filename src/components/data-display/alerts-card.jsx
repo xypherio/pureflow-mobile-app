@@ -1,4 +1,4 @@
-import { globalStyles } from "@styles/globalStyles";
+import { globalStyles } from "@styles/globalStyles.js";
 import * as Lucide from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Animated, Easing, Text, View } from "react-native";

@@ -1,7 +1,7 @@
+import { alertManager } from "@services/alertManager";
+import dataPreloader from "@services/dataPreloader";
+import { realtimeDataService } from "@services/realtimeDataService";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { alertManager } from "../backend/services/alertManager";
-import dataPreloader from "../backend/services/dataPreloader";
-import { realtimeDataService } from "../backend/services/realtimeDataService";
 
 const DataContext = createContext();
 

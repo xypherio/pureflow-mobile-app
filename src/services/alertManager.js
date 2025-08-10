@@ -1,6 +1,6 @@
-import { addAlertToFirestore, getRecentAlerts } from '../firebase/firestore';
-import { getAlertsFromSensorData } from '../../utils/alertLogicHandler';
-import { performanceMonitor } from '../../utils/performanceMonitor';
+import { addAlertToFirestore } from '@services/firebase/firestore.js';
+import { getAlertsFromSensorData } from '@utils/alert-logic-handler.js';
+import { performanceMonitor } from '@utils/performance-monitor.js';
 
 /**
  * Enhanced Alert Management Service

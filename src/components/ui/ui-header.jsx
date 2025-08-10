@@ -1,8 +1,8 @@
-import { globalStyles } from "@styles/globalStyles"; // Adjust path if needed
+import { globalStyles } from "@styles/globalStyles.js";
 import { CloudRain, CloudSun, Sun } from "lucide-react-native";
 import { Image, Text, View } from "react-native";
 
-const LOGO_PATH = require("../../assets/logo/pureflow-logo.png");
+const LOGO_PATH = require("../../../assets/logo/pureflow-logo.png");
 
 const weatherIconMap = {
   rain: <CloudRain size={24} color="#3b82f6" />,

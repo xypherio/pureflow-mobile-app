@@ -1,14 +1,13 @@
-import AlertsCard from "@components/alerts-card";
-import StatusCard from "@components/device-status-card.jsx";
-import WaterQualityGauge from "@components/gauge-card";
-import GlobalWrapper from "@components/global-wrapper";
-import LineChartCard from "@components/linechart-card";
-import RealTimeData from "@components/realtime-data-cards";
-import PureFlowLogo from "@components/ui-header";
 import { useData } from "@contexts/DataContext";
-
+import AlertsCard from "@data-display/alerts-card";
+import WaterQualityGauge from "@data-display/gauge-card";
+import LineChartCard from "@data-display/linechart-card";
+import RealTimeData from "@data-display/realtime-data-cards";
 import { globalStyles } from "@styles/globalStyles";
-import { ScrollView, Text, View, RefreshControl } from "react-native";
+import StatusCard from "@ui/device-status-card.jsx";
+import GlobalWrapper from "@ui/global-wrapper";
+import PureFlowLogo from "@ui/ui-header";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 
 const sectionLabelStyle = {
   fontSize: 12,

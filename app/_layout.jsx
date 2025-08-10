@@ -1,9 +1,23 @@
+import { DataProvider } from "@contexts/DataContext";
+import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
+import SplashScreenComponent from "@ui/splash-screen";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from "react";
-import { DataProvider } from "../contexts/DataContext";
-import SplashScreenComponent from "./components/splash-screen";
-import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
+import { LogBox } from 'react-native';
+
+// Suppress React Native Web warnings
+if (typeof window !== 'undefined') {
+  LogBox.ignoreLogs([
+    'Invalid DOM property `transform-origin`. Did you mean `transformOrigin`?',
+    'Unknown event handler property `onStartShouldSetResponder`. It will be ignored.',
+    'Unknown event handler property `onResponderTerminationRequest`. It will be ignored.',
+    'Unknown event handler property `onResponderGrant`. It will be ignored.',
+    'Unknown event handler property `onResponderMove`. It will be ignored.',
+    'Unknown event handler property `onResponderRelease`. It will be ignored.',
+    'Unknown event handler property `onResponderTerminate`. It will be ignored.',
+  ]);
+}
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -21,7 +35,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      // Hide the native splash screen once fonts are loaded
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);

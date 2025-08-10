@@ -1,11 +1,11 @@
-import { globalStyles } from "@styles/globalStyles";
+import { globalStyles } from "@styles/globalStyles.js";
 import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Droplet,
-  Gauge,
-  Thermometer,
-  Waves,
+    ArrowDownRight,
+    ArrowUpRight,
+    Droplet,
+    Gauge,
+    Thermometer,
+    Waves,
 } from "lucide-react-native";
 import { Text, View } from "react-native";
 

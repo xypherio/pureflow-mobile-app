@@ -1,6 +1,6 @@
 import { onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { formatSensorData } from "../../utils/formatSensorData";
+import { useState, useEffect } from "react";
+import { formatSensorData } from "@utils/format-sensor-data";
 
 export const useFirestoreCollection = (query) => {
   const [data, setData] = useState([]);

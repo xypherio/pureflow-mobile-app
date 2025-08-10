@@ -1,5 +1,5 @@
-import { fetchAllDocuments } from '../firebase/firestore';
-import { performanceMonitor } from '../../utils/performanceMonitor';
+import { fetchAllDocuments } from '@services/firebase/firestore.js';
+import { performanceMonitor } from '@utils/performance-monitor.js';
 
 /**
  * Historical Alerts Service for fetching and managing stored alerts from Firebase

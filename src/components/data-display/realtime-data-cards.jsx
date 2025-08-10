@@ -1,7 +1,7 @@
-import { Droplet, Gauge, Thermometer, Waves, Clock } from "lucide-react-native";
-import { Text, View } from "react-native";
-import { useData } from "@contexts/DataContext";
+import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { Text, View, TouchableOpacity } from "react-native";
+import { useData } from "@contexts/DataContext";
 
 export default function RealTimeData({ data = [] }) {
   const { realtimeData } = useData();

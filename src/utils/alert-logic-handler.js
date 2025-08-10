@@ -1,5 +1,5 @@
-import { getWaterQualityThresholds } from "../constants/thresholds";
-import { formatSensorData } from "./formatSensorData";
+import { getWaterQualityThresholds } from "@constants/thresholds";
+import { formatSensorData } from "./format-sensor-data";
 
 const parameterNames = {
   pH: "pH",

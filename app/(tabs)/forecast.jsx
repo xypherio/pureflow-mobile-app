@@ -1,9 +1,9 @@
-import ForecastCard from "@components/forecast-card";
-import GlobalWrapper from "@components/global-wrapper";
-import InsightsCard from "@components/insights-card";
-import LineChartCard from "@components/linechart-card";
-import PureFlowLogo from "@components/ui-header";
-import WeatherBanner from "@components/weather-banner";
+import ForecastCard from "@data-display/forecast-card";
+import GlobalWrapper from "@ui/global-wrapper";
+import InsightsCard from "@data-display/insights-card";
+import LineChartCard from "@data-display/linechart-card";
+import PureFlowLogo from "@ui/ui-header";
+import WeatherBanner from "@ui/weather-banner";
 
 import { ScrollView, Text, View } from "react-native";
 

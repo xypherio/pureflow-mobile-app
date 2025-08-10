@@ -20,11 +20,11 @@ import {
   RefreshCw,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { historicalAlertsService } from '../../backend/services/historicalAlertsService';
-import NotificationCard from '@components/notification-card';
-import PureFlowLogo from '@components/ui-header';
-import NotificationFilter from '@components/alerts-filter';
-import GlobalWrapper from '@components/global-wrapper';
+import { historicalAlertsService } from '@services/historicalAlertsService';
+import NotificationCard from '@ui/notification-card';
+import PureFlowLogo from '@ui/ui-header';
+import NotificationFilter from '@navigation/alerts-filter';
+import GlobalWrapper from '@ui/global-wrapper';
 
 // Alert type mappings for display
 const getAlertIcon = (type) => {

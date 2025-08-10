@@ -1,5 +1,5 @@
-import { performanceMonitor } from '../../utils/performanceMonitor';
-import { fetchAllDocuments } from '../firebase/firestore';
+import { performanceMonitor } from '@utils/performance-monitor.js';
+import { fetchAllDocuments } from '@services/firebase/firestore.js';
 
 class RealtimeDataService {
   constructor() {

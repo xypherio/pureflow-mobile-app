@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { addAlertToFirestore, fetchAllDocuments } from "../backend/firebase/firestore"; // <-- Import the fetch function
-import { getAlertsFromSensorData } from "../utils/alertLogicHandler";
+import { addAlertToFirestore, fetchAllDocuments } from "@services/firebase/firestore";
+import { getAlertsFromSensorData } from "@utils/alert-logic-handler";
 
 const AlertContext = createContext();
 

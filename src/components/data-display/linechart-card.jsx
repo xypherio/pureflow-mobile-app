@@ -1,8 +1,8 @@
-import { globalStyles } from "@styles/globalStyles";
+import SegmentedFilter from "@navigation/segmented-filters";
+import { globalStyles } from "@styles/globalStyles.js";
 import React from "react";
 import { Dimensions, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import SegmentedFilter from "./segmented-filters";
 
 export default function LineChartCard() {
   // Dummy data for demonstration

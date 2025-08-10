@@ -1,4 +1,4 @@
-import { globalStyles } from "@styles/globalStyles";
+import { globalStyles } from "@styles/globalStyles.js";
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

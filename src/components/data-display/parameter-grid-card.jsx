@@ -1,4 +1,4 @@
-import { globalStyles } from "@styles/globalStyles";
+import { globalStyles } from "@styles/globalStyles.js";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { Text, TouchableOpacity, View } from "react-native";
 

@@ -1,4 +1,4 @@
-import { globalStyles } from "@styles/globalStyles";
+import { globalStyles } from "@styles/globalStyles.js";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import React from "react";
 import { Text, View } from "react-native";
@@ -13,7 +13,7 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
     progress >= 70 ? "#3ab57c" : progress >= 40 ? "#f73535" : "#ef4444";
 
   const parameters = [
-    { color: "#007bff", icon: Droplet, label: "pH Level", value: paramValues?.ph || 0 },
+    { color: "#007bff", icon: Droplet, label: "pH Level", value: paramValues?.pH || 0 },
     { color: "#e83e8c", icon: Thermometer, label: "Temperature", value: paramValues?.temp || 0 },
     { color: "#28a745", icon: Gauge, label: "TDS", value: paramValues?.turbidity || 0 },
     { color: "#8b5cf6", icon: Waves, label: "Salinity", value: paramValues?.salinity || 0 },

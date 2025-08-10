@@ -1,4 +1,4 @@
-import { globalStyles } from '@styles/globalStyles';
+import { globalStyles } from '../../styles/globalStyles.js';
 import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import React from 'react';
 import { Text, View } from 'react-native';
@@ -82,4 +82,4 @@ export default function WaterQualitySummaryCard({ qualityLevel = 'good', lastUpd
       </View>
     </View>
   );
-} 
+}

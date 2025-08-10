@@ -58,13 +58,7 @@ export default function SegmentedFilter({
             </TouchableOpacity>
           );
         })}
-        {/* Example inside SegmentedFilter */}
-        <TouchableOpacity onPress={() => setActiveFilter("Monthly")}>
-          <Text></Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const [activeFilter, setActiveFilter] = React.useState("Weekly");

@@ -1,6 +1,6 @@
+import { globalStyles } from "@styles/globalStyles.js";
 import { ArrowUpRight, Thermometer } from "lucide-react-native";
 import { Text, View } from "react-native";
-import { globalStyles } from "../styles/globalStyles";
 
 export default function HeadsUpBanner({ message, temperatureRise = 5 }) {
   return (

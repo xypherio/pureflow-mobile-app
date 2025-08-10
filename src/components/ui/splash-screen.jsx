@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, Animated, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import dataPreloader from '@services/dataPreloader';
 import { StatusBar } from 'expo-status-bar';
-import dataPreloader from '../../backend/services/dataPreloader';
+import React, { useEffect, useState } from 'react';
+import { Animated, Dimensions, Image, Text, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -70,10 +69,9 @@ export default function SplashScreen({ onDataLoaded }) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#002d66' }}>
       <StatusBar style="light" />
-      <LinearGradient
-        colors={['#1a2d51', '#2c5aa0', '#4a90e2']}
+      <View
         style={{
           flex: 1,
           justifyContent: 'center',
@@ -89,25 +87,18 @@ export default function SplashScreen({ onDataLoaded }) {
         >
           {/* Logo/App Name */}
           <View style={{
-            marginBottom: 60,
+            marginBottom: 10,
             alignItems: 'center',
           }}>
-            <Text style={{
-              fontSize: 36,
-              fontWeight: 'bold',
-              color: '#ffffff',
-              marginBottom: 8,
-              textAlign: 'center',
-            }}>
-              PureFlow
-            </Text>
-            <Text style={{
-              fontSize: 16,
-              color: '#b8d4f0',
-              textAlign: 'center',
-            }}>
-              Water Quality Monitoring
-            </Text>
+            <Image
+              source={require('../../../assets/logo/logo-emblem.png')}
+              style={{
+                width: 200,
+                height: 200,
+                marginBottom: 10,
+                resizeMode: 'contain',
+              }}
+            />
           </View>
 
           {/* Loading Indicator */}
@@ -115,12 +106,6 @@ export default function SplashScreen({ onDataLoaded }) {
             alignItems: 'center',
             marginBottom: 40,
           }}>
-            <ActivityIndicator 
-              size="large" 
-              color="#ffffff" 
-              style={{ marginBottom: 20 }}
-            />
-            
             {/* Progress Bar */}
             <View style={{
               width: 200,
@@ -148,18 +133,8 @@ export default function SplashScreen({ onDataLoaded }) {
             </Text>
           </View>
 
-          {/* Version Info */}
-          <Text style={{
-            position: 'absolute',
-            bottom: -100,
-            fontSize: 12,
-            color: 'rgba(255, 255, 255, 0.6)',
-            textAlign: 'center',
-          }}>
-            Version 1.0.0
-          </Text>
         </Animated.View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
