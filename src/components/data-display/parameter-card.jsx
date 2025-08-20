@@ -1,106 +1,176 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Text, View } from 'react-native';
+// src/components/data-display/ParameterCard.jsx
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BarChart } from 'react-native-chart-kit';
 
-const STATUS_STYLES = {
-  normal: {
-    backgroundColor: '#22c55e', // green
-    icon: 'check-circle',
-    title: 'Normal',
-    label: 'Normal',
-  },
-  moderate: {
-    backgroundColor: '#eab308', // yellow
-    icon: 'alert-circle',
-    title: 'Moderate',
-    label: 'Moderate',
-  },
-  critical: {
-    backgroundColor: '#ef4444', // red
-    icon: 'alert-octagon',
-    title: 'High',
-    label: 'Critical',
-  },
-};
-
-const ICON_MAP = {
-  pH: 'flask',
-  Temperature: 'thermometer',
-  Turbidity: 'water',
-  Salinity: 'waves',
-  TDS: 'water-percent',
-  EC: 'flash',
-};
-
-export default function ParameterCard() {
-  // Dummy data for demonstration
-  const icon = "pH";
-  const label = "pH";
-  const value = 7.2;
-  const unit = "";
-  const status = "normal";
-  const location = "Pond A";
-
-  const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.normal;
-  const title = `${statusStyle.title} ${label || 'Parameter'}`;
-  const description = `Detected ${(label || 'parameter').toLowerCase()} of ${value}${unit ? ' ' + unit : ''}${location ? ' in ' + location : ''}.`;
+const ParameterCard = ({ 
+  parameter, 
+  value, 
+  unit, 
+  safeRange, 
+  status, 
+  analysis, 
+  chartData,
+  style 
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  const statusColors = {
+    normal: '#22c55e',
+    caution: '#eab308',
+    critical: '#ef4444'
+  };
 
   return (
-    <View style={{
-      backgroundColor: '#fff',
-      borderRadius: 12,
-      padding: 12,
-      shadowColor: '#000',
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 2,
-      position: 'relative',
-      minHeight: 100,
-    }}>
-      {/* Status Pill */}
-      <View style={{
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        backgroundColor: statusStyle.backgroundColor,
-        borderRadius: 10,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        zIndex: 2,
-      }}>
-        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 10 }}>{statusStyle.label}</Text>
-      </View>
-      
-      {/* Icon Circle */}
-      <View style={{
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: statusStyle.backgroundColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 8,
-        alignSelf: 'center',
-      }}>
-        <MaterialCommunityIcons
-          name={ICON_MAP[icon] || 'flask'}
-          size={20}
-          color="#fff"
-        />
-      </View>
-      
-      {/* Content */}
-      <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 4, textAlign: 'center' }}>
-          {label}
+    <View style={[styles.card, style, { borderLeftColor: statusColors[status] }]}>
+      <TouchableOpacity 
+        style={styles.header} 
+        onPress={() => setExpanded(!expanded)}
+      >
+        <View style={styles.headerContent}>
+          <Text style={styles.parameterName}>{parameter}</Text>
+          <View style={styles.valueContainer}>
+            <Text style={styles.value}>{value}</Text>
+            <Text style={styles.unit}>{unit}</Text>
+          </View>
+        </View>
+        {expanded ? (
+          <ChevronUp size={24} color="#64748b" />
+        ) : (
+          <ChevronDown size={24} color="#64748b" />
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.content}>
+        <View style={styles.statusRow}>
+          <View style={[styles.statusDot, { backgroundColor: statusColors[status] }]} />
+          <Text style={styles.statusText}>{status.toUpperCase()}</Text>
+          <Text style={styles.safeRange}>Safe range: {safeRange}</Text>
+        </View>
+        <Text style={styles.analysis} numberOfLines={expanded ? undefined : 1}>
+          {analysis}
         </Text>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', color: statusStyle.backgroundColor, marginBottom: 2 }}>
-          {value}{unit}
-        </Text>
-        <Text style={{ fontSize: 11, color: '#666', textAlign: 'center' }}>
-          {statusStyle.title}
-        </Text>
+
+        {expanded && chartData && (
+          <View style={styles.chartContainer}>
+            <BarChart
+              data={chartData}
+              width={300}
+              height={180}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 1,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                barPercentage: 0.5,
+                style: { 
+                  borderRadius: 16,
+                  paddingRight: 15 // Add right padding to prevent last bar from being cut off
+                },
+                propsForBackgroundLines: {
+                  strokeWidth: 0.5,
+                  stroke: '#e2e8f0'
+                }
+              }}
+              verticalLabelRotation={-45}
+              fromZero
+              showBarTops={false}
+              withInnerLines={true}
+              showValuesOnTopOfBars={true}
+              withCustomBarColorFromData={true}
+              flatColor={true}
+              style={styles.chart}
+            />
+          </View>
+        )}
       </View>
     </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerContent: {
+    flex: 1,
+  },
+  parameterName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    textTransform: 'capitalize',
+  },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 4,
+  },
+  value: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  unit: {
+    fontSize: 14,
+    color: '#64748b',
+    marginLeft: 4,
+  },
+  content: {
+    marginTop: 12,
+    overflow: 'visible',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+    marginRight: 12,
+    textTransform: 'uppercase',
+  },
+  safeRange: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  analysis: {
+    fontSize: 13,
+    color: '#475569',
+    marginTop: 4,
+  },
+  chartContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 8,
+  },
+});
+
+export default ParameterCard;

@@ -1,13 +1,13 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import {
-    ArrowDownRight,
-    ArrowUpRight,
-    Droplet,
-    Gauge,
-    Thermometer,
-    Waves,
+  ArrowDownRight,
+  ArrowUpRight,
+  Droplet,
+  Gauge,
+  Thermometer,
+  Waves,
 } from "lucide-react-native";
-import { Text, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 
 const iconMap = {
   pH: <Gauge size={36} color="#3b82f6" />,
@@ -34,7 +34,13 @@ const backgroundArrowMap = {
   stable: null,
 };
 
-export default function ForecastCard({ title, value, trend }) {
+export default function ForecastCard({
+  title,
+  value,
+  trend,
+  onPress,
+  breachPredicted = false,
+}) {
   const trendLabel =
     trend === "rising"
       ? "Increasing"
@@ -49,17 +55,25 @@ export default function ForecastCard({ title, value, trend }) {
       ? "#ef4444"
       : "#9ca3af";
 
+  const baseContainerStyle = {
+    backgroundColor: "#f6fafd",
+    padding: 16,
+    marginRight: 12,
+    width: 190,
+    height: 130,
+    borderRadius: 16,
+    ...globalStyles.boxShadow,
+  };
+
+  const breachStyles = breachPredicted
+    ? { borderWidth: 1, borderColor: "#ef4444", backgroundColor: "#fee2e2" }
+    : {};
+
   return (
-    <View
-      style={{
-        backgroundColor: "#f6fafd",
-        padding: 16,
-        marginRight: 12,
-        width: 170,
-        borderRadius: 16,
-        ...globalStyles.boxShadow,
-        height: 130,
-      }}
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={{ ...baseContainerStyle, ...breachStyles }}
     >
       {/* Background Arrow */}
       {backgroundArrowMap[trend]}
@@ -82,10 +96,19 @@ export default function ForecastCard({ title, value, trend }) {
         {iconMap[title]}
         <Text
           style={{
-            fontSize: 24,
+            fontSize: 30,
             fontWeight: "700",
             marginLeft: 10,
-            color: "#1f2937",
+            color:
+              title === "pH"
+                ? "#007bff" // purple
+                : title === "Temperature"
+                ? "#e83e8c" // amber
+                : title === "Turbidity"
+                ? "#28a745" // sky blue
+                : title === "Salinity"
+                ? "#8b5cf6" // indigo
+                : "#1f2937", // default
           }}
         >
           {value}
@@ -93,10 +116,10 @@ export default function ForecastCard({ title, value, trend }) {
       </View>
 
       <Text
-        style={{ fontSize: 15, marginTop: 6, color: trendColor, zIndex: 2 }}
+        style={{ fontSize: 13, marginTop: 6, color: trendColor, zIndex: 2 }}
       >
         {trendLabel}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }

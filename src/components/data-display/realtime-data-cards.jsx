@@ -1,7 +1,7 @@
+import { useData } from "@contexts/DataContext";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Text, View, TouchableOpacity } from "react-native";
-import { useData } from "@contexts/DataContext";
+import { Text, View } from "react-native";
 
 export default function RealTimeData({ data = [] }) {
   const { realtimeData } = useData();
@@ -42,14 +42,14 @@ export default function RealTimeData({ data = [] }) {
       label: "Turbidity",
       value: latest.turbidity !== undefined ? String(latest.turbidity) : "-",
       unit: "NTU",
-      icon: <Droplet size={30} color="#28a745" />, 
+      icon: <Waves size={30} color="#28a745" />, 
       color: "#28a745",
     },
     {
       label: "Salinity",
       value: latest.salinity !== undefined ? String(latest.salinity) : "-",
       unit: "ppt",
-      icon: <Waves size={30} color="#8b5cf6" />, 
+      icon: <Droplet size={30} color="#8b5cf6" />, 
       color: "#8b5cf6",
     },
   ];
@@ -60,7 +60,7 @@ export default function RealTimeData({ data = [] }) {
         backgroundColor: "#2455a9",
         padding: 16,
         borderRadius: 16,
-        marginBottom: 24,
+        marginBottom: 10,
       }}
     >
       <View

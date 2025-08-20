@@ -1,6 +1,6 @@
 import { useData } from "@contexts/DataContext";
 import AlertsCard from "@data-display/alerts-card";
-import WaterQualityGauge from "@data-display/gauge-card";
+import InsightsCard from "@data-display/insights-card";
 import LineChartCard from "@data-display/linechart-card";
 import RealTimeData from "@data-display/realtime-data-cards";
 import { globalStyles } from "@styles/globalStyles";
@@ -15,8 +15,33 @@ const sectionLabelStyle = {
   marginBottom: 8,
 };
 
+const insights = [
+  {
+    type: "positive",
+    title: "Water Quality Excellent",
+    description:
+      "All major parameters are within optimal ranges. Your water system is performing well.",
+    timestamp: "1 hour ago",
+  },
+  {
+    type: "info",
+    title: "Daily Report Available",
+    description:
+      "Your comprehensive daily water quality report is ready for download.",
+    timestamp: "30 minutes ago",
+  },
+];
+
 export default function HomeScreen() {
-  const { alerts, sensorData, loading, error, refreshData, lastUpdate, getHomepageAlerts } = useData();
+  const {
+    alerts,
+    sensorData,
+    loading,
+    error,
+    refreshData,
+    lastUpdate,
+    getHomepageAlerts,
+  } = useData();
 
   return (
     <GlobalWrapper style={globalStyles.pageBackground}>
@@ -27,13 +52,13 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={loading}
             onRefresh={refreshData}
-            colors={['#4a90e2']}
+            colors={["#4a90e2"]}
             tintColor="#4a90e2"
           />
         }
       >
         {/* Header */}
-        <View style={{ marginBottom: 12 }}>
+        <View style={{ marginBottom: 12, position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000 }}>
           <PureFlowLogo
             weather={{
               label: "Light Rain",
@@ -64,23 +89,35 @@ export default function HomeScreen() {
         {/* Historical Trends Section */}
         <View style={{ marginBottom: 12 }}>
           <Text style={{ ...sectionLabelStyle, marginBottom: -10 }}>
-            Historical Trends
+            Daily Trends
           </Text>
           <LineChartCard />
         </View>
 
-        {/* Water Quality Gauge */}
-        <View style={{ marginBottom: 12 }}>
-          <Text style={sectionLabelStyle}>Overall Water Quality</Text>
-          <WaterQualityGauge
-            percentage={65}
-            parameters={{
-              temp: 80,
-              turbidity: 60,
-              ph: 50,
-              salinity: 40,
+        <View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
-          />
+          >
+            <Text style={{ fontSize: 12, color: "#1a2d51" }}>
+              Insights & Recommendations
+            </Text>
+          </View>
+
+          {insights.map((insight, index) => (
+            <InsightsCard
+              key={index}
+              type={insight.type}
+              title={insight.title}
+              description={insight.description}
+              action={insight.action}
+              onActionPress={() => handleExportAction(insight.action)}
+              timestamp={insight.timestamp}
+            />
+          ))}
         </View>
       </ScrollView>
     </GlobalWrapper>

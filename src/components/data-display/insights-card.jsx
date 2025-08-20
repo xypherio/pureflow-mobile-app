@@ -1,5 +1,4 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
-import React from 'react';
 import { Text, View } from 'react-native';
 
 const INSIGHT_TYPES = {
@@ -54,7 +53,7 @@ export default function InsightsCard({
       backgroundColor: '#fff',
       borderRadius: 20,
       padding: 20,
-      marginVertical: 10,
+      marginVertical: 5,
       shadowColor: config.shadowColor,
       shadowOpacity: 0.15,
       shadowRadius: 8,

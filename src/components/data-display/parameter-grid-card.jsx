@@ -1,5 +1,5 @@
 import { globalStyles } from "@styles/globalStyles.js";
-import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
+import { Eye, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { Text, TouchableOpacity, View } from "react-native";
 
 const PARAMETER_CONFIG = {
@@ -10,61 +10,52 @@ const PARAMETER_CONFIG = {
     unit: "pH",
     normalRange: "6.5-8.5",
   },
-  Temperature: {
+  temperature: {
     icon: Thermometer,
     bgColor: "#FEF3C7",
     iconColor: "#D97706",
     unit: "°C",
     normalRange: "15-35",
   },
-  TDS: {
-    icon: Droplet,
-    bgColor: "#DBEAFE",
-    iconColor: "#2563EB",
-    unit: "ppm",
-    normalRange: "0-500",
-  },
-  Salinity: {
+  salinity: {
     icon: Waves,
     bgColor: "#E0E7FF",
     iconColor: "#7C3AED",
     unit: "ppt",
     normalRange: "0-35",
   },
-  Turbidity: {
-    icon: Droplet,
+  turbidity: {
+    icon: Eye,
     bgColor: "#F3E8FF",
     iconColor: "#9333EA",
     unit: "NTU",
     normalRange: "0-5",
   },
-  EC: {
-    icon: Gauge,
-    bgColor: "#FEF3C7",
-    iconColor: "#D97706",
-    unit: "µS/cm",
-    normalRange: "0-1500",
-  },
 };
 
-export default function ParameterGridCard({
-  parameter,
-  value,
-  status = "normal",
-  onPress,
-}) {
-  const config = PARAMETER_CONFIG[parameter] || PARAMETER_CONFIG.pH;
+const ParameterCard = ({ parameter, value, status, onPress }) => {
+  console.log(`ParameterCard rendering: ${parameter}, value: ${value}, status: ${status}`);
+  
+  // Normalize parameter name for case-insensitive lookup
+  const normalizedParam = parameter.toLowerCase();
+  const config = PARAMETER_CONFIG[normalizedParam] || PARAMETER_CONFIG.pH;
   const IconComponent = config.icon;
 
+  console.log(`Using config for parameter: ${normalizedParam}`, config);
+  console.log(`Available config keys:`, Object.keys(PARAMETER_CONFIG));
+  console.log(`Looking for: ${normalizedParam}`);
+
   const getStatusColor = (status) => {
+    console.log(`Getting status color for: ${status}`);
     switch (status) {
       case "normal":
         return "#10B981";
       case "moderate":
         return "#F59E0B";
-      case "critical":
+      case "bad":
         return "#EF4444";
       default:
+        console.warn(`Unknown status: ${status}, using default color`);
         return "#10B981";
     }
   };
@@ -81,6 +72,7 @@ export default function ParameterGridCard({
         flexShrink: 0,
         justifyContent: "space-between",
         ...globalStyles.boxShadow,
+        marginBottom: 16,
       }}
     >
       <View style={{ alignItems: "center" }}>
@@ -91,6 +83,8 @@ export default function ParameterGridCard({
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 12,
+            width: 48,
+            height: 48,
           }}
         >
           <IconComponent size={24} color={config.iconColor} />
@@ -151,5 +145,44 @@ export default function ParameterGridCard({
         </Text>
       </View>
     </TouchableOpacity>
+  );
+};
+
+export default function ParameterGridCard({ parameters, onParameterPress }) {
+  console.log('ParameterGridCard received parameters:', parameters);
+  console.log('ParameterGridCard parameter keys:', Object.keys(parameters || {}));
+  
+  if (!parameters || Object.keys(parameters).length === 0) {
+    console.log('No parameters available, showing empty state');
+    return (
+      <View style={{ padding: 20, alignItems: 'center' }}>
+        <Text style={{ color: '#6B7280' }}>No parameter data available.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    }}>
+      {Object.entries(parameters).map(([name, data]) => {
+        // Normalize parameter name to handle case sensitivity
+        const normalizedName = name.toLowerCase();
+        console.log(`Rendering parameter: ${name} (normalized: ${normalizedName})`);
+        console.log(`Parameter data:`, data);
+        
+        return (
+          <ParameterCard
+            key={name}
+            parameter={name}
+            value={data.value}
+            status={data.status}
+            onPress={() => onParameterPress && onParameterPress(name)}
+          />
+        );
+      })}
+    </View>
   );
 }

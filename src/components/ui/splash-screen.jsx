@@ -1,6 +1,6 @@
 import dataPreloader from '@services/dataPreloader';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Dimensions, Image, Text, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -16,13 +16,13 @@ export default function SplashScreen({ onDataLoaded }) {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 50,
-        friction: 7,
+        tension: 55,
+        friction: 8,
         useNativeDriver: true,
       }),
     ]).start();
@@ -87,15 +87,13 @@ export default function SplashScreen({ onDataLoaded }) {
         >
           {/* Logo/App Name */}
           <View style={{
-            marginBottom: 10,
             alignItems: 'center',
           }}>
             <Image
-              source={require('../../../assets/logo/logo-emblem.png')}
+              source={require('../../../assets/logo/SPLASH-01.png')}
               style={{
-                width: 200,
-                height: 200,
-                marginBottom: 10,
+                width: 300,
+                height: 300,
                 resizeMode: 'contain',
               }}
             />

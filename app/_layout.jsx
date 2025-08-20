@@ -4,7 +4,7 @@ import SplashScreenComponent from "@ui/splash-screen";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from "react";
-import { LogBox } from 'react-native';
+import { LogBox, StyleSheet, View } from 'react-native';
 
 // Suppress React Native Web warnings
 if (typeof window !== 'undefined') {
@@ -21,6 +21,13 @@ if (typeof window !== 'undefined') {
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+});
 
 export default function RootLayout() {
   const [isAppReady, setIsAppReady] = useState(false);

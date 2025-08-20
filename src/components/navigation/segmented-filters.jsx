@@ -1,64 +1,99 @@
 import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-
-const defaultOptions = ["pH", "Temp", "TDS", "Salinity"];
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { colors } from "../../constants/colors";
 
 export default function SegmentedFilter({
-  options = defaultOptions,
-  activeFilter,
-  setActiveFilter,
+  options = [],
+  selectedValue,
+  onValueChange,
+  style,
 }) {
+  const getParameterColor = (parameter) => {
+    const parameterColors = {
+      ph: colors.phColor,
+      temperature: colors.tempColor,
+      turbidity: colors.turbidityColor,
+      salinity: colors.salinityColor,
+    };
+    return parameterColors[parameter?.toLowerCase()] || colors.primary;
+  };
+
   return (
-    <View style={{ marginBottom: 16 }}>
-      <View
-        style={{
-          flexDirection: "row",
-          borderWidth: 1,
-          borderColor: "#2455a9",
-          borderRadius: 15,
-          backgroundColor: "#f6fafd",
-          padding: 3,
-        }}
-      >
-        {options.map((filter, index) => {
-          const isActive = activeFilter === filter;
-          return (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setActiveFilter(filter)}
-              style={{
-                flex: 1,
-                backgroundColor: isActive ? "#2455a9" : "transparent",
-                paddingVertical: 10,
-                alignItems: "center",
-                borderRadius: isActive ? 12 : 12,
-                marginHorizontal: isActive ? 2 : 0,
-                // Add a subtle shadow for the active pill (optional)
-                ...(isActive
-                  ? {
-                      shadowColor: "midnightblue",
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 2,
-                      elevation: 4,
-                    }
-                  : {}),
-              }}
-            >
-              <Text
-                style={{
-                  color: isActive ? "#f6fafd" : "#2455a9",
-                  fontWeight: "600",
-                  fontSize: 14,
-                  fontFamily: "Poppins",
-                }}
+    <View style={[styles.container, style]}>
+      {options.map((option, index) => {
+        const isSelected = selectedValue === option.value;
+        const paramColor = getParameterColor(option.value);
+
+        // Handle both text and icon elements
+        const renderLabel = () => {
+          if (React.isValidElement(option.label)) {
+            // For icon elements, clone with selected color
+            return React.cloneElement(option.label, {
+              color: isSelected ? "#FFFFFF" : option.label.props.color,
+            });
+          } else {
+            // For text labels, wrap in Text component
+            return (
+              <Text 
+                style={[
+                  styles.optionText,
+                  isSelected && styles.selectedOptionText
+                ]}
               >
-                {filter}
+                {option.label}
               </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            );
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={option.value}
+            onPress={() => onValueChange(option.value)}
+            style={[
+              styles.option,
+              index === 0 && styles.firstOption,
+              index === options.length - 1 && styles.lastOption,
+              isSelected && { backgroundColor: paramColor },
+            ]}
+          >
+            {renderLabel()}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    backgroundColor: "#f0f8fe",
+    borderRadius: 22,
+    padding: 4,
+    shadowColor: colors.shadow.dark,
+    shadowOffset: { width: 0, height: 2 },
+    borderWidth: 1,
+    borderColor: "#2455a9",
+  },
+  option: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  optionText: {
+    color: colors.text,
+    textAlign: 'center',
+  },
+  selectedOptionText: {
+    color: '#FFFFFF',
+  },
+  firstOption: {
+    marginRight: 2,
+  },
+  lastOption: {
+    marginLeft: 2,
+  },
+});

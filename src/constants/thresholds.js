@@ -4,10 +4,10 @@
  */
 export function getWaterQualityThresholds() {
   return {
-    ph: { min: 6.5, max: 8 },
-    temperature: { min: 24, max: 30 },
-    salinity: { min: 0, max: 35 },
-    tds: { min: 60, max: 90 }
+    pH: { min: 6.5, max: 8.5 },
+    temperature: { min: 26, max: 30 },
+    salinity: { min: 0, max: 5 },
+    turbidity: { min: 0, max: 50 }
   };
 }
 

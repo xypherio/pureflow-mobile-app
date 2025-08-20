@@ -1,21 +1,23 @@
 import ForecastCard from "@data-display/forecast-card";
-import GlobalWrapper from "@ui/global-wrapper";
 import InsightsCard from "@data-display/insights-card";
-import LineChartCard from "@data-display/linechart-card";
+import ForecastDetailModal from "@ui/forecast-detail-modal";
+import GlobalWrapper from "@ui/global-wrapper";
 import PureFlowLogo from "@ui/ui-header";
 import WeatherBanner from "@ui/weather-banner";
 
+import { getMockForecast } from "@services/mockForecastService";
+import React from "react";
 import { ScrollView, Text, View } from "react-native";
 
 export default function HomeScreen() {
-  
   const insights = [
     {
       type: "positive",
       title: "AI Forecast: Optimal Water Quality Maintained",
       description:
         "ML predicts stable conditions for 48h. pH (7.2-7.4), DO (6.8-7.2 mg/L) optimal. No action needed.",
-      suggestion: "Continue current maintenance schedule. Monitor for any sudden changes.",
+      suggestion:
+        "Continue current maintenance schedule. Monitor for any sudden changes.",
       timestamp: "Updated 15 min ago",
     },
     {
@@ -23,7 +25,8 @@ export default function HomeScreen() {
       title: "AI Alert: Potential Turbidity Spike Predicted",
       description:
         "ML detects 23% turbidity increase in 6-8h. 87% accuracy. Recommend filter maintenance.",
-      suggestion: "Schedule filter replacement within 4 hours. Increase monitoring frequency to hourly.",
+      suggestion:
+        "Schedule filter replacement within 4 hours. Increase monitoring frequency to hourly.",
       action: "View AI Analysis",
       timestamp: "Updated 1 hour ago",
     },
@@ -32,20 +35,47 @@ export default function HomeScreen() {
       title: "AI Insights: Seasonal Pattern Detected",
       description:
         "Neural network shows rainfall-conductivity correlation. Monitor salinity during weather events.",
-      suggestion: "Prepare backup filtration systems. Stock up on treatment chemicals.",
+      suggestion:
+        "Prepare backup filtration systems. Stock up on treatment chemicals.",
       action: "View Pattern Analysis",
       timestamp: "Updated 3 hours ago",
     },
-    {
-      type: "warning",
-      title: "AI Warning: pH Drift Pattern Identified",
-      description:
-        "RNN detects pH drift. Predicts drop to 6.8 in 12h. 91% accuracy. Consider pH adjustment.",
-      suggestion: "Add pH buffer solution within 6 hours. Monitor pH every 2 hours.",
-      action: "View Trend Analysis",
-      timestamp: "Updated 6 hours ago",
-    },
   ];
+
+  const [isModalVisible, setIsModalVisible] = React.useState(false);
+  const [selectedParam, setSelectedParam] = React.useState(null);
+  const [forecastDetails, setForecastDetails] = React.useState(null);
+  const [forecastPredicted, setForecastPredicted] = React.useState(null);
+
+  React.useEffect(() => {
+    (async () => {
+      const result = await getMockForecast("6h");
+      setForecastDetails(result.details);
+      setForecastPredicted(result.predicted);
+    })();
+  }, []);
+
+  function openDetails(paramKey) {
+    if (forecastDetails && forecastDetails[paramKey]) {
+      setSelectedParam({ key: paramKey, ...forecastDetails[paramKey] });
+    } else {
+      setSelectedParam({ key: paramKey });
+    }
+    setIsModalVisible(true);
+  }
+
+  function closeDetails() {
+    setIsModalVisible(false);
+  }
+
+  function formatValue(key, value) {
+    if (value === null || value === undefined) return "-";
+    if (key === "pH") return String(value);
+    if (key === "Temperature") return `${value}°C`;
+    if (key === "Turbidity") return `${value} NTU`;
+    if (key === "Salinity") return `${value} ppt`;
+    return String(value);
+  }
 
   return (
     <GlobalWrapper style={{ flex: 1, backgroundColor: "#e6fbff" }}>
@@ -66,24 +96,42 @@ export default function HomeScreen() {
       </View>
 
       {/* Forecast Parameters Section */}
-      <View style={{ marginBottom: 24 }}>
+      <View style={{ marginBottom: 10 }}>
         <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 10 }}>
           Forecast Parameters
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <ForecastCard title="pH" value="7.3" trend="rising" />
-          <ForecastCard title="Temperature" value="29.5°C" trend="falling" />
-          <ForecastCard title="Turbidity" value="12 NTU" trend="rising" />
-          <ForecastCard title="Salinity" value="35 ppt" trend="rising" />
+          <ForecastCard
+            title="pH"
+            value={formatValue("pH", forecastPredicted?.pH)}
+            trend="rising"
+            onPress={() => openDetails("pH")}
+            breachPredicted={!!forecastDetails?.["pH"]?.breachPredicted}
+          />
+          <ForecastCard
+            title="Temperature"
+            value={formatValue("Temperature", forecastPredicted?.Temperature)}
+            trend="falling"
+            onPress={() => openDetails("Temperature")}
+            breachPredicted={
+              !!forecastDetails?.["Temperature"]?.breachPredicted
+            }
+          />
+          <ForecastCard
+            title="Turbidity"
+            value={formatValue("Turbidity", forecastPredicted?.Turbidity)}
+            trend="rising"
+            onPress={() => openDetails("Turbidity")}
+            breachPredicted={!!forecastDetails?.["Turbidity"]?.breachPredicted}
+          />
+          <ForecastCard
+            title="Salinity"
+            value={formatValue("Salinity", forecastPredicted?.Salinity)}
+            trend="rising"
+            onPress={() => openDetails("Salinity")}
+            breachPredicted={!!forecastDetails?.["Salinity"]?.breachPredicted}
+          />
         </ScrollView>
-      </View>
-
-      {/* Forecast Trends Section */}
-      <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: -10 }}>
-          Forecast Trends
-        </Text>
-        <LineChartCard></LineChartCard>
       </View>
 
       {/* Forecast Insights Section */}
@@ -95,7 +143,7 @@ export default function HomeScreen() {
             alignItems: "center",
           }}
         >
-          <Text style={{ fontSize: 12, color: "#1a2d51" }}>
+          <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 5, marginTop: 10 }}>
             Insights & Suggestions
           </Text>
         </View>
@@ -115,6 +163,12 @@ export default function HomeScreen() {
           />
         ))}
       </View>
+
+      <ForecastDetailModal
+        visible={isModalVisible}
+        onClose={closeDetails}
+        param={selectedParam}
+      />
     </GlobalWrapper>
   );
 }

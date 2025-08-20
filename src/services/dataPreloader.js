@@ -1,7 +1,9 @@
-import { fetchAllDocuments, fetchAllDocumentsBackend } from '@services/firebase/firestore.js';
+import { fetchAllDocuments } from '@services/firebase/firestore';
+import { performanceMonitor } from '@utils/performance-monitor.js';
 import { alertManager } from './alertManager.js';
 import { historicalAlertsService } from './historicalAlertsService.js';
-import { performanceMonitor } from '@utils/performance-monitor.js';
+import { notificationEvents } from './pushNotifications.js';
+import { getWaterQualityReport } from './water-quality-status.js';
 
 /**
  * Data preloader service for efficiently loading Firebase data during app startup
@@ -12,6 +14,7 @@ class DataPreloader {
       sensorData: null,
       alerts: null,
       historicalAlerts: null,
+      dailyReport: null,
       lastFetch: null,
     };
     this.isLoading = false;
@@ -34,6 +37,7 @@ class DataPreloader {
         sensorData: this.cache.sensorData,
         alerts: this.cache.alerts,
         historicalAlerts: this.cache.historicalAlerts,
+        dailyReport: this.cache.dailyReport,
         fromCache: true,
       };
     }
@@ -79,17 +83,48 @@ class DataPreloader {
           ),
         ]);
 
+        // Debug: Check the structure of sensor data
+        if (sensorData.length > 0) {
+          console.log('📊 Sensor data sample structure:', Object.keys(sensorData[0]));
+          console.log('📊 Sensor data sample values:', sensorData[0]);
+        }
+
         // Process alerts from sensor data using AlertManager
         const alertResult = await performanceMonitor.measureAsync('processAlerts', () => 
           alertManager.processAlertsFromSensorData(sensorData)
         );
         const alerts = alertResult.alerts;
 
+        // Generate daily report from the preloaded sensor data
+        const dailyReport = await performanceMonitor.measureAsync('generateDailyReport', () =>
+          getWaterQualityReport('daily', sensorData)
+        );
+
+        console.log('📊 Generated daily report:', dailyReport);
+        if (!dailyReport) {
+          console.warn('⚠️ Daily report generation returned null/undefined');
+          console.warn('⚠️ This might indicate an error in getWaterQualityReport');
+        } else {
+          console.log('✅ Daily report generated successfully with:', {
+            wqi: dailyReport.wqi,
+            parametersCount: Object.keys(dailyReport.parameters || {}).length,
+            chartDataPoints: dailyReport.chartData?.datasets?.[0]?.data?.length || 0,
+            chartDataLabels: dailyReport.chartData?.labels?.length || 0
+          });
+          // Notify that a fresh daily report is ready when not from cache
+          try {
+            if (sensorData?.length > 0) {
+              await notificationEvents.dailyReportReady();
+            }
+          } catch {}
+        }
+
         // Update cache
         this.cache = {
           sensorData,
           alerts,
           historicalAlerts: historicalAlertsData,
+          dailyReport,
           lastFetch: Date.now(),
         };
 
@@ -101,6 +136,7 @@ class DataPreloader {
           sensorData,
           alerts,
           historicalAlerts: historicalAlertsData,
+          dailyReport,
           fromCache: false,
         };
       } catch (error) {
@@ -120,6 +156,7 @@ class DataPreloader {
     return {
       sensorData: this.cache.sensorData,
       alerts: this.cache.alerts,
+      dailyReport: this.cache.dailyReport,
       fromCache: true,
     };
   }
@@ -131,6 +168,7 @@ class DataPreloader {
     this.cache = {
       sensorData: null,
       alerts: null,
+      dailyReport: null,
       lastFetch: null,
     };
   }

@@ -1,336 +1,323 @@
-import ExportToggleButton from "@forms/export-toggle-button";
-import GlobalWrapper from "@ui/global-wrapper";
-import InsightsCard from "@data-display/insights-card";
-import LineChartCard from "@data-display/linechart-card";
-import ParameterGridCard from "@data-display/parameter-grid-card";
-import SegmentedFilter from "@navigation/segmented-filters";
-import PureFlowLogo from "@ui/ui-header";
+// app/(tabs)/report.jsx
+import PureFlowLogo from "@components/ui/ui-header";
+import ConclusionCard from "@data-display/conclusion-card";
+import ParameterCard from "@data-display/parameter-card";
 import WaterQualitySummaryCard from "@data-display/water-quality-summary-card";
+import { Ionicons } from "@expo/vector-icons";
+import { useChartData } from "@hooks/useChartData";
+import SegmentedFilter from "@navigation/segmented-filters";
+import GlobalWrapper from "@ui/global-wrapper";
+import {
+  generateWaterQualityReport,
+  prepareChartData,
+} from "@utils/reportUtils";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import ExportToggleButton from "../../src/components/forms/export-toggle-button";
 
-import { format } from 'date-fns';
-import { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+const sectionLabelStyle = {
+  fontSize: 12,
+  color: "#1a2d51",
+  marginBottom: 8,
+};
 
-export default function ReportScreen() {
-  const [activeFilter, setActiveFilter] = useState("Daily");
-  const [chartData, setChartData] = useState(null);
-  const [gridData, setGridData] = useState([]);
-  const [summaryData, setSummaryData] = useState({ qualityLevel: "Good", lastUpdated: "N/A" });
-  const [loading, setLoading] = useState(true);
-  const [sensorData, setSensorData] = useState([]);
+const PARAMETER_CONFIG = {
+  pH: { unit: "", safeRange: "6.5 - 8.5", displayName: "pH" },
+  temperature: {
+    unit: "°C",
+    safeRange: "26 - 30°C",
+    displayName: "Temperature",
+  },
+  salinity: { unit: "ppt", safeRange: "0 - 5 ppt", displayName: "Salinity" },
+  turbidity: { unit: "NTU", safeRange: "0 - 50 NTU", displayName: "Turbidity" },
+};
 
-  const timePeriodOptions = ["Daily", "Weekly", "Monthly", "Annually"];
+const getStatusColor = (status) => {
+  switch (status) {
+    case "critical":
+      return "#ef4444";
+    case "warning":
+      return "#eab308";
+    case "normal":
+    default:
+      return "#22c55e";
+  }
+};
 
-  const insights = [
-    {
-      type: "positive",
-      title: "Water Quality Excellent",
-      description:
-        "All major parameters are within optimal ranges. Your water system is performing well.",
-      timestamp: "2 hours ago",
-    },
-    {
-      type: "warning",
-      title: "Turbidity Slightly Elevated",
-      description:
-        "Turbidity levels are above normal but still within acceptable limits. Consider checking your filtration system.",
-      action: "View Details",
-      timestamp: "4 hours ago",
-    },
-    {
-      type: "info",
-      title: "Weekly Report Available",
-      description:
-        "Your comprehensive weekly water quality report is ready for download.",
-      action: "Download",
-      timestamp: "1 day ago",
-    },
-  ];
+const timePeriodOptions = [
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
+];
 
-  const handleParameterPress = (parameter) => {
-    console.log(`Pressed ${parameter}`);
-  };
+const ReportScreen = () => {
+  const [activeFilter, setActiveFilter] = useState("daily");
+  const [reportData, setReportData] = useState({
+    wqi: { value: 0, status: "normal" },
+    parameters: {},
+    status: "loading",
+    message: "Loading report data...",
+    generatedAt: null,
+  });
+  const [error, setError] = useState(null);
 
-  const handleExportAction = (actionId) => {
-    console.log(`Export action: ${actionId}`);
-  };
+  // Use the useChartData hook to fetch data
+  const {
+    chartData,
+    loading,
+    error: chartError,
+    refreshData,
+  } = useChartData("reports", activeFilter);
 
-  const handleFilterChange = (filter) => {
-    setActiveFilter(filter);
-  };
-
-  // DUMMY DATA FOR DEMO PURPOSES
+  // Process the data when chartData changes
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      // Dummy sensor data
-      const dummySensorData = [
-        {
-          id: "1",
-          ph: 7.2,
-          temperature: 25,
-          tds: 320,
-          salinity: 0.5,
-          timestamp: new Date(),
-        },
-        {
-          id: "2",
-          ph: 7.0,
-          temperature: 26,
-          tds: 310,
-          salinity: 0.4,
-          timestamp: new Date(Date.now() - 3600 * 1000),
-        },
-        {
-          id: "3",
-          ph: 7.5,
-          temperature: 24,
-          tds: 330,
-          salinity: 0.6,
-          timestamp: new Date(Date.now() - 2 * 3600 * 1000),
-        },
-      ];
-      setSensorData(dummySensorData);
-      setLoading(false);
-    }, 800);
-  }, [activeFilter]);
+    if (chartData && chartData.length > 0) {
+      try {
+        console.log("Processing chart data for report:", {
+          dataLength: chartData.length,
+          sampleData: chartData[0],
+        });
 
+        // Generate report using the data from useChartData
+        const report = generateWaterQualityReport(chartData, activeFilter);
+
+        setReportData({
+          ...report,
+          generatedAt: new Date().toISOString(),
+        });
+        setError(null);
+      } catch (err) {
+        console.error("Error generating report:", err);
+        setError({
+          message: "Failed to generate report from chart data",
+          details: err.toString(),
+        });
+      }
+    } else if (chartError) {
+      setError({
+        message: chartError,
+        details: "Failed to fetch chart data",
+      });
+    }
+  }, [chartData, chartError, activeFilter]);
+
+  const onRefresh = useCallback(() => {
+    refreshData();
+  }, [refreshData]);
+
+  // Error handling for the report generation
   useEffect(() => {
-    if (sensorData.length > 0) {
-      processData(sensorData, activeFilter);
-    } else {
-      setChartData(null);
-      setGridData([]);
+    if (error) {
+      setReportData({
+        status: "error",
+        message: error.message,
+        parameters: {},
+        wqi: { value: 0, status: "unknown" },
+        generatedAt: new Date().toISOString(),
+      });
     }
-  }, [sensorData, activeFilter]);
+  }, [error]);
 
-  const processData = (data, filter) => {
-    const chartResult = processChartData(data, filter);
-    setChartData(chartResult);
+  const processedParameters = Object.entries(reportData.parameters || {}).map(
+    ([key, value]) => {
+      const config = PARAMETER_CONFIG[key] || {};
 
-    if (data.length > 0) {
-      const latestData = data[0];
-      const newGridData = [
-        { parameter: "pH", value: latestData.ph, status: getStatus(latestData.ph, "pH") },
-        { parameter: "Temperature", value: latestData.temperature, status: getStatus(latestData.temperature, "Temperature") },
-        { parameter: "TDS", value: latestData.tds, status: getStatus(latestData.tds, "TDS") },
-        { parameter: "Salinity", value: latestData.salinity, status: getStatus(latestData.salinity, "Salinity") },
-      ];
-      setGridData(newGridData);
-      setSummaryData({
-        qualityLevel: getOverallQuality(newGridData),
-        lastUpdated: format(latestData.timestamp, "p, MMM d")
-      })
-    } else {
-      setGridData([]);
-    }
-  };
-
-  const processChartData = (data, filter) => {
-    if (!data || data.length === 0) return null;
-  
-    const getGroupKey = (date, filter) => {
-      switch (filter) {
-        case 'Daily':
-          return format(date, 'HH:00');
-        case 'Weekly':
-          return format(date, 'eeee');
-        case 'Monthly':
-          return format(date, 'dd');
-        case 'Annually':
-          return format(date, 'MMMM');
-        default:
-          return format(date, 'yyyy-MM-dd');
+      // Only try to prepare chart data if the value has data points
+      let chartData = { labels: [], datasets: [{ data: [] }] };
+      try {
+        chartData = prepareChartData(reportData, key);
+      } catch (err) {
+        console.error("Error preparing chart data:", err);
       }
-    };
-  
-    const groupedData = data.reduce((acc, curr) => {
-      const groupKey = getGroupKey(curr.timestamp, filter);
-      if (!acc[groupKey]) {
-        acc[groupKey] = { ph: [], temperature: [], tds: [], salinity: [], count: 0 };
-      }
-      acc[groupKey].ph.push(curr.ph);
-      acc[groupKey].temperature.push(curr.temperature);
-      acc[groupKey].tds.push(curr.tds);
-      acc[groupKey].salinity.push(curr.salinity);
-      acc[groupKey].count++;
-      return acc;
-    }, {});
-  
-    const labels = Object.keys(groupedData);
-    const datasets = [
-      {
-        name: 'pH',
-        data: labels.map(label => average(groupedData[label].ph)),
-        color: (opacity = 1) => `rgba(134, 65, 244, ${opacity})`,
-      },
-      {
-        name: 'Temperature',
-        data: labels.map(label => average(groupedData[label].temperature)),
-        color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`,
-      },
-      {
-        name: 'TDS',
-        data: labels.map(label => average(groupedData[label].tds)),
-        color: (opacity = 1) => `rgba(54, 162, 235, ${opacity})`,
-      },
-      {
-        name: 'Salinity',
-        data: labels.map(label => average(groupedData[label].salinity)),
-        color: (opacity = 1) => `rgba(75, 192, 192, ${opacity})`,
-      },
-    ];
-  
-    return { labels, datasets };
-  };
-  
-  const average = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
-  const getStatus = (value, parameter) => {
-    const thresholds = {
-        pH: { normal: [6.5, 8.5] },
-        Temperature: { normal: [20, 30] },
-        TDS: { normal: [0, 500] },
-        Salinity: { normal: [0, 1] },
-    };
-    const range = thresholds[parameter]?.normal;
-    if (range && value >= range[0] && value <= range[1]) {
-        return "normal";
+      return {
+        parameter: config.displayName || key,
+        value: (value.average || 0).toFixed(2),
+        unit: config.unit || "",
+        safeRange: config.safeRange || "",
+        status: value.status || "normal",
+        analysis: value.trend?.message || "No trend data available",
+        chartData: {
+          labels: chartData?.labels || [],
+          datasets: [
+            {
+              data: chartData?.datasets?.[0]?.data || [],
+              colors: Array(chartData?.datasets?.[0]?.data?.length || 0).fill(
+                (opacity = 1) => getStatusColor(value.status)
+              ),
+            },
+          ],
+        },
+      };
     }
-    return "warning";
-  };
+  );
 
-  const getOverallQuality = (gridData) => {
-    const statuses = gridData.map(d => d.status);
-    if (statuses.some(s => s === 'warning')) return 'Poor';
-    if (statuses.every(s => s === 'normal')) return 'Excellent';
-    return 'Good';
+  // Render loading state
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="mt-4 text-gray-600">Loading report data...</Text>
+      </View>
+    );
+  }
+
+  // Render error state
+  if (reportData.status === "error" || error) {
+    return (
+      <View className="flex-1 items-center justify-center p-6 bg-white">
+        <Ionicons name="warning-outline" size={48} color="#ef4444" />
+        <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">
+          Report Unavailable
+        </Text>
+        <Text className="text-center text-gray-600 mb-6">
+          {error?.message || reportData.message || "Failed to load report data"}
+        </Text>
+        <TouchableOpacity
+          className="bg-blue-500 px-6 py-3 rounded-lg"
+          onPress={onRefresh}
+        >
+          <Text className="text-white font-medium">Try Again</Text>
+        </TouchableOpacity>
+
+        {__DEV__ && error?.details && (
+          <View className="mt-6 p-4 bg-gray-100 rounded-lg w-full">
+            <Text className="text-xs text-gray-500 font-mono">
+              {error.details}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
   }
 
   return (
     <View style={{ flex: 1, position: "relative" }}>
-      <GlobalWrapper style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+      <GlobalWrapper>
+        <PureFlowLogo />
+
+        <SegmentedFilter
+          options={timePeriodOptions}
+          selectedValue={activeFilter}
+          onValueChange={setActiveFilter}
+          style={styles.filter}
+        />
         <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 10 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={onRefresh}
+              colors={["#3b82f6"]}
+            />
+          }
         >
-          <View style={{ alignItems: "flex-start" }}>
-            <PureFlowLogo
-              weather={{
-                label: "Light Rain",
-                temp: "30°C",
-                icon: "partly",
-              }}
-            />
-          </View>
-
-          <View style={{ marginBottom: -5 }}>
-            <SegmentedFilter
-              options={timePeriodOptions}
-              activeFilter={activeFilter}
-              setActiveFilter={handleFilterChange}
-            />
-          </View>
-
-          <View style={{ marginBottom: 5 }}>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={sectionLabelStyle}>Water Quality Summary</Text>
             <WaterQualitySummaryCard
-              qualityLevel={summaryData.qualityLevel}
-              lastUpdated={summaryData.lastUpdated}
+              qualityLevel={reportData.overallStatus || "normal"}
+              lastUpdated={
+                reportData.generatedAt
+                  ? new Date(reportData.generatedAt).toLocaleTimeString()
+                  : "N/A"
+              }
+              parameters={Object.entries(reportData.parameters || {}).map(
+                ([key, value]) => ({
+                  name: key,
+                  value: value.average || 0,
+                  status: value.status || "normal",
+                  unit: PARAMETER_CONFIG[key]?.unit || "",
+                })
+              )}
             />
           </View>
 
-          <View style={{ marginBottom: 24 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: "#1a2d51",
-                  marginTop: 5,
-                  marginBottom: 5,
-                }}
-              >
-                Key Parameters
-              </Text>
-            </View>
-
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
-                rowGap: 12,
-                columnGap: 12,
-              }}
-            >
-              {gridData.length > 0 ? gridData.map((param, index) => (
-                <View
-                  key={index}
-                  style={{
-                    width: "48%",
-                    height: 150,
-                  }}
-                >
-                  <ParameterGridCard
-                    parameter={param.parameter}
-                    value={param.value}
-                    status={param.status}
-                    onPress={() => handleParameterPress(param.parameter)}
-                  />
-                </View>
-              )) : <Text>No data available for this period.</Text>}
-            </View>
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontSize: 12, color: "#1a2d51" }}>
-              Historical Data
-            </Text>
-          </View>
-          <View style={{ marginBottom: 24, marginTop: -10 }}>
-            <LineChartCard data={chartData} loading={loading} />
-          </View>
-
-          <View>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ fontSize: 12, color: "#1a2d51" }}>
-                Insights & Recommendations
-              </Text>
-            </View>
-
-            {insights.map((insight, index) => (
-              <InsightsCard
-                key={index}
-                type={insight.type}
-                title={insight.title}
-                description={insight.description}
-                action={insight.action}
-                onActionPress={() => handleExportAction(insight.action)}
-                timestamp={insight.timestamp}
-              />
+          <View styles={{ marginBottom: 16 }}>
+            <Text style={sectionLabelStyle}>Key Parameters Report</Text>
+            {processedParameters.map((param, index) => (
+              <ParameterCard key={param.parameter} {...param} />
             ))}
+          </View>
+
+          <View style={{ marginBottom: 16, marginTop: 10 }}>
+            <Text style={sectionLabelStyle}>
+              Quality Report and Recommendation
+            </Text>
+            <ConclusionCard
+              status={reportData.overallStatus || "normal"}
+              message={
+                reportData.overallStatus === "critical"
+                  ? "Immediate action required for critical parameters."
+                  : reportData.overallStatus === "warning"
+                  ? "Some parameters require attention."
+                  : "All parameters are within normal ranges."
+              }
+              recommendations={
+                reportData.recommendations || [
+                  "Regularly monitor all parameters",
+                  "Check system for any anomalies",
+                ]
+              }
+            />
           </View>
         </ScrollView>
       </GlobalWrapper>
 
-      <ExportToggleButton onExportAction={handleExportAction} />
+      <ExportToggleButton />
     </View>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  filter: {
+    marginVertical: 16,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  text: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  button: {
+    backgroundColor: "#3b82f6",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  errorDetails: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: "#f8f8f8",
+    borderRadius: 5,
+    width: "100%",
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#666",
+    fontFamily: "monospace",
+  },
+});
+
+export default ReportScreen;

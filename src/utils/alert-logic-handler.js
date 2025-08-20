@@ -53,7 +53,7 @@ export function getAlertsFromSensorData(sensorData) {
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Near Low`,
-        message: `${parameterNames[parameter] || parameter} is close to the minimum safe value.`,
+        message: `${parameterNames[parameter] || parameter} close on minimum safe value.`,
         value,
         threshold: t,
       });
@@ -65,7 +65,7 @@ export function getAlertsFromSensorData(sensorData) {
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Near High`,
-        message: `${parameterNames[parameter] || parameter} is close to the maximum safe value.`,
+        message: `${parameterNames[parameter] || parameter} close on maximum safe value.`,
         value,
         threshold: t,
       });
@@ -76,8 +76,8 @@ export function getAlertsFromSensorData(sensorData) {
       acc.push({
         parameter,
         type: "warning", // YELLOW
-        title: `${parameterNames[parameter] || parameter} Approaching Low`,
-        message: `${parameterNames[parameter] || parameter} is close to the minimum safe value.`,
+        title: `${parameterNames[parameter] || parameter} Dropping`,
+        message: `${parameterNames[parameter] || parameter} near minimum safe value.`,
         value,
         threshold: t,
       });
@@ -89,7 +89,7 @@ export function getAlertsFromSensorData(sensorData) {
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Approaching High`,
-        message: `${parameterNames[parameter] || parameter} is close to the maximum safe value.`,
+        message: `${parameterNames[parameter] || parameter} close on maximum safe value.`,
         value,
         threshold: t,
       });

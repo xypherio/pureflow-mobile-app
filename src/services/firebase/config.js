@@ -27,11 +27,11 @@ export const backendFirebaseConfig = {
 
 // Initialize Firebase apps
 const app = initializeApp(firebaseConfig);
-const backendApp = initializeApp(backendFirebaseConfig, 'backend');
+const backendApp = initializeApp(backendFirebaseConfig, 'datm_data');
 
 // Initialize Firestore instances
 const db = getFirestore(app);
 const backendDb = getFirestore(backendApp);
 
-export { db, backendDb };
+export { backendDb, db };
 

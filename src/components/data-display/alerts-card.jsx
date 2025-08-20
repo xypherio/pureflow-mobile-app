@@ -45,8 +45,8 @@ const typeStyles = {
 export default function AlertsCard({ alerts = [], interval = 4000 }) {
   console.log("alerts", alerts);
   const [current, setCurrent] = useState(0);
-  const [translateXAnim] = useState(new Animated.Value(0));
-  const [opacityAnim] = useState(new Animated.Value(1));
+  const [scaleAnim] = useState(new Animated.Value(1));
+  const [opacityAnim] = useState(new Animated.Value(2));
 
   const hasAlertsWithParameter =
     Array.isArray(alerts) && alerts.some((a) => a && a.parameter);
@@ -69,46 +69,46 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
   useEffect(() => {
     if (displayAlerts.length <= 1) return;
     const timer = setInterval(() => {
-      // Slide left and fade out
+      // Fade/scale out
       Animated.parallel([
-        Animated.timing(translateXAnim, {
-          toValue: -30,
-          duration: 300,
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 220,
           useNativeDriver: false,
-          easing: Easing.out(Easing.ease),
+          easing: Easing.in(Easing.ease),
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 300,
+          duration: 220,
           useNativeDriver: false,
-          easing: Easing.out(Easing.ease),
+          easing: Easing.in(Easing.ease),
         }),
       ]).start(() => {
         setCurrent((prev) => {
           const next = (prev + 1) % displayAlerts.length;
           return isNaN(next) ? 0 : next;
         });
-        // Reset position to right and fade in
-        translateXAnim.setValue(30); // start to the right
+        // Prep for fade/scale in
+        scaleAnim.setValue(1.05);
         opacityAnim.setValue(0);
         Animated.parallel([
-          Animated.timing(translateXAnim, {
-            toValue: 0,
-            duration: 300,
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 260,
             useNativeDriver: false,
-            easing: Easing.in(Easing.ease),
+            easing: Easing.out(Easing.ease),
           }),
           Animated.timing(opacityAnim, {
             toValue: 1,
-            duration: 300,
+            duration: 260,
             useNativeDriver: false,
-            easing: Easing.in(Easing.ease),
+            easing: Easing.out(Easing.ease),
           }),
         ]).start();
       });
     }, interval);
     return () => clearInterval(timer);
-  }, [displayAlerts, interval, translateXAnim, opacityAnim]);
+  }, [displayAlerts, interval, scaleAnim, opacityAnim]);
 
   if (!displayAlerts.length) {
     return null;
@@ -141,14 +141,14 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
     <Animated.View
       style={{
         opacity: opacityAnim,
-        transform: [{ translateX: translateXAnim }],
+        transform: [{ scale: scaleAnim }],
         backgroundColor: style.bg,
         borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 16,
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 16,
+        marginBottom: 10,
         minHeight: 80,
         height: 80,
         ...globalStyles.boxShadow,
@@ -177,9 +177,9 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
       {/* Parameter icon */}
       <View
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 16,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
           backgroundColor: "#fff",
           alignItems: "center",
           justifyContent: "center",
@@ -220,10 +220,6 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
               Normal range: {alert.threshold.min} - {alert.threshold.max}
             </Text>
           )}
-      </View>
-      {/* Severity icon (right) */}
-      <View style={{ marginLeft: 12 }}>
-        <LevelIcon size={22} color={style.iconColor} />
       </View>
     </Animated.View>
   );
