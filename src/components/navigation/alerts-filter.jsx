@@ -1,19 +1,19 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 const parameterFilters = [
-  { label: 'All Parameters', value: 'all' },
-  { label: 'pH', value: 'pH' },
-  { label: 'Temperature', value: 'temperature' },
-  { label: 'Turbidity', value: 'turbidity' },
-  { label: 'Salinity', value: 'salinity' },
+  { label: "All Parameters", value: "all" },
+  { label: "pH", value: "pH" },
+  { label: "Temperature", value: "temperature" },
+  { label: "Turbidity", value: "turbidity" },
+  { label: "Salinity", value: "salinity" },
 ];
 
 const severityFilters = [
-  { label: 'All Alerts', value: 'all' },
-  { label: 'Red Alerts', value: 'error' },
-  { label: 'Warning', value: 'warning' },
-  { label: 'Info', value: 'info' },
-  { label: 'Normal', value: 'normal' },
+  { label: "All Alerts", value: "all" },
+  { label: "Red Alerts", value: "error" },
+  { label: "Warning", value: "warning" },
+  { label: "Info", value: "info" },
+  { label: "Normal", value: "normal" },
 ];
 
 const NotificationFilter = ({
@@ -30,7 +30,7 @@ const NotificationFilter = ({
           key={filter.value}
           onPress={() => onSelect(filter.value)}
           style={{
-            backgroundColor: isActive ? '#2455a9' : '#f3f4f6',
+            backgroundColor: isActive ? "#2455a9" : "#f3f4f6",
             paddingHorizontal: 16,
             paddingVertical: 8,
             borderRadius: 999,
@@ -40,8 +40,8 @@ const NotificationFilter = ({
         >
           <Text
             style={{
-              color: isActive ? '#fff' : '#374151',
-              fontWeight: '500',
+              color: isActive ? "#fff" : "#374151",
+              fontWeight: "500",
             }}
           >
             {filter.label}
@@ -51,7 +51,16 @@ const NotificationFilter = ({
     });
 
   return (
-    <View style={{ marginBottom: 12 }}>
+    <View
+      style={{
+        marginBottom: 12,
+        position: "absolutes",
+        zIndex: 1000,
+        top: 0,
+        left: 0,
+        right: 0,
+      }}
+    >
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {renderPills(parameterFilters, selectedAlert, onSelectAlert)}
       </ScrollView>

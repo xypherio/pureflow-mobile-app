@@ -19,16 +19,21 @@ export function getAlertsFromSensorData(sensorData) {
   const latest = formattedData.at(-1);
   if (!latest || typeof latest !== "object") return [];
 
-  const alerts = Object.entries(thresholds).reduce((acc, [parameter, t]) => {
-    if (!t || typeof t !== "object") return acc;
+  // First collect all parameters that have alerts
+  const alerts = [];
+  const alertedParameters = new Set();
+  
+  Object.entries(thresholds).forEach(([parameter, t]) => {
+    if (!t || typeof t !== "object") return;
     const value = Number(latest[parameter]);
-    if (isNaN(value)) return acc;
+    if (isNaN(value)) return;
 
     const range = t.max - t.min;
     const nearZone = range * 0.05; // 5% of the range
 
     if (t.min !== undefined && value < t.min) {
-      acc.push({
+      alertedParameters.add(parameter);
+      alerts.push({
         parameter,
         type: "error", // RED
         title: `${parameterNames[parameter] || parameter} Low`,
@@ -36,8 +41,9 @@ export function getAlertsFromSensorData(sensorData) {
         value,
         threshold: t,
       });
-    } else if (t.max !== undefined && value > t.max) {
-      acc.push({
+} else if (t.max !== undefined && value > t.max) {
+      alertedParameters.add(parameter);
+      alerts.push({
         parameter,
         type: "error", // RED
         title: `${parameterNames[parameter] || parameter} High`,
@@ -45,11 +51,12 @@ export function getAlertsFromSensorData(sensorData) {
         value,
         threshold: t,
       });
-    } else if (
+} else if (
       t.min !== undefined &&
       value < t.min + nearZone
     ) {
-      acc.push({
+      alertedParameters.add(parameter);
+      alerts.push({
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Near Low`,
@@ -57,11 +64,12 @@ export function getAlertsFromSensorData(sensorData) {
         value,
         threshold: t,
       });
-    } else if (
+} else if (
       t.max !== undefined &&
       value > t.max - nearZone
     ) {
-      acc.push({
+      alertedParameters.add(parameter);
+      alerts.push({
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Near High`,
@@ -69,11 +77,12 @@ export function getAlertsFromSensorData(sensorData) {
         value,
         threshold: t,
       });
-    } else if (
+} else if (
       t.min !== undefined &&
       value < t.min + 2
     ) {
-      acc.push({
+      alertedParameters.add(parameter);
+      alerts.push({
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Dropping`,
@@ -81,11 +90,12 @@ export function getAlertsFromSensorData(sensorData) {
         value,
         threshold: t,
       });
-    } else if (
+} else if (
       t.max !== undefined &&
       value > t.max - 2
     ) {
-      acc.push({
+      alertedParameters.add(parameter);
+      alerts.push({
         parameter,
         type: "warning", // YELLOW
         title: `${parameterNames[parameter] || parameter} Approaching High`,
@@ -93,9 +103,32 @@ export function getAlertsFromSensorData(sensorData) {
         value,
         threshold: t,
       });
+    } else {
+      // For parameters that don't match any alert conditions, add a normal status
+      alerts.push({
+        parameter,
+        type: "normal",
+        title: `${parameterNames[parameter] || parameter} Normal`,
+        message: `${parameterNames[parameter] || parameter} is within normal range.`,
+        value,
+        threshold: t,
+      });
     }
-    return acc;
-  }, []);
+  });
+
+  // Add normal status for parameters that didn't generate any alerts
+  Object.keys(thresholds).forEach(parameter => {
+    if (!alertedParameters.has(parameter)) {
+      alerts.push({
+        parameter,
+        type: "normal",
+        title: `${parameterNames[parameter] || parameter} Normal`,
+        message: `${parameterNames[parameter] || parameter} is within normal range.`,
+        value: latest[parameter],
+        threshold: thresholds[parameter],
+      });
+    }
+  });
 
   if (latest.isRaining === true) {
     alerts.push({

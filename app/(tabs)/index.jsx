@@ -44,82 +44,82 @@ export default function HomeScreen() {
   } = useData();
 
   return (
-    <GlobalWrapper style={globalStyles.pageBackground}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={refreshData}
-            colors={["#4a90e2"]}
-            tintColor="#4a90e2"
-          />
-        }
-      >
-        {/* Header */}
-        <View style={{ marginBottom: 12, position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000 }}>
-          <PureFlowLogo
-            weather={{
-              label: "Light Rain",
-              temp: "30°C",
-              icon: "partly",
-            }}
-          />
-        </View>
+    <>
+      {/* Header */}
+        <PureFlowLogo
+          weather={{
+            label: "Light Rain",
+            temp: "30°C",
+            icon: "partly",
+          }}
+        />
 
-        {/* System Status Section */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={sectionLabelStyle}>System Status</Text>
-          <StatusCard status="Active" battery="Low" />
-        </View>
-
-        {/* Critical Alerts Section */}
-        <View style={{ marginBottom: 12 }}>
-          <Text style={sectionLabelStyle}>Active Alerts</Text>
-          <AlertsCard alerts={getHomepageAlerts()} />
-        </View>
-
-        {/* Real-Time Data Section */}
-        <View style={{ marginBottom: 12 }}>
-          <Text style={sectionLabelStyle}>Real-Time Parameters</Text>
-          <RealTimeData data={sensorData} />
-        </View>
-
-        {/* Historical Trends Section */}
-        <View style={{ marginBottom: 12 }}>
-          <Text style={{ ...sectionLabelStyle, marginBottom: -10 }}>
-            Daily Trends
-          </Text>
-          <LineChartCard />
-        </View>
-
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontSize: 12, color: "#1a2d51" }}>
-              Insights & Recommendations
-            </Text>
+      <GlobalWrapper style={globalStyles.pageBackground}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refreshData}
+              colors={["#4a90e2"]}
+              tintColor="#4a90e2"
+            />
+          }
+        >
+          {/* System Status Section */}
+          <View style={{ marginBottom: 16 }}>
+            <Text style={sectionLabelStyle}>System Status</Text>
+            <StatusCard status="Active" battery="Low" />
           </View>
 
-          {insights.map((insight, index) => (
-            <InsightsCard
-              key={index}
-              type={insight.type}
-              title={insight.title}
-              description={insight.description}
-              action={insight.action}
-              onActionPress={() => handleExportAction(insight.action)}
-              timestamp={insight.timestamp}
-            />
-          ))}
-        </View>
-      </ScrollView>
-    </GlobalWrapper>
+          {/* Critical Alerts Section */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={sectionLabelStyle}>Active Alerts</Text>
+            <AlertsCard alerts={getHomepageAlerts()} />
+          </View>
+
+          {/* Real-Time Data Section */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={sectionLabelStyle}>Real-Time Parameters</Text>
+            <RealTimeData data={sensorData} />
+          </View>
+
+          {/* Historical Trends Section */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ ...sectionLabelStyle, marginBottom: -10 }}>
+              Daily Trends
+            </Text>
+            <LineChartCard />
+          </View>
+
+          <View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 12, color: "#1a2d51" }}>
+                Insights & Recommendations
+              </Text>
+            </View>
+
+            {insights.map((insight, index) => (
+              <InsightsCard
+                key={index}
+                type={insight.type}
+                title={insight.title}
+                description={insight.description}
+                action={insight.action}
+                onActionPress={() => handleExportAction(insight.action)}
+                timestamp={insight.timestamp}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </GlobalWrapper>
+    </>
   );
 }

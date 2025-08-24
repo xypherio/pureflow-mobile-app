@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     backgroundColor: "#f0f8fe",
-    borderRadius: 22,
+    borderRadius: 20,
     padding: 4,
     shadowColor: colors.shadow.dark,
     shadowOffset: { width: 0, height: 2 },
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   option: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -78,97 +78,105 @@ export default function HomeScreen() {
   }
 
   return (
-    <GlobalWrapper style={{ flex: 1, backgroundColor: "#e6fbff" }}>
-      {/* Header */}
-      <View style={{ alignItems: "flex-start" }}>
-        <PureFlowLogo
-          weather={{
-            label: "Light Rain",
-            temp: "30°C",
-            icon: "partly",
-          }}
-        />
-      </View>
+    <>
+      <PureFlowLogo
+        weather={{
+          label: "Light Rain",
+          temp: "30°C",
+          icon: "partly",
+        }}
+      />
 
-      {/* Weather Summary Section */}
-      <View>
-        <WeatherBanner forecast="Light rain expected at 4PM. Humidity: 82%, Temp: 30°C." />
-      </View>
-
-      {/* Forecast Parameters Section */}
-      <View style={{ marginBottom: 10 }}>
-        <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 10 }}>
-          Forecast Parameters
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <ForecastCard
-            title="pH"
-            value={formatValue("pH", forecastPredicted?.pH)}
-            trend="rising"
-            onPress={() => openDetails("pH")}
-            breachPredicted={!!forecastDetails?.["pH"]?.breachPredicted}
-          />
-          <ForecastCard
-            title="Temperature"
-            value={formatValue("Temperature", forecastPredicted?.Temperature)}
-            trend="falling"
-            onPress={() => openDetails("Temperature")}
-            breachPredicted={
-              !!forecastDetails?.["Temperature"]?.breachPredicted
-            }
-          />
-          <ForecastCard
-            title="Turbidity"
-            value={formatValue("Turbidity", forecastPredicted?.Turbidity)}
-            trend="rising"
-            onPress={() => openDetails("Turbidity")}
-            breachPredicted={!!forecastDetails?.["Turbidity"]?.breachPredicted}
-          />
-          <ForecastCard
-            title="Salinity"
-            value={formatValue("Salinity", forecastPredicted?.Salinity)}
-            trend="rising"
-            onPress={() => openDetails("Salinity")}
-            breachPredicted={!!forecastDetails?.["Salinity"]?.breachPredicted}
-          />
-        </ScrollView>
-      </View>
-
-      {/* Forecast Insights Section */}
-      <View>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 5, marginTop: 10 }}>
-            Insights & Suggestions
-          </Text>
+      <GlobalWrapper style={{ flex: 1, backgroundColor: "#e6fbff" }}>
+        {/* Weather Summary Section */}
+        <View>
+          <WeatherBanner forecast="Light rain expected at 4PM. Humidity: 82%, Temp: 30°C." />
         </View>
 
-        {insights.map((insight, index) => (
-          <InsightsCard
-            key={index}
-            type={insight.type}
-            title={insight.title}
-            description={insight.description}
-            suggestion={insight.suggestion}
-            action={insight.action}
-            onActionPress={() => {
-              console.log("button pressed");
-            }}
-            timestamp={insight.timestamp}
-          />
-        ))}
-      </View>
+        {/* Forecast Parameters Section */}
+        <View style={{ marginBottom: 10 }}>
+          <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 10 }}>
+            Forecast Parameters
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ForecastCard
+              title="pH"
+              value={formatValue("pH", forecastPredicted?.pH)}
+              trend="rising"
+              onPress={() => openDetails("pH")}
+              breachPredicted={!!forecastDetails?.["pH"]?.breachPredicted}
+            />
+            <ForecastCard
+              title="Temperature"
+              value={formatValue("Temperature", forecastPredicted?.Temperature)}
+              trend="falling"
+              onPress={() => openDetails("Temperature")}
+              breachPredicted={
+                !!forecastDetails?.["Temperature"]?.breachPredicted
+              }
+            />
+            <ForecastCard
+              title="Turbidity"
+              value={formatValue("Turbidity", forecastPredicted?.Turbidity)}
+              trend="rising"
+              onPress={() => openDetails("Turbidity")}
+              breachPredicted={
+                !!forecastDetails?.["Turbidity"]?.breachPredicted
+              }
+            />
+            <ForecastCard
+              title="Salinity"
+              value={formatValue("Salinity", forecastPredicted?.Salinity)}
+              trend="rising"
+              onPress={() => openDetails("Salinity")}
+              breachPredicted={!!forecastDetails?.["Salinity"]?.breachPredicted}
+            />
+          </ScrollView>
+        </View>
 
-      <ForecastDetailModal
-        visible={isModalVisible}
-        onClose={closeDetails}
-        param={selectedParam}
-      />
-    </GlobalWrapper>
+        {/* Forecast Insights Section */}
+        <View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                color: "#1a2d51",
+                marginBottom: 5,
+                marginTop: 10,
+              }}
+            >
+              Insights & Suggestions
+            </Text>
+          </View>
+
+          {insights.map((insight, index) => (
+            <InsightsCard
+              key={index}
+              type={insight.type}
+              title={insight.title}
+              description={insight.description}
+              suggestion={insight.suggestion}
+              action={insight.action}
+              onActionPress={() => {
+                console.log("button pressed");
+              }}
+              timestamp={insight.timestamp}
+            />
+          ))}
+        </View>
+
+        <ForecastDetailModal
+          visible={isModalVisible}
+          onClose={closeDetails}
+          param={selectedParam}
+        />
+      </GlobalWrapper>
+    </>
   );
 }

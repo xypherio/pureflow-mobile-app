@@ -6,6 +6,7 @@ import WaterQualitySummaryCard from "@data-display/water-quality-summary-card";
 import { Ionicons } from "@expo/vector-icons";
 import { useChartData } from "@hooks/useChartData";
 import SegmentedFilter from "@navigation/segmented-filters";
+import EmptyState from "@ui/empty-state";
 import GlobalWrapper from "@ui/global-wrapper";
 import {
   generateWaterQualityReport,
@@ -77,10 +78,39 @@ const ReportScreen = () => {
     refreshData,
   } = useChartData("reports", activeFilter);
 
-  // Process the data when chartData changes
+  // Debug: Log the raw chart data
   useEffect(() => {
     if (chartData && chartData.length > 0) {
+      console.log('Raw chart data sample:', chartData[0]);
+      console.log('All pH values:', chartData.map(item => ({
+        pH: item.pH,
+        datetime: item.datetime,
+        hasPH: 'pH' in item,
+        keys: Object.keys(item)
+      })));
+    }
+  }, [chartData]);
+
+  // Process the data when chartData changes
+  useEffect(() => {
+    // Only process if we have chartData and we're not already in a loading state
+    if (chartData && !loading) {
       try {
+        if (chartData.length === 0) {
+          console.log('No data available for the selected time period');
+          // Set empty state but keep the tab structure
+          setReportData({
+            wqi: { value: 0, status: "unknown" },
+            parameters: {},
+            status: "empty",
+            message: "No data available for the selected time period",
+            generatedAt: new Date().toISOString(),
+            overallStatus: "unknown"
+          });
+          setError(null);
+          return;
+        }
+
         console.log("Processing chart data for report:", {
           dataLength: chartData.length,
           sampleData: chartData[0],
@@ -88,6 +118,9 @@ const ReportScreen = () => {
 
         // Generate report using the data from useChartData
         const report = generateWaterQualityReport(chartData, activeFilter);
+        
+        console.log("Generated report data:", report);
+        console.log("pH value in report:", report.parameters?.pH || report.parameters?.['pH Value']);
 
         setReportData({
           ...report,
@@ -145,6 +178,8 @@ const ReportScreen = () => {
         safeRange: config.safeRange || "",
         status: value.status || "normal",
         analysis: value.trend?.message || "No trend data available",
+        minValue: value.min,
+        maxValue: value.max,
         chartData: {
           labels: chartData?.labels || [],
           datasets: [
@@ -161,7 +196,7 @@ const ReportScreen = () => {
   );
 
   // Render loading state
-  if (loading) {
+  if (loading || (chartData === null && !error)) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" color="#3b82f6" />
@@ -200,16 +235,23 @@ const ReportScreen = () => {
   }
 
   return (
-    <View style={{ flex: 1, position: "relative" }}>
-      <GlobalWrapper>
-        <PureFlowLogo />
+    <>
+      <PureFlowLogo
+        weather={{
+          label: "Light Rain",
+          temp: "30°C",
+          icon: "partly",
+        }}
+      />
 
-        <SegmentedFilter
-          options={timePeriodOptions}
-          selectedValue={activeFilter}
-          onValueChange={setActiveFilter}
-          style={styles.filter}
-        />
+      <SegmentedFilter
+        options={timePeriodOptions}
+        selectedValue={activeFilter}
+        onValueChange={setActiveFilter}
+        style={styles.filter}
+      />
+
+      <GlobalWrapper>
         <ScrollView
           refreshControl={
             <RefreshControl
@@ -219,65 +261,85 @@ const ReportScreen = () => {
             />
           }
         >
-          <View style={{ marginBottom: 16 }}>
-            <Text style={sectionLabelStyle}>Water Quality Summary</Text>
-            <WaterQualitySummaryCard
-              qualityLevel={reportData.overallStatus || "normal"}
-              lastUpdated={
-                reportData.generatedAt
-                  ? new Date(reportData.generatedAt).toLocaleTimeString()
-                  : "N/A"
-              }
-              parameters={Object.entries(reportData.parameters || {}).map(
-                ([key, value]) => ({
-                  name: key,
-                  value: value.average || 0,
-                  status: value.status || "normal",
-                  unit: PARAMETER_CONFIG[key]?.unit || "",
-                })
-              )}
+          {!loading && chartData && chartData.length === 0 ? (
+            <EmptyState 
+              icon="document-text-outline"
+              title="No Data Available"
+              description="There is no data available to generate the report for the selected time period."
+              buttonText="Try Again"
+              onPress={onRefresh}
+              style={{ marginTop: 60 }}
+              iconSize={50}
             />
-          </View>
+          ) : (
+            <>
+              <View style={{ marginBottom: 16, marginTop: 65 }}>
+                <Text style={sectionLabelStyle}>Water Quality Summary</Text>
+                <WaterQualitySummaryCard
+                  qualityLevel={reportData.overallStatus || "normal"}
+                  lastUpdated={
+                    reportData.generatedAt
+                      ? new Date(reportData.generatedAt).toLocaleTimeString()
+                      : "N/A"
+                  }
+                  parameters={Object.entries(reportData.parameters || {}).map(
+                    ([key, value]) => ({
+                      name: key,
+                      value: value.average || 0,
+                      status: value.status || "normal",
+                      unit: PARAMETER_CONFIG[key]?.unit || "",
+                    })
+                  )}
+                />
+              </View>
 
-          <View styles={{ marginBottom: 16 }}>
-            <Text style={sectionLabelStyle}>Key Parameters Report</Text>
-            {processedParameters.map((param, index) => (
-              <ParameterCard key={param.parameter} {...param} />
-            ))}
-          </View>
+              <View styles={{ marginBottom: 16 }}>
+                <Text style={sectionLabelStyle}>Key Parameters Report</Text>
+                {processedParameters.map((param, index) => (
+                  <ParameterCard key={param.parameter} {...param} />
+                ))}
+              </View>
 
-          <View style={{ marginBottom: 16, marginTop: 10 }}>
-            <Text style={sectionLabelStyle}>
-              Quality Report and Recommendation
-            </Text>
-            <ConclusionCard
-              status={reportData.overallStatus || "normal"}
-              message={
-                reportData.overallStatus === "critical"
-                  ? "Immediate action required for critical parameters."
-                  : reportData.overallStatus === "warning"
-                  ? "Some parameters require attention."
-                  : "All parameters are within normal ranges."
-              }
-              recommendations={
-                reportData.recommendations || [
-                  "Regularly monitor all parameters",
-                  "Check system for any anomalies",
-                ]
-              }
-            />
-          </View>
+              <View style={{ marginBottom: 16, marginTop: 10 }}>
+                <Text style={sectionLabelStyle}>
+                  Quality Report and Recommendation
+                </Text>
+                <ConclusionCard
+                  status={reportData.overallStatus || "normal"}
+                  message={
+                    reportData.overallStatus === "critical"
+                      ? "Immediate action required for critical parameters."
+                      : reportData.overallStatus === "warning"
+                      ? "Some parameters require attention."
+                      : "All parameters are within normal ranges."
+                  }
+                  recommendations={
+                    reportData.recommendations || [
+                      "Regularly monitor all parameters",
+                      "Check system for any anomalies",
+                    ]
+                  }
+                />
+              </View>
+            </>
+          )}
         </ScrollView>
       </GlobalWrapper>
 
       <ExportToggleButton />
-    </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   filter: {
-    marginVertical: 16,
+    marginBottom: 10,
+    margintop: 10,
+    position: "absolute",
+    top: 100,
+    zIndex: 1000,
+    left: 15,
+    right: 15,
   },
   centered: {
     flex: 1,

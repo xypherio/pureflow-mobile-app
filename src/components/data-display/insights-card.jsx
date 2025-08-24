@@ -51,14 +51,9 @@ export default function InsightsCard({
   return (
     <View style={{
       backgroundColor: '#fff',
-      borderRadius: 20,
+      borderRadius: 16,
       padding: 20,
       marginVertical: 5,
-      shadowColor: config.shadowColor,
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 4,
       borderWidth: 1,
       borderColor: config.borderColor,
       position: 'relative',

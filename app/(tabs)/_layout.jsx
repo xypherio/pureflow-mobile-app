@@ -1,4 +1,4 @@
-import { colors, globalStyles } from "@styles/globalStyles";
+import { colors } from "@styles/globalStyles";
 import { Tabs } from "expo-router";
 import { Bell, FileText, Flame, Home } from "lucide-react-native";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -15,8 +15,8 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     backgroundColor: "#fff",
-    borderRadius: 24,
-    height: 72,
+    borderRadius: 20,
+    height: 70,
     position: "absolute",
     left: 0,
     right: 0,
@@ -26,8 +26,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 8,
     paddingLeft: 16,
-    paddingRight: 16,
-    shadowColor: globalStyles.boxShadow,
+    paddingRight: 16
   },
   tabBarLabel: {
     fontSize: 12,
@@ -57,7 +56,7 @@ const _layout = () => {
         tabBarPressOpacity: 1,
         tabBarStyle: [styles.tabBar, { marginBottom: 10 + insets.bottom }],
         tabBarLabelStyle: styles.tabBarLabel,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor:  "#2569d0",
         tabBarInactiveTintColor: colors.textMuted,
         tabBarIcon: ({ color }) => {
           switch (route.name) {

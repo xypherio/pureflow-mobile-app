@@ -1,5 +1,5 @@
 import { globalStyles } from "@styles/globalStyles.js";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -13,6 +13,7 @@ export default function GlobalWrapper({ children, disableScrollView = false }) {
         paddingBottom: 100,
         paddingHorizontal: 16,
         flex: 1,
+        zIndex: 9999,
       }}
     >
       {children}
@@ -25,8 +26,10 @@ export default function GlobalWrapper({ children, disableScrollView = false }) {
         content
       ) : (
         <ScrollView
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
-            paddingTop: insets.top + 0,
+            paddingTop: insets.top + 60,
             paddingBottom: 100,
             paddingHorizontal: 16,
           }}
@@ -35,7 +38,16 @@ export default function GlobalWrapper({ children, disableScrollView = false }) {
         </ScrollView>
       )}
       {/* Subtle bottom gradient overlay */}
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 80, pointerEvents: 'none' }}>
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 80,
+          pointerEvents: "none",
+        }}
+      >
         <LinearGradient
           colors={["transparent", "#c2e3fb"]}
           style={{ flex: 1 }}

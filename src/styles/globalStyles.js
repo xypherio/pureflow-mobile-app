@@ -63,16 +63,6 @@ export const globalStyles = StyleSheet.create({
     resizeMode: "contain",
   },
 
-  // Shadows
-    boxShadow: {
-    shadowColor: "#2569d0",
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 5,
-    zIndex: 1000,
-  },
-
   // Typography
   text: {
     color: colors.text,

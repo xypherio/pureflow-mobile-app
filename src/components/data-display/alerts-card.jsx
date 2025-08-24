@@ -152,7 +152,7 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
         minHeight: 80,
         height: 80,
         ...globalStyles.boxShadow,
-        position: "relative",
+        position: "relative" // Ensure it appears above other elements
       }}
     >
       {/* Color indicator bar */}

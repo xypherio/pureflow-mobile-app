@@ -35,10 +35,10 @@ const QUALITY_LEVELS = {
 };
 
 const PARAMETER_ICONS = {
-  pH: Droplet,
+  pH: Gauge,
   temperature: Thermometer,
   salinity: Waves,
-  turbidity: Gauge,
+  turbidity: Droplet,
 };
 
 const getStatusColor = (status) =>

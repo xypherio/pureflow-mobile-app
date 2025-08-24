@@ -48,11 +48,41 @@ export const aggregateData = (readings, timeRange = 'daily') => {
   const groups = {};
   
   // Process each reading into time-based groups
-  validReadings.forEach(reading => {
+  validReadings.forEach((reading, index) => {
     try {
-      const date = new Date(reading.datetime);
+      // Log the raw reading before any processing
+      if (index < 3) {
+        console.log(`Raw reading ${index}:`, JSON.parse(JSON.stringify(reading)));
+      }
+      
+      // Normalize parameter names in the reading
+      const normalizedReading = { ...reading };
+      
+      // Handle case-insensitive parameter names
+      const paramMap = {
+        'ph': 'pH',
+        'temp': 'temperature',
+        'sal': 'salinity',
+        'turb': 'turbidity'
+      };
+      
+      // Normalize all parameter names to match our expected format
+      Object.keys(reading).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        if (paramMap[lowerKey] && key !== paramMap[lowerKey]) {
+          normalizedReading[paramMap[lowerKey]] = reading[key];
+          delete normalizedReading[key];
+        }
+      });
+      
+      // Debug: Log pH value for first few readings
+      if (index < 3) {
+        console.log(`Reading ${index} - pH:`, normalizedReading.pH, 'keys:', Object.keys(normalizedReading));
+      }
+      
+      const date = new Date(normalizedReading.datetime);
       if (isNaN(date.getTime())) {
-        console.log('Invalid date in reading:', reading);
+        console.log('Invalid date in reading:', normalizedReading);
         return;
       }
       
@@ -64,15 +94,39 @@ export const aggregateData = (readings, timeRange = 'daily') => {
           temperature: [],
           salinity: [],
           turbidity: [],
-          timestamp: date.getTime()
+          count: 0
         };
       }
       
-      // Add each parameter if it exists
-      if (reading.pH !== undefined) groups[timeKey].pH.push(Number(reading.pH));
-      if (reading.temperature !== undefined) groups[timeKey].temperature.push(Number(reading.temperature));
-      if (reading.salinity !== undefined) groups[timeKey].salinity.push(Number(reading.salinity));
-      if (reading.turbidity !== undefined) groups[timeKey].turbidity.push(Number(reading.turbidity));
+      // Add parameter values to their respective arrays using normalized reading
+      ['pH', 'temperature', 'salinity', 'turbidity'].forEach(param => {
+        const value = normalizedReading[param];
+        const isValid = typeof value === 'number' && !isNaN(value);
+        
+        if (isValid) {
+          groups[timeKey][param].push(value);
+          
+          // Log the first few values being added to each group
+          if (index < 3) {
+            console.log(`Adding to ${timeKey}.${param}:`, {
+              value: value,
+              type: typeof value,
+              isFinite: Number.isFinite(value),
+              sourceValue: reading[param] // Original value before normalization
+            });
+          }
+        } else if (index < 3) {
+          console.log(`Skipping ${param} (invalid value):`, {
+            value: value,
+            type: typeof value,
+            inReading: param in normalizedReading,
+            originalValue: reading[param],
+            originalKeys: Object.keys(reading)
+          });
+        }
+      });
+      
+      groups[timeKey].count++;
       
     } catch (error) {
       console.error('Error processing reading:', error, reading);
@@ -81,6 +135,31 @@ export const aggregateData = (readings, timeRange = 'daily') => {
   
   console.log('Groups after processing:', Object.keys(groups).length);
   
+  // Log the final groups structure
+  console.log('Final groups structure:');
+  Object.entries(groups).forEach(([timeKey, groupData]) => {
+    console.log(`Group ${timeKey}:`, {
+      count: groupData.count,
+      pH: {
+        count: groupData.pH.length,
+        firstFew: groupData.pH.slice(0, 3),
+        hasNaN: groupData.pH.some(isNaN)
+      },
+      temperature: {
+        count: groupData.temperature.length,
+        firstFew: groupData.temperature.slice(0, 3)
+      },
+      salinity: {
+        count: groupData.salinity.length,
+        firstFew: groupData.salinity.slice(0, 3)
+      },
+      turbidity: {
+        count: groupData.turbidity.length,
+        firstFew: groupData.turbidity.slice(0, 3)
+      }
+    });
+  });
+
   // Convert groups to array and sort by timestamp
   const sortedGroups = Object.entries(groups)
     .map(([key, data]) => ({
@@ -168,9 +247,11 @@ const formatDateKey = (date, timeRange) => {
  */
 const evaluateParameter = (parameter, value) => {
   const thresholds = getWaterQualityThresholds();
-  const paramThresholds = thresholds[parameter.toLowerCase()];
+  // Handle case sensitivity - try exact match first, then lowercase
+  const paramThresholds = thresholds[parameter] || thresholds[parameter.toLowerCase()];
   
   if (!paramThresholds) {
+    console.warn(`No thresholds found for parameter: ${parameter}. Available parameters:`, Object.keys(thresholds));
     return {
       status: 'unknown',
       message: 'No thresholds defined for this parameter'
@@ -268,6 +349,20 @@ export const generateWaterQualityReport = (readings, timeRange = 'weekly') => {
 
   // Filter out invalid readings
   const validReadings = readings.filter(r => r && r.datetime);
+  
+  // Log first few readings to check pH values
+  console.log('First 3 readings with pH values:');
+  validReadings.slice(0, 3).forEach((reading, i) => {
+    console.log(`Reading ${i + 1}:`, {
+      datetime: reading.datetime,
+      pH: reading.pH,
+      ph: reading.ph, // Check for lowercase 'ph'
+      allKeys: Object.keys(reading),
+      hasPH: 'pH' in reading,
+      has_ph: 'ph' in reading
+    });
+  });
+  
   if (validReadings.length === 0) {
     console.log('No valid readings with datetime found');
     return {
@@ -283,14 +378,28 @@ export const generateWaterQualityReport = (readings, timeRange = 'weekly') => {
   console.log(`Processing ${validReadings.length} valid readings`);
   
   // Aggregate data for the time period
+  console.log('Starting data aggregation...');
   const aggregatedData = aggregateData(validReadings, timeRange);
+  
+  // Log the first few aggregated data points
+  if (aggregatedData?.labels?.length > 0) {
+    console.log('First 3 aggregated data points:');
+    const paramKeys = Object.keys(aggregatedData.datasets || {});
+    paramKeys.forEach(param => {
+      console.log(`Parameter '${param}':`, {
+        values: aggregatedData.datasets[param]?.slice(0, 3) || [],
+        count: aggregatedData.datasets[param]?.length || 0,
+        hasNaN: aggregatedData.datasets[param]?.some(isNaN) || false
+      });
+    });
+  }
   
   // Check if we have any data after aggregation
   if (!aggregatedData || !aggregatedData.labels || aggregatedData.labels.length === 0) {
     console.log('No data after aggregation');
     return {
       status: 'error',
-      message: 'Could not aggregate data for the selected time period',
+      message: 'No data available after aggregation',
       parameters: {},
       overallStatus: 'unknown',
       recommendations: [],
@@ -302,15 +411,65 @@ export const generateWaterQualityReport = (readings, timeRange = 'weekly') => {
   
   // Analyze each parameter
   const parameters = ['pH', 'temperature', 'salinity', 'turbidity'].reduce((acc, param) => {
-    const values = aggregatedData.datasets[param.toLowerCase()] || [];
-    const avgValue = values.length > 0 
-      ? parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2))
-      : 0;
+    // Handle case-insensitive parameter access
+    const paramLower = param.toLowerCase();
+    const paramKey = Object.keys(aggregatedData.datasets).find(
+      key => key.toLowerCase() === paramLower
+    ) || paramLower; // Fallback to lowercase if not found
     
-    const evaluation = evaluateParameter(param, avgValue);
+    const displayName = param; // Keep original for display
+    
+    // Debug: Log all available dataset keys and their types
+    console.log('Available dataset keys:', Object.entries(aggregatedData.datasets).map(([key, values]) => ({
+      key,
+      type: Array.isArray(values) ? 'array' : typeof values,
+      length: Array.isArray(values) ? values.length : 'N/A'
+    })));
+    
+    // Get values with case-insensitive access
+    const values = Array.isArray(aggregatedData.datasets[paramKey]) 
+      ? aggregatedData.datasets[paramKey] 
+      : [];
+    
+    // Filter out invalid values
+    const validValues = values
+      .map(v => {
+        const num = parseFloat(v);
+        return isNaN(num) ? null : num;
+      })
+      .filter(v => v !== null);
+    
+    console.log(`Processing ${displayName} (key: ${paramKey}):`, {
+      values: validValues,
+      valuesLength: validValues.length,
+      firstFew: validValues.slice(0, 3),
+      hasNaN: validValues.some(isNaN),
+      hasNull: validValues.some(v => v === null || v === undefined)
+    });
+    
+    // Log detailed info about the first few values
+    if (validValues.length > 0) {
+      console.log(`Detailed values for ${displayName}:`, validValues.slice(0, 5).map((v, i) => ({
+        index: i,
+        value: v,
+        type: typeof v,
+        isNumber: typeof v === 'number',
+        isFinite: Number.isFinite(v),
+        isNaN: isNaN(v)
+      })));
+    }
+    
+    const avgValue = validValues.length > 0 
+      ? parseFloat((validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2))
+      : 0;
+      
+    console.log(`Calculated average for ${displayName}:`, avgValue);
+    
+    const evaluation = evaluateParameter(displayName, avgValue);
     const trend = analyzeTrend(values, aggregatedData.labels);
     
-    acc[param] = {
+    // Use the original parameter name as the key in the result
+    acc[displayName] = {
       average: avgValue,
       status: evaluation.status,
       trend: {
@@ -369,6 +528,14 @@ export const generateWaterQualityReport = (readings, timeRange = 'weekly') => {
   if (parameters.temperature.trend.direction === 'increasing' && parameters.temperature.average > 28) {
     recommendations.push('Consider cooling measures as temperature is trending up');
   }
+
+  // Debug log the final parameters
+  console.log('Final parameters before returning report:', {
+    pH: parameters.pH,
+    temperature: parameters.temperature,
+    salinity: parameters.salinity,
+    turbidity: parameters.turbidity
+  });
 
   return {
     status: 'success',

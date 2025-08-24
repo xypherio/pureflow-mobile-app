@@ -84,34 +84,96 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
     }
   }, []);
 
+  // Helper function to validate if a date is within the specified range
+  const isDateInRange = (date, rangeStart, rangeEnd) => {
+    const dateTime = new Date(date).getTime();
+    return dateTime >= rangeStart.getTime() && dateTime <= rangeEnd.getTime();
+  };
+
   // Fetch data for reports tab (aggregated based on time filter)
   const fetchReportsData = useCallback(async (filter) => {
+    console.log('📅 Fetching reports data with filter:', filter);
+    
     try {
       setLoading(true);
+      setChartData([]); // Clear previous data immediately
+      
       const { startDate, endDate } = historicalDataService.getDateRange(filter);
-      const data = await historicalDataService.getAggregatedData(filter, startDate, endDate);
+      console.log('📅 Date range:', { 
+        filter, 
+        startDate: startDate.toISOString(), 
+        endDate: endDate.toISOString() 
+      });
+      
+      // Clear any existing cache for this filter to ensure fresh data
+      historicalDataService.clearCacheForFilter(filter);
+      
+      let data = await historicalDataService.getAggregatedData(filter, startDate, endDate);
+      
+      // Filter data to ensure it's within the selected time range
+      data = data.filter(item => {
+        if (!item || !item.datetime) return false;
+        const itemDate = new Date(item.datetime);
+        return isDateInRange(itemDate, startDate, endDate);
+      });
+      
+      // Sort data by datetime to ensure proper ordering
+      data.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+      
+      console.log('📊 Filtered data:', {
+        originalCount: data.length,
+        filteredCount: data.length,
+        dateRange: {
+          firstDate: data[0]?.datetime,
+          lastDate: data[data.length - 1]?.datetime
+        },
+        timeFilter: filter
+      });
+      
+      if (data.length === 0) {
+        console.warn('⚠️ No data found within the specified date range');
+      }
       
       setChartData(data);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
-      console.error('Error fetching reports data:', err);
-      setError('Failed to fetch data. Showing cached data if available.');
+      console.error('❌ Error in fetchReportsData:', {
+        error: err.message,
+        stack: err.stack,
+        filter
+      });
+      
+      setError('Failed to fetch fresh data. Attempting to use cached data...');
+      
       // Try to get cached data
       try {
+        console.log('🔄 Attempting to get cached data...');
         const { startDate, endDate } = historicalDataService.getDateRange(filter);
-        const cachedData = await historicalDataService.getAggregatedData(filter, startDate, endDate);
+        const cachedData = await historicalDataService.getAggregatedData(filter, startDate, endDate, true);
+        
+        console.log('📦 Cached data retrieved:', {
+          cachedCount: cachedData.length,
+          firstCachedItem: cachedData[0]
+        });
+        
         if (cachedData.length > 0) {
           setChartData(cachedData);
           setLastUpdated(new Date());
+        } else {
+          console.log('⚠️ No cached data available for filter:', filter);
         }
       } catch (cacheErr) {
-        console.error('Cache fallback failed:', cacheErr);
+        console.error('❌ Cache fallback failed:', {
+          error: cacheErr.message,
+          stack: cacheErr.stack
+        });
       }
     } finally {
       setLoading(false);
+      console.log('🏁 fetchReportsData completed for filter:', filter);
     }
-  }, []);
+  }, [timeFilter]); // Add timeFilter to dependency array
 
   // Refresh data
   const refreshData = useCallback(() => {

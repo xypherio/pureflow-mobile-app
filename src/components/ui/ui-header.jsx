@@ -18,11 +18,15 @@ export default function PureFlowLogo({
   return (
     <View
       style={{
+        position: "absolute",
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         width: "100%",
-        paddingHorizontal: 8,
+        paddingHorizontal: 15,
+        paddingTop: 23,
+        backgroundColor: "#e5f0f9",
+        zIndex: 9999,
       }}
     >
       {/* PureFlow Logo */}
@@ -35,7 +39,9 @@ export default function PureFlowLogo({
 
       {/* Weather Info */}
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {weatherIconMap[weather.icon] || <CloudRain size={24} color="#3b82f6" />}
+        {weatherIconMap[weather.icon] || (
+          <CloudRain size={24} color="#3b82f6" />
+        )}
         <View style={{ marginLeft: 8 }}>
           <Text style={{ fontSize: 12, fontWeight: "600", color: "#1e293b" }}>
             {weather.label}

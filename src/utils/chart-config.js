@@ -43,10 +43,10 @@ export const getChartDatasetConfig = (parameter) => ({
 });
 
 export const getParameterOptions = () => [
-  { label: <Gauge size={24} color={'#007bff'} />, value: 'pH' },
-  { label: <Thermometer size={24} color={'#e83e8c'} />, value: 'temperature' },
-  { label: <Waves size={24} color={'#28a745'} />, value: 'turbidity' },
-  { label: <Droplet size={24} color={'#8b5cf6'} />, value: 'salinity' }
+  { label: <Gauge size={20} color={'#007bff'} />, value: 'pH' },
+  { label: <Thermometer size={20} color={'#e83e8c'} />, value: 'temperature' },
+  { label: <Waves size={20} color={'#28a745'} />, value: 'turbidity' },
+  { label: <Droplet size={20} color={'#8b5cf6'} />, value: 'salinity' }
 ];
 
 export const CHART_PARAMETERS = ["pH", "temperature", "turbidity", "salinity"];

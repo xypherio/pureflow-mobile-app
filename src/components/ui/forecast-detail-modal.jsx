@@ -1,13 +1,13 @@
 import {
-    AlertCircle,
-    Droplet,
-    Filter,
-    Layers,
-    Shuffle,
-    Sun,
-    Thermometer,
-    Waves,
-    Wind,
+  AlertCircle,
+  Droplet,
+  Filter,
+  Layers,
+  Shuffle,
+  Sun,
+  Thermometer,
+  Waves,
+  Wind,
 } from "lucide-react-native";
 import React from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
@@ -77,7 +77,7 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
                   marginBottom: 12,
                 }}
               >
-                <Text style={{ fontSize: 18, fontWeight: "700", color: "#1a2d51" }}>
+                <Text style={{ fontSize: 18, fontWeight: "700", color: "#1a2d51", justifyContent: "center" }}>
                   {param?.key} Forecast Details
                 </Text>
               </View>

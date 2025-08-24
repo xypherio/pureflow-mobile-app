@@ -86,15 +86,21 @@ class HistoricalAlertsService {
     let filteredAlerts = alerts;
     
     if (filterType && filterType !== 'all') {
-      filteredAlerts = filteredAlerts.filter(alert => alert.type === filterType);
+      filteredAlerts = filteredAlerts.filter(alert => 
+        alert.type && alert.type.toLowerCase() === filterType.toLowerCase()
+      );
     }
     
     if (filterSeverity && filterSeverity !== 'all') {
-      filteredAlerts = filteredAlerts.filter(alert => alert.severity === filterSeverity);
+      filteredAlerts = filteredAlerts.filter(alert => 
+        alert.severity && alert.severity.toLowerCase() === filterSeverity.toLowerCase()
+      );
     }
     
     if (filterParameter && filterParameter !== 'all') {
-      filteredAlerts = filteredAlerts.filter(alert => alert.parameter === filterParameter);
+      filteredAlerts = filteredAlerts.filter(alert => 
+        alert.parameter && alert.parameter.toLowerCase() === filterParameter.toLowerCase()
+      );
     }
     
     // Remove duplicates by alert signature (parameter + type + title + value)

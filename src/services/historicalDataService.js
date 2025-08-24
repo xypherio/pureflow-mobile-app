@@ -81,6 +81,12 @@ class HistoricalDataService {
       const data = [];
       let processedCount = 0;
       
+      // Log all field names from the first document
+      if (!querySnapshot.empty) {
+        const firstDoc = querySnapshot.docs[0].data();
+        console.log('📋 Document fields in Firestore:', Object.keys(firstDoc));
+      }
+      
       querySnapshot.forEach((doc) => {
         const docData = doc.data();
         const processedDoc = {
@@ -98,6 +104,7 @@ class HistoricalDataService {
             id: doc.id,
             datetime: processedDoc.datetime,
             pH: docData.pH,
+            ph: docData.ph, // Check for lowercase 'ph' as well
             temperature: docData.temperature,
             turbidity: docData.turbidity,
             salinity: docData.salinity
@@ -334,6 +341,18 @@ class HistoricalDataService {
     
     const aggregated = {};
     const parameters = ['pH', 'temperature', 'turbidity', 'salinity'];
+    
+    // Log the first few readings to check field names
+    if (data.length > 0) {
+      console.log('Sample reading fields:', Object.keys(data[0]));
+      console.log('First reading values:', {
+        pH: data[0].pH,
+        ph: data[0].ph, // Check for lowercase 'ph'
+        hasPH: 'pH' in data[0],
+        has_ph: 'ph' in data[0],
+        allKeys: Object.keys(data[0])
+      });
+    }
 
     data.forEach((reading, index) => {
       const date = new Date(reading.datetime);
@@ -353,11 +372,29 @@ class HistoricalDataService {
       }
 
       parameters.forEach(param => {
-        if (reading[param] !== undefined && reading[param] !== null) {
-          aggregated[key][param].sum += reading[param];
-          aggregated[key][param].count += 1;
+        // Handle case-insensitive parameter access
+        const paramLower = param.toLowerCase();
+        const value = reading[param] !== undefined ? reading[param] : 
+                     (reading[paramLower] !== undefined ? reading[paramLower] : null);
+        
+        if (value !== null && value !== undefined && !isNaN(parseFloat(value))) {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue)) {
+            aggregated[key][param].sum += numValue;
+            aggregated[key][param].count += 1;
+            
+            // Debug log for first few pH values
+            if (param === 'pH' && index < 3) {
+              console.log(`pH value at ${reading.datetime}:`, {
+                originalValue: reading[param] || reading[paramLower],
+                normalizedValue: numValue,
+                readingKeys: Object.keys(reading)
+              });
+            }
+          }
         }
       });
+      
       aggregated[key].count += 1;
     });
 
@@ -459,42 +496,78 @@ class HistoricalDataService {
   getDateRange(timeFilter) {
     const now = new Date();
     let startDate, endDate;
+    
+    // Ensure we're working with the correct timezone
+    const userTimezoneOffset = now.getTimezoneOffset() * 60000;
+    const localNow = new Date(now - userTimezoneOffset);
+    
+    console.log('🔄 Calculating date range for filter:', timeFilter, {
+      currentLocalTime: localNow.toISOString(),
+      timezoneOffset: now.getTimezoneOffset() / 60
+    });
 
     switch (timeFilter) {
       case 'daily':
-        startDate = new Date(now);
+        // For daily, get today's data in local timezone
+        startDate = new Date(localNow);
         startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now);
+        endDate = new Date(localNow);
         endDate.setHours(23, 59, 59, 999);
         break;
+        
       case 'weekly':
-        startDate = new Date(now);
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday = 1, Sunday = 0
+        // For weekly, get current week (Monday to Sunday)
+        startDate = new Date(localNow);
+        const day = startDate.getDay();
+        const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
         startDate.setDate(diff);
         startDate.setHours(0, 0, 0, 0);
+        
         endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6);
+        endDate.setDate(startDate.getDate() + 6); // End on Sunday
         endDate.setHours(23, 59, 59, 999);
         break;
+        
       case 'monthly':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      case 'annually':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        endDate = new Date(now.getFullYear(), 11, 31);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      default:
-        startDate = new Date(now);
+        // For monthly, get current month
+        startDate = new Date(localNow.getFullYear(), localNow.getMonth(), 1);
         startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now);
+        
+        endDate = new Date(localNow.getFullYear(), localNow.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+        
+      case 'annually':
+        // For annually, get current year
+        startDate = new Date(localNow.getFullYear(), 0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        
+        endDate = new Date(localNow.getFullYear(), 11, 31);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+        
+      default:
+        // Default to today
+        startDate = new Date(localNow);
+        startDate.setHours(0, 0, 0, 0);
+        
+        endDate = new Date(localNow);
         endDate.setHours(23, 59, 59, 999);
     }
+    
+    // Log the calculated date range
+    console.log('📅 Calculated date range:', {
+      filter: timeFilter,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      startLocal: startDate.toString(),
+      endLocal: endDate.toString()
+    });
 
-    return { startDate, endDate };
+    return { 
+      startDate: new Date(startDate), // Ensure we return new instances
+      endDate: new Date(endDate)      // to prevent reference issues
+    };
   }
 
   // Clear expired cache entries
@@ -531,6 +604,26 @@ class HistoricalDataService {
     });
   }
 
+  // Clear cache entries for a specific filter
+  clearCacheForFilter(filter) {
+    let clearedCount = 0;
+    const filterPrefix = `aggregated_${filter}_`;
+    
+    // Create a new iterator to avoid modifying the map during iteration
+    const entries = Array.from(this.cache.entries());
+    
+    for (const [key] of entries) {
+      if (key.startsWith(filterPrefix)) {
+        this.cache.delete(key);
+        clearedCount++;
+      }
+    }
+    
+    if (clearedCount > 0) {
+      console.log(`🧹 Cleared ${clearedCount} cache entries for filter: ${filter}`);
+    }
+  }
+  
   // Clear all cache
   clearCache() {
     const beforeSize = this.cache.size;
