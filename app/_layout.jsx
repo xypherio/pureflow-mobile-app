@@ -3,8 +3,9 @@ import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } fr
 import SplashScreenComponent from "@ui/splash-screen";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from "react";
-import { LogBox, StyleSheet, View } from 'react-native';
+import { useEffect, useState, useRef } from "react";
+import { LogBox, StyleSheet, View, Platform } from 'react-native';
+import { configureNotifications, requestNotificationPermissions, getExpoPushToken } from '../src/services/notificationSetup';
 
 // Suppress React Native Web warnings
 if (typeof window !== 'undefined') {
@@ -32,6 +33,8 @@ const styles = StyleSheet.create({
 export default function RootLayout() {
   const [isAppReady, setIsAppReady] = useState(false);
   const [preloadedData, setPreloadedData] = useState(null);
+  const notificationListener = useRef();
+  const responseListener = useRef();
   
   // Load fonts
   const [fontsLoaded] = useFonts({
@@ -41,9 +44,55 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    // Set up notifications
+    const setupNotifications = async () => {
+      try {
+        await configureNotifications();
+        await requestNotificationPermissions();
+        
+        if (Platform.OS !== 'web') {
+          const token = await getExpoPushToken();
+          console.log('Expo Push Token:', token);
+          // TODO: Send this token to your server for push notifications
+        }
+        
+        // Listen for incoming notifications while the app is in the foreground
+        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+          console.log('Notification received:', notification);
+        });
+        
+        // Handle user interaction with notifications
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+          console.log('Notification response:', response);
+          // Handle notification tap here
+        });
+        
+        // Check if the app was opened from a notification
+        const initialNotification = await Notifications.getLastNotificationResponseAsync();
+        if (initialNotification) {
+          console.log('App opened from notification:', initialNotification);
+          // Handle initial notification here
+        }
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
+      }
+    };
+    
+    // Hide splash screen when fonts are loaded
     if (fontsLoaded) {
+      setupNotifications();
       SplashScreen.hideAsync();
     }
+    
+    // Clean up listeners on unmount
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
   }, [fontsLoaded]);
 
   const handleDataLoaded = async (data) => {

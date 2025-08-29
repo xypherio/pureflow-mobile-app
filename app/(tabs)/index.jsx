@@ -1,12 +1,14 @@
+import { listenToForegroundMessages, listenToBackgroundMessages, requestUserPermission } from "@/services/pushNotifications";
+import { globalStyles } from "@/styles/globalStyles";
 import { useData } from "@contexts/DataContext";
 import AlertsCard from "@data-display/alerts-card";
 import InsightsCard from "@data-display/insights-card";
 import LineChartCard from "@data-display/linechart-card";
 import RealTimeData from "@data-display/realtime-data-cards";
-import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/device-status-card.jsx";
 import GlobalWrapper from "@ui/global-wrapper";
 import PureFlowLogo from "@ui/ui-header";
+import { useEffect } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 
 const sectionLabelStyle = {
@@ -42,6 +44,48 @@ export default function HomeScreen() {
     lastUpdate,
     getHomepageAlerts,
   } = useData();
+
+  useEffect(() => {
+    // Initialize Firebase and notifications
+    const setupNotifications = async () => {
+      try {
+        // Request notification permissions
+        const hasPermission = await requestUserPermission();
+        
+        if (hasPermission) {
+          console.log('Notification permissions granted');
+          
+          // Get FCM token (you'll need to pass the current user's ID)
+          // const fcmToken = await getFcmToken(currentUserId);
+          // console.log('FCM Token:', fcmToken);
+          
+          // Set up message listeners
+          const unsubscribeForeground = listenToForegroundMessages();
+          listenToBackgroundMessages();
+          
+          return () => {
+            if (unsubscribeForeground && typeof unsubscribeForeground === 'function') {
+              unsubscribeForeground();
+            }
+          };
+        } else {
+          console.log('Notification permissions denied');
+        }
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
+      }
+    };
+    
+    // Call the setup function
+    const cleanup = setupNotifications();
+    
+    // Cleanup function
+    return () => {
+      if (cleanup && typeof cleanup.then === 'function') {
+        cleanup.then(fn => fn && fn());
+      }
+    };
+  }, []);
 
   return (
     <>

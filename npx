@@ -1,0 +1,27 @@
+Installing 1 SDK 53.0.0 compatible native module and 3 other packages using npm.
+> npm install
+
+added 4 packages, and audited 1346 packages in 6s
+
+223 packages are looking for funding
+  run `npm fund` for details
+
+1 low severity vulnerability
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.
+> npm install --save @react-native-firebase/app @react-native-firebase/auth @react-native-firebase/messaging
+
+up to date, audited 1346 packages in 6s
+
+223 packages are looking for funding
+  run `npm fund` for details
+
+1 low severity vulnerability
+
+To address all issues, run:
+  npm audit fix
+
+Run `npm audit` for details.

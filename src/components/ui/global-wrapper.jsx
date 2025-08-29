@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function GlobalWrapper({ children, disableScrollView = false }) {
+export default function GlobalWrapper({ children, disableScrollView = false, style }) {
   const insets = useSafeAreaInsets();
 
   const content = (
@@ -21,7 +21,7 @@ export default function GlobalWrapper({ children, disableScrollView = false }) {
   );
 
   return (
-    <SafeAreaView style={globalStyles.pageBackground}>
+    <SafeAreaView style={[globalStyles.pageBackground, style]}>
       {disableScrollView ? (
         content
       ) : (

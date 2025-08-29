@@ -86,52 +86,122 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
 
   // Helper function to validate if a date is within the specified range
   const isDateInRange = (date, rangeStart, rangeEnd) => {
-    const dateTime = new Date(date).getTime();
-    return dateTime >= rangeStart.getTime() && dateTime <= rangeEnd.getTime();
+    if (!date) return false;
+    
+    const dateTime = date instanceof Date ? date : new Date(date);
+    const rangeStartTime = rangeStart instanceof Date ? rangeStart : new Date(rangeStart);
+    const rangeEndTime = rangeEnd instanceof Date ? rangeEnd : new Date(rangeEnd);
+    
+    // Handle invalid dates
+    if (isNaN(dateTime.getTime())) {
+      console.warn('Invalid date in isDateInRange:', date);
+      return false;
+    }
+    
+    return dateTime >= rangeStartTime && dateTime <= rangeEndTime;
   };
 
   // Fetch data for reports tab (aggregated based on time filter)
   const fetchReportsData = useCallback(async (filter) => {
-    console.log('📅 Fetching reports data with filter:', filter);
+    console.log('📅 [useChartData] Fetching reports data with filter:', filter);
     
     try {
       setLoading(true);
-      setChartData([]); // Clear previous data immediately
+      setChartData([]);
       
+      // Get date range with timezone handling
       const { startDate, endDate } = historicalDataService.getDateRange(filter);
-      console.log('📅 Date range:', { 
-        filter, 
-        startDate: startDate.toISOString(), 
-        endDate: endDate.toISOString() 
+      
+      // Create local date copies
+      const adjustedStartDate = new Date(startDate);
+      const adjustedEndDate = new Date(endDate);
+      
+      console.log('📅 [useChartData] Date range:', { 
+        filter,
+        startDate: adjustedStartDate.toISOString(),
+        localStartDate: adjustedStartDate.toString(),
+        endDate: adjustedEndDate.toISOString(),
+        localEndDate: adjustedEndDate.toString()
       });
       
-      // Clear any existing cache for this filter to ensure fresh data
+      // Clear cache for this filter to ensure fresh data
       historicalDataService.clearCacheForFilter(filter);
       
-      let data = await historicalDataService.getAggregatedData(filter, startDate, endDate);
+      // Try to fetch data with retry logic
+      let data = [];
+      let attempts = 0;
+      const maxAttempts = 2;
       
-      // Filter data to ensure it's within the selected time range
-      data = data.filter(item => {
-        if (!item || !item.datetime) return false;
-        const itemDate = new Date(item.datetime);
-        return isDateInRange(itemDate, startDate, endDate);
-      });
+      while (attempts < maxAttempts && data.length === 0) {
+        attempts++;
+        console.log(`🔄 [useChartData] Fetch attempt ${attempts}/${maxAttempts}`);
+        
+        try {
+          // On second attempt, force refresh from server
+          const useCache = attempts === 1;
+          if (!useCache) {
+            console.log('🔄 [useChartData] Cache disabled for this attempt');
+          }
+          
+          // Fetch data with current settings
+          const result = await historicalDataService.getAggregatedData(
+            filter, 
+            adjustedStartDate, 
+            adjustedEndDate,
+            useCache
+          );
+          
+          console.log(`📊 [useChartData] Received ${result?.length || 0} data points`);
+          
+          if (result && result.length > 0) {
+            // Process the data
+            data = result
+              .filter(item => item && item.datetime)
+              .map(item => {
+                const datetime = typeof item.datetime === 'string' 
+                  ? new Date(item.datetime) 
+                  : item.datetime;
+                
+                // Skip invalid dates
+                if (isNaN(datetime.getTime())) {
+                  console.warn('⚠️ [useChartData] Invalid date in data point:', item);
+                  return null;
+                }
+                
+                return { ...item, datetime };
+              })
+              .filter(Boolean) // Remove null entries
+              .filter(item => isDateInRange(item.datetime, adjustedStartDate, adjustedEndDate));
+            
+            // Sort by datetime
+            data.sort((a, b) => a.datetime - b.datetime);
+            
+            console.log('📊 [useChartData] Processed data:', {
+              count: data.length,
+              first: data[0]?.datetime?.toISOString(),
+              last: data[data.length - 1]?.datetime?.toISOString(),
+              sample: data[0] || 'No data'
+            });
+          }
+          
+        } catch (error) {
+          console.error(`❌ [useChartData] Attempt ${attempts} failed:`, error);
+          if (attempts >= maxAttempts) throw error;
+        }
+      }
       
-      // Sort data by datetime to ensure proper ordering
-      data.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
-      
-      console.log('📊 Filtered data:', {
-        originalCount: data.length,
-        filteredCount: data.length,
-        dateRange: {
-          firstDate: data[0]?.datetime,
-          lastDate: data[data.length - 1]?.datetime
-        },
-        timeFilter: filter
-      });
-      
+      // Fallback to current day data if no data found
       if (data.length === 0) {
-        console.warn('⚠️ No data found within the specified date range');
+        console.warn('⚠️ [useChartData] No data found, trying fallback to current day data');
+        try {
+          const todayData = await historicalDataService.getCurrentDayData();
+          if (todayData.length > 0) {
+            console.log('🔄 [useChartData] Using current day data as fallback');
+            data = todayData;
+          }
+        } catch (fallbackError) {
+          console.error('❌ [useChartData] Fallback data fetch failed:', fallbackError);
+        }
       }
       
       setChartData(data);

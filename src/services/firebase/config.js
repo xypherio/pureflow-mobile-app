@@ -1,7 +1,9 @@
 // firebase.js
 import Constants from 'expo-constants';
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Main Firebase configuration
 export const firebaseConfig = {
@@ -14,6 +16,36 @@ export const firebaseConfig = {
   measurementId: Constants.expoConfig?.extra?.firebaseMeasurementId,
 };
 
+// Initialize Firebase
+const initializeFirebase = () => {
+  try {
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    
+    // Initialize Firestore and Storage
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    
+    console.log('Firebase services initialized successfully');
+    
+    return {
+      app,
+      db,
+      storage
+    };
+  } catch (error) {
+    console.error('Error initializing Firebase:', error);
+    throw error; // Re-throw to handle in the calling code
+  }
+};
+
+// Initialize Firebase and export the instances
+const firebase = initializeFirebase();
+export const app = firebase.app;
+export const auth = firebase.auth;
+export const db = firebase.db;
+export const storage = firebase.storage;
+
 // Backend Firebase configuration (if different)
 export const backendFirebaseConfig = {
   apiKey: Constants.expoConfig?.extra?.backendFirebaseApiKey || Constants.expoConfig?.extra?.firebaseApiKey,
@@ -25,13 +57,17 @@ export const backendFirebaseConfig = {
   measurementId: Constants.expoConfig?.extra?.backendFirebaseMeasurementId || Constants.expoConfig?.extra?.firebaseMeasurementId,
 };
 
-// Initialize Firebase apps
-const app = initializeApp(firebaseConfig);
-const backendApp = initializeApp(backendFirebaseConfig, 'datm_data');
+// Initialize backend Firebase app
+let backendApp;
+let backendDb;
 
-// Initialize Firestore instances
-const db = getFirestore(app);
-const backendDb = getFirestore(backendApp);
+try {
+  backendApp = initializeApp(backendFirebaseConfig, 'datm_data');
+  backendDb = getFirestore(backendApp);
+  console.log('Backend Firebase initialized successfully');
+} catch (error) {
+  console.error('Error initializing Backend Firebase:', error);
+}
 
-export { backendDb, db };
+export { backendApp, backendDb };
 

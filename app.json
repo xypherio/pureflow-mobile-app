@@ -16,6 +16,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#002d66"
       },
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.pureflowmobile"
     },
@@ -36,10 +37,44 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 33,
+            "targetSdkVersion": 33,
+            "buildToolsVersion": "33.0.0"
+          },
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "messaging_android_headless_auto_background": true,
+          "messaging_android_auto_init_enabled": true,
+          "messaging_android_notification_channel_id": "high_importance_channel",
+          "messaging_android_notification_color": "@color/notification_icon_color",
+          "messaging_android_notification_icon": "@mipmap/ic_notification"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "GEMINI_API_KEY": "",
+      "GEMINI_BASE_URL": "",
+      "firebaseApiKey": "AIzaSyBCcrWxgO0wRa0-QL0DTLdExN01tbQrzhY",
+      "firebaseAuthDomain": "pureflow-system.firebasestorage.app",
+      "firebaseProjectId": "pureflow-system",
+      "firebaseStorageBucket": "pureflow-system.firebasestorage.app",
+      "firebaseMessagingSenderId": "817474825207",
+      "firebaseAppId": "1:817474825207:web:cfb188a35d073158575cf2",
+      "firebaseMeasurementId": "G-T7X7JB8428"
     }
   }
 }
