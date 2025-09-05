@@ -87,7 +87,7 @@ export default function HomeScreen() {
         }}
       />
 
-      <GlobalWrapper style={{ flex: 1, backgroundColor: "#e6fbff" }}>
+      <GlobalWrapper style={{ flex: 1 }}>
         {/* Weather Summary Section */}
         <View>
           <WeatherBanner forecast="Light rain expected at 4PM. Humidity: 82%, Temp: 30°C." />

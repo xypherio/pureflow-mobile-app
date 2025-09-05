@@ -1,7 +1,8 @@
-import { globalStyles } from '@styles/globalStyles';
+import * as Haptics from 'expo-haptics';
 import { FileSpreadsheet, FileText, Share } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { handleExport } from '../../utils/exportUtils';
 
 const EXPORT_OPTIONS = [
   {
@@ -27,98 +28,122 @@ const EXPORT_OPTIONS = [
   }
 ];
 
-export default function ExportToggleButton({ onExportAction }) {
+export default function ExportToggleButton({ 
+  reportData = {},
+  componentRef,
+  onExportStart,
+  onExportComplete,
+  onExportError
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [activeExport, setActiveExport] = useState(null);
+  const buttonRef = useRef();
 
-  const handleToggle = () => {
-    setIsExpanded(!isExpanded);
-  };
+  const handleToggle = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsExpanded(prev => !prev);
+  }, []);
 
-  const handleActionPress = (actionId) => {
-    onExportAction?.(actionId);
-    setIsExpanded(false);
+  const handleExportAction = useCallback(
+    async (actionId) => {
+      console.log('Export action triggered:', actionId);
+      console.log('Component ref in handler:', componentRef);
+      
+      if (!componentRef) {
+        const error = new Error('Component reference is undefined');
+        console.error(error);
+        Alert.alert('Error', 'Component reference is not available for export');
+        onExportError?.(actionId, error);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('Starting export with data:', { actionId, hasReportData: !!reportData });
+        
+        await handleExport(actionId, {
+          reportData,
+          componentRef,
+          onStart: onExportStart,
+          onComplete: onExportComplete,
+          onError: onExportError,
+        });
+        
+        console.log('Export completed successfully');
+      } catch (error) {
+        console.error('Export error:', error);
+        onExportError?.(actionId, error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [reportData, componentRef, onExportStart, onExportComplete, onExportError]
+  );
+
+  const handleActionPress = useCallback((actionId) => {
+    handleExportAction(actionId);
+  }, [handleExportAction]);
+
+  const renderButtonContent = (option) => {
+    if (isExporting && activeExport === option.id) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator 
+            size="small" 
+            color={option.color} 
+            style={styles.loadingSpinner} 
+          />
+        </View>
+      );
+    }
+    
+    const Icon = option.icon;
+    return (
+      <View style={[styles.iconContainer, { backgroundColor: option.bgColor }]}>
+        <Icon size={18} color={option.color} />
+      </View>
+    );
   };
 
   return (
-    <View style={{
-      position: 'absolute',
-      bottom: 110,
-      right: 25,
-      zIndex: 9999,
-    }}>
+    <View style={styles.container} ref={buttonRef}>
       {/* Export Options */}
       {isExpanded && (
         <View style={{
           position: 'absolute',
-          bottom: 70,
-          right: 0,
-          backgroundColor: '#fff',
+          bottom: 60,
+          right: -5,
           borderRadius: 12,
           padding: 8,
-          shadowColor: '#000',
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 8,
-          minWidth: 120,
         }}>
-          {EXPORT_OPTIONS.map((option, index) => {
-            const IconComponent = option.icon;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                onPress={() => handleActionPress(option.id)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 8,
-                  marginBottom: index < EXPORT_OPTIONS.length - 1 ? 4 : 0,
-                }}
-              >
-                <View style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: option.bgColor,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12,
-                }}>
-                  <IconComponent
-                    size={16}
-                    color={option.color}
-                  />
-                </View>
-                <Text style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: '#374151',
-                }}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {EXPORT_OPTIONS.map((option, index) => (
+            <TouchableOpacity
+              key={option.id}
+              style={[styles.optionButton, { backgroundColor: option.bgColor }]}
+              onPress={() => handleActionPress(option.id)}
+              disabled={isExporting}
+              activeOpacity={0.7}
+            >
+              {renderButtonContent(option)}
+              <Text style={[styles.optionText, { color: option.color }]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
 
-      {/* Main Toggle Button */}
+      {/* Main Button */}
       <TouchableOpacity
+        style={[styles.mainButton, isExpanded && styles.mainButtonExpanded]}
         onPress={handleToggle}
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: '#2455a9',
-          alignItems: 'center',
-          justifyContent: 'center',
-          ...globalStyles.boxShadow,
-          elevation: 8,
-        }}
+        disabled={isExporting}
+        activeOpacity={0.8}
       >
-        {isExpanded ? (
+        {isExporting && activeExport ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : isExpanded ? (
           <FileText size={24} color="#fff" />
         ) : (
           <FileText size={24} color="#fff" />
@@ -126,4 +151,66 @@ export default function ExportToggleButton({ onExportAction }) {
       </TouchableOpacity>
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 110,
+    right: 20,
+    zIndex: 9999,
+    alignItems: 'flex-end',
+  },
+  mainButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2455a9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  mainButtonExpanded: {
+    backgroundColor: '#ef4444',
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    minWidth: 100,
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  optionText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  loadingSpinner: {
+    marginRight: 0,
+  },
+});

@@ -1,10 +1,25 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { db } from './firebase/config';
 import { v4 as uuidv4 } from 'uuid';
 import { collection, doc, setDoc, serverTimestamp, where, getDocs, query, updateDoc } from 'firebase/firestore';
+
+// Import Firebase services with dynamic import to avoid circular dependencies
+let db;
+
+// Initialize Firebase services when first imported
+const initializeFirebase = async () => {
+  if (!db) {
+    try {
+      const { db: firestoreDb } = await import('./firebase/config');
+      db = firestoreDb;
+    } catch (error) {
+      console.error('Error initializing Firebase for push notifications:', error);
+      throw error;
+    }
+  }
+  return { db };
+};
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -59,6 +74,8 @@ export async function requestUserPermission() {
 
 // Store device token in Firestore without requiring auth
 export async function registerDevice(deviceInfo = {}) {
+  // Ensure Firebase is initialized
+  await initializeFirebase();
   try {
     let token;
     

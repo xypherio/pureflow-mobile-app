@@ -1,11 +1,12 @@
 import { DataProvider } from "@contexts/DataContext";
+import { SuggestionProvider } from "@contexts/SuggestionContext";
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
 import SplashScreenComponent from "@ui/splash-screen";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState, useRef } from "react";
-import { LogBox, StyleSheet, View, Platform } from 'react-native';
-import { configureNotifications, requestNotificationPermissions, getExpoPushToken } from '../src/services/notificationSetup';
+import { useEffect, useRef, useState } from "react";
+import { LogBox, Platform, StyleSheet } from 'react-native';
+import { configureNotifications, getExpoPushToken, requestNotificationPermissions } from '../src/services/notificationSetup';
 
 // Suppress React Native Web warnings
 if (typeof window !== 'undefined') {
@@ -125,14 +126,16 @@ export default function RootLayout() {
 
   return (
     <DataProvider initialData={preloadedData}>
-      <Stack>
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Stack>
+      <SuggestionProvider>
+        <Stack>
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack>
+      </SuggestionProvider>
     </DataProvider>
   );
 }

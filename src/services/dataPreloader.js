@@ -67,7 +67,7 @@ class DataPreloader {
         const [sensorData, historicalAlertsData] = await Promise.all([
           performanceMonitor.measureAsync('fetchSensorData', () => 
             fetchAllDocuments("datm_data", { 
-              limitCount: 1000, // Limit to prevent excessive data loading
+              limitCount: 500, // Limit to prevent excessive data loading
               orderByField: 'timestamp',
               orderDirection: 'desc'
             }).catch(error => {

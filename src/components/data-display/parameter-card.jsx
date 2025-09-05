@@ -17,7 +17,9 @@ const getParameterIcon = (paramName) => {
   const iconSize = 170;
   const iconStyles = { position: 'absolute', bottom: 0, right: -40 };
   
-  switch(paramName.toLowerCase()) {
+  if (!paramName) return null;
+  
+  switch(paramName.toString().toLowerCase()) {
     case 'ph':
     case 'ph value':
       return <Gauge size={iconSize} color="rgba(59, 130, 246, 0.08)" style={iconStyles} />;
@@ -151,32 +153,54 @@ const ParameterCard = ({
           <View style={styles.chartContainer}>
             <BarChart
               data={chartData}
-              width={300}
-              height={180}
+              width={350}
+              height={220}
               chartConfig={{
                 backgroundColor: '#ffffff',
                 backgroundGradientFrom: '#ffffff',
                 backgroundGradientTo: '#ffffff',
                 decimalPlaces: 1,
                 color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                barPercentage: 0.5,
+                barPercentage: chartData.timeRange === 'daily' ? 0.5 : 0.7,
                 style: { 
                   borderRadius: 16,
-                  paddingRight: 15 // Add right padding to prevent last bar from being cut off
+                  marginLeft: -20, 
+                  paddingRight: 15,
                 },
                 propsForBackgroundLines: {
                   strokeWidth: 0.5,
-                  stroke: '#e2e8f0'
-                }
+                  stroke: '#e2e8f0',
+                },
+                propsForLabels: {
+                  fontSize: chartData.labels?.length > 10 ? 8 : 10,
+                },
+                barRadius: 4,
+                fillShadowGradient: PARAMETER_COLORS[parameter] || '#007bff',
+                fillShadowGradientOpacity: 1,
               }}
-              verticalLabelRotation={-45}
-              fromZero
+              verticalLabelRotation={chartData.labels?.length > 7 ? -45 : 0}
+              fromZero={true}
               showBarTops={false}
               withInnerLines={true}
-              showValuesOnTopOfBars={true}
+              showValuesOnTopOfBars={false}
               withCustomBarColorFromData={true}
               flatColor={true}
               style={styles.chart}
+              segments={chartData.timeRange === 'weekly' ? 7 : chartData.timeRange === 'monthly' ? 12 : 6}
+              yAxisSuffix={unit ? ` ${unit}` : ''}
+              yAxisInterval={1}
+              formatYLabel={(value) => {
+                // Format Y-axis labels to be more compact
+                if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                return value.toString();
+              }}
+              formatXLabel={(value, index) => {
+                // For dates, show just the day number if it's a date string
+                if (typeof value === 'string' && value.includes('-')) {
+                  return value.split('-').pop();
+                }
+                return value;
+              }}
             />
           </View>
         )}

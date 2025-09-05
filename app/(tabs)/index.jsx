@@ -1,6 +1,7 @@
 import { listenToForegroundMessages, listenToBackgroundMessages, requestUserPermission } from "@/services/pushNotifications";
 import { globalStyles } from "@/styles/globalStyles";
 import { useData } from "@contexts/DataContext";
+import { useSuggestions } from "@contexts/SuggestionContext";
 import AlertsCard from "@data-display/alerts-card";
 import InsightsCard from "@data-display/insights-card";
 import LineChartCard from "@data-display/linechart-card";
@@ -9,30 +10,13 @@ import StatusCard from "@ui/device-status-card.jsx";
 import GlobalWrapper from "@ui/global-wrapper";
 import PureFlowLogo from "@ui/ui-header";
 import { useEffect } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 
 const sectionLabelStyle = {
   fontSize: 12,
   color: "#1a2d51",
   marginBottom: 8,
 };
-
-const insights = [
-  {
-    type: "positive",
-    title: "Water Quality Excellent",
-    description:
-      "All major parameters are within optimal ranges. Your water system is performing well.",
-    timestamp: "1 hour ago",
-  },
-  {
-    type: "info",
-    title: "Daily Report Available",
-    description:
-      "Your comprehensive daily water quality report is ready for download.",
-    timestamp: "30 minutes ago",
-  },
-];
 
 export default function HomeScreen() {
   const {
@@ -44,6 +28,16 @@ export default function HomeScreen() {
     lastUpdate,
     getHomepageAlerts,
   } = useData();
+
+  const {
+    suggestions,
+    loading: suggestionsLoading,
+    fetchSuggestions,
+  } = useSuggestions();
+
+  useEffect(() => {
+    fetchSuggestions();
+  }, [sensorData]);
 
   useEffect(() => {
     // Initialize Firebase and notifications
@@ -150,17 +144,20 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            {insights.map((insight, index) => (
-              <InsightsCard
-                key={index}
-                type={insight.type}
-                title={insight.title}
-                description={insight.description}
-                action={insight.action}
-                onActionPress={() => handleExportAction(insight.action)}
-                timestamp={insight.timestamp}
-              />
-            ))}
+            {suggestionsLoading ? (
+              <ActivityIndicator size="large" color="#4a90e2" style={{ marginTop: 20 }} />
+            ) : (
+              suggestions.map((insight, index) => (
+                <InsightsCard
+                  key={index}
+                  type={insight.type}
+                  title={insight.title}
+                  description={insight.description}
+                  suggestion={insight.suggestion}
+                  timestamp={insight.timestamp}
+                />
+              ))
+            )}
           </View>
         </ScrollView>
       </GlobalWrapper>

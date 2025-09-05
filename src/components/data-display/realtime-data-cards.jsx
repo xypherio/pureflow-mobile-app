@@ -5,7 +5,7 @@ import { Text, View } from "react-native";
 
 export default function RealTimeData({ data = [] }) {
   const { realtimeData } = useData();
-  const [displayData, setDisplayData] = useState(null);
+  const [displayData, setDisplayData] = useState(0);
   
   // Use real-time data if available, otherwise fallback to latest from data array
   useEffect(() => {
@@ -17,7 +17,7 @@ export default function RealTimeData({ data = [] }) {
       setDisplayData(latest);
       console.log('📊 Using fallback data:', latest);
     } else {
-      setDisplayData(null);
+      setDisplayData(0);
     }
   }, [realtimeData, data]);
   
@@ -26,28 +26,28 @@ export default function RealTimeData({ data = [] }) {
   const parameters = [
     {
       label: "pH Level",
-      value: latest.pH !== undefined ? String(latest.pH) : "-",
+      value: latest.pH !== undefined ? String(latest.pH) : "0",
       unit: "pH",
       icon: <Gauge size={30} color="#007bff" />, 
       color: "#007bff",
     },
     {
       label: "Temperature",
-      value: latest.temperature !== undefined ? String(latest.temperature) : "-",
+      value: latest.temperature !== undefined ? String(latest.temperature) : "0",
       unit: "°C",
       icon: <Thermometer size={30} color="#e83e8c" />, 
       color: "#e83e8c",
     },
     {
       label: "Turbidity",
-      value: latest.turbidity !== undefined ? String(latest.turbidity) : "-",
+      value: latest.turbidity !== undefined ? String(latest.turbidity) : "0",
       unit: "NTU",
       icon: <Waves size={30} color="#28a745" />, 
       color: "#28a745",
     },
     {
       label: "Salinity",
-      value: latest.salinity !== undefined ? String(latest.salinity) : "-",
+      value: latest.salinity !== undefined ? String(latest.salinity) : "0",
       unit: "ppt",
       icon: <Droplet size={30} color="#8b5cf6" />, 
       color: "#8b5cf6",

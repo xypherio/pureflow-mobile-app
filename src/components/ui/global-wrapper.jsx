@@ -1,10 +1,22 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import { LinearGradient } from "expo-linear-gradient";
+import { forwardRef, useRef, useImperativeHandle } from 'react';
 import { SafeAreaView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function GlobalWrapper({ children, disableScrollView = false, style }) {
+const GlobalWrapper = forwardRef(({ children, disableScrollView = false, style }, ref) => {
   const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef(null);
+
+  // Forward the ref to the ScrollView when not disabled
+  useImperativeHandle(ref, () => ({
+    // Add any methods you want to expose
+    scrollTo: (options) => {
+      if (!disableScrollView && scrollViewRef.current) {
+        scrollViewRef.current.scrollTo(options);
+      }
+    },
+  }));
 
   const content = (
     <View
@@ -23,9 +35,12 @@ export default function GlobalWrapper({ children, disableScrollView = false, sty
   return (
     <SafeAreaView style={[globalStyles.pageBackground, style]}>
       {disableScrollView ? (
-        content
+        <View ref={ref} style={{ flex: 1 }}>
+          {content}
+        </View>
       ) : (
         <ScrollView
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
@@ -49,12 +64,14 @@ export default function GlobalWrapper({ children, disableScrollView = false, sty
         }}
       >
         <LinearGradient
-          colors={["transparent", "#c2e3fb"]}
+          colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.8)"]}
           style={{ flex: 1 }}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
         />
       </View>
     </SafeAreaView>
   );
-}
+});
+
+export default GlobalWrapper;

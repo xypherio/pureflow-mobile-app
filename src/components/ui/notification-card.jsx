@@ -3,6 +3,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle,
+  CloudRain,
   Droplet,
   Gauge,
   Info,
@@ -10,14 +11,16 @@ import {
   Waves,
   XCircle
 } from 'lucide-react-native';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Text, View } from 'react-native';
 
 // Icon and default color mapping
 const parameterIcons = {
-  ph: { icon: Gauge },
-  temperature: { icon: Thermometer },
-  tds: { icon: Droplet },
-  salinity: { icon: Waves },
+  ph: { icon: Gauge, label: 'pH' },
+  temperature: { icon: Thermometer, label: 'Temperature' },
+  turbidity: { icon: Droplet, label: 'Turbidity' },
+  salinity: { icon: Waves, label: 'Salinity' },
+  rain: { icon: CloudRain, label: 'Rainy' },
 };
 
 const alertIcons = {
@@ -90,38 +93,26 @@ const NotificationCard = ({
 
       {/* Texts */}
       <View style={{ flex: 1 }}>
-        <Text style={{ fontWeight: '600', fontSize: 16, color: '#111' }}>{title}</Text>
-        <Text style={{ fontSize: 14, color: '#4B5563', marginTop: 4 }}>{message}</Text>
-
-        {/* Suggestion Buttons */}
-        {type === 'suggestion' && (
-          <View style={{ flexDirection: 'row', marginTop: 12 }}>
-            <TouchableOpacity
-              onPress={onPrimaryAction}
-              style={{
-                backgroundColor: '#375996',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 24,
-                marginRight: 8,
-              }}
-            >
-              <Text style={{ color: 'white', fontWeight: '500' }}>{primaryLabel}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onSecondaryAction}
-              style={{
-                borderColor: '#D1D5DB',
-                borderWidth: 1,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 24,
-              }}
-            >
-              <Text style={{ color: '#111827', fontWeight: '500' }}>{secondaryLabel}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          {parameter && parameterIcons[parameter.toLowerCase()] && (
+            <View style={{ marginRight: 8 }}>
+              {React.createElement(parameterIcons[parameter.toLowerCase()].icon, {
+                size: 16,
+                color: '#1E40AF' // Deep blue color
+              }, null)}
+            </View>
+          )}
+          <Text style={{ 
+            fontWeight: '700', 
+            fontSize: 14, 
+            color: '#1E40AF', // Deep blue color
+            textTransform: 'capitalize'
+          }}>
+            {parameter ? parameterIcons[parameter.toLowerCase()]?.label || parameter : ''}
+          </Text>
+        </View>
+        <Text style={{ fontWeight: '600', fontSize: 16, color: '#111', marginBottom: 4 }}>{title}</Text>
+        <Text style={{ fontSize: 14, color: '#4B5563' }}>{message}</Text>
       </View>
     </View>
   );

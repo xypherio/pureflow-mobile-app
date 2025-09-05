@@ -517,15 +517,6 @@ class HistoricalDataService {
       return [];
     }
 
-    console.log('✅ Aggregation method selected:', {
-      timeFilter,
-      method: timeFilter === 'daily' ? 'aggregateBy2Hour' : 
-              timeFilter === 'weekly' || timeFilter === 'monthly' ? 'aggregateByDay' :
-              timeFilter === 'annually' ? 'aggregateByMonth' : 'rawData',
-      resultCount: aggregatedData.length
-    });
-
-    return aggregatedData;
   }
 
   /**

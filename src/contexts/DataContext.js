@@ -3,7 +3,7 @@ import { alertManager } from "@services/alertManager";
 import dataPreloader from "@services/dataPreloader";
 import { notificationEvents, registerForPushNotificationsAsync } from "@services/pushNotifications";
 import { realtimeDataService } from "@services/realtimeDataService";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const DataContext = createContext();
 

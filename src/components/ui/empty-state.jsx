@@ -41,20 +41,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: '#f0f8fe',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#dceefd'
 
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f9fafb',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 5,
   },
   title: {
     fontSize: 18,
@@ -76,10 +75,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: '#dceefd',
   },
   buttonText: {
-    color: '#3b82f6',
+    color: '#439bee',
     fontWeight: '500',
     fontSize: 14,
   },

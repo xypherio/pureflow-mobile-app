@@ -23,8 +23,8 @@ export default function PureFlowLogo({
         justifyContent: "space-between",
         alignItems: "center",
         width: "100%",
-        paddingHorizontal: 15,
-        paddingTop: 23,
+        paddingHorizontal: 16,
+        paddingTop: 30,
         backgroundColor: "#e5f0f9",
         zIndex: 9999,
       }}

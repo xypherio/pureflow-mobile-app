@@ -1,4 +1,5 @@
 // app/(tabs)/report.jsx
+import ExportToggleButton from "@/components/forms/export-toggle-button";
 import PureFlowLogo from "@components/ui/ui-header";
 import ConclusionCard from "@data-display/conclusion-card";
 import ParameterCard from "@data-display/parameter-card";
@@ -8,11 +9,8 @@ import { useChartData } from "@hooks/useChartData";
 import SegmentedFilter from "@navigation/segmented-filters";
 import EmptyState from "@ui/empty-state";
 import GlobalWrapper from "@ui/global-wrapper";
-import {
-  generateWaterQualityReport,
-  prepareChartData,
-} from "@utils/reportUtils";
-import { useCallback, useEffect, useState } from "react";
+import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -22,7 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ExportToggleButton from "../../src/components/forms/export-toggle-button";
 
 const sectionLabelStyle = {
   fontSize: 12,
@@ -69,6 +66,8 @@ const ReportScreen = () => {
     generatedAt: null,
   });
   const [error, setError] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportRef = useRef();
 
   // Use the useChartData hook to fetch data
   const {
@@ -146,6 +145,24 @@ const ReportScreen = () => {
     refreshData();
   }, [refreshData]);
 
+  const handleExportStart = (format) => {
+    console.log(`Starting ${format} export...`);
+    setIsExporting(true);
+  };
+
+  const handleExportComplete = (format) => {
+    console.log(`${format} export completed successfully`);
+    setIsExporting(false);
+    // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleExportError = (format, error) => {
+    console.error(`${format} export error:`, error);
+    setIsExporting(false);
+    // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    // Alert.alert('Export Failed', `Could not export as ${format.toUpperCase()}. ${error?.message || ''}`);
+  };
+
   // Error handling for the report generation
   useEffect(() => {
     if (error) {
@@ -198,10 +215,38 @@ const ReportScreen = () => {
   // Render loading state
   if (loading || (chartData === null && !error)) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="mt-4 text-gray-600">Loading report data...</Text>
-      </View>
+      <>
+        <PureFlowLogo
+          weather={{
+            label: "Loading...",
+            temp: "--°C",
+            icon: "partly",
+          }}
+        />
+        <SegmentedFilter
+          options={timePeriodOptions}
+          selectedValue={activeFilter}
+          onValueChange={setActiveFilter}
+          style={styles.filter}
+          disabled={true}
+        />
+        <GlobalWrapper>
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading report data...</Text>
+          </View>
+        </View>
+
+        <ExportToggleButton 
+          reportData={reportData}
+          componentRef={reportRef}
+          onExportStart={handleExportStart}
+          onExportComplete={handleExportComplete}
+          onExportError={handleExportError}
+        />
+        </GlobalWrapper>
+      </>
     );
   }
 
@@ -243,7 +288,7 @@ const ReportScreen = () => {
           icon: "partly",
         }}
       />
-
+      
       <SegmentedFilter
         options={timePeriodOptions}
         selectedValue={activeFilter}
@@ -251,7 +296,8 @@ const ReportScreen = () => {
         style={styles.filter}
       />
 
-      <GlobalWrapper>
+      {/* Wrap the report content in GlobalWrapper with the reportRef */}
+      <GlobalWrapper ref={reportRef}>
         <ScrollView
           refreshControl={
             <RefreshControl
@@ -273,7 +319,7 @@ const ReportScreen = () => {
             />
           ) : (
             <>
-              <View style={{ marginBottom: 16, marginTop: 65 }}>
+              <View style={{ marginBottom: 16, marginTop: 70 }}>
                 <Text style={sectionLabelStyle}>Water Quality Summary</Text>
                 <WaterQualitySummaryCard
                   qualityLevel={reportData.overallStatus || "normal"}
@@ -296,7 +342,16 @@ const ReportScreen = () => {
               <View styles={{ marginBottom: 16 }}>
                 <Text style={sectionLabelStyle}>Key Parameters Report</Text>
                 {processedParameters.map((param, index) => (
-                  <ParameterCard key={param.parameter} {...param} />
+                  <ParameterCard
+                    key={param.parameter}
+                    parameter={param.parameter}
+                    value={param.value}
+                    unit={param.unit}
+                    safeRange={param.safeRange}
+                    status={param.status}
+                    analysis={param.analysis}
+                    chartData={param.chartData}
+                  />
                 ))}
               </View>
 
@@ -325,16 +380,20 @@ const ReportScreen = () => {
           )}
         </ScrollView>
       </GlobalWrapper>
-
-      <ExportToggleButton />
+      
+      <ExportToggleButton 
+        reportData={reportData}
+        componentRef={reportRef}
+        onExportStart={handleExportStart}
+        onExportComplete={handleExportComplete}
+        onExportError={handleExportError}
+      />
     </>
   );
 };
 
 const styles = StyleSheet.create({
   filter: {
-    marginBottom: 10,
-    margintop: 10,
     position: "absolute",
     top: 100,
     zIndex: 1000,
@@ -379,6 +438,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     fontFamily: "monospace",
+  },
+  loadingContainer: {
+    marginTop: 250,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingContent: {
+    alignItems: 'center',
+    padding: 24,
+    borderRadius: 8,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#666',
+    fontSize: 16,
   },
 });
 

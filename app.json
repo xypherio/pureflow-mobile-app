@@ -3,11 +3,13 @@
     "name": "pureflow-mobile",
     "slug": "pureflow-mobile",
     "version": "1.0.0",
+    "owner": "xy_pher",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
-    "scheme": "pureflowmobile",
+    "scheme": "pureflow",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true
     },
@@ -50,31 +52,28 @@
             "useFrameworks": "static"
           }
         }
-      ],
-      [
-        "@react-native-firebase/app",
-        {
-          "messaging_android_headless_auto_background": true,
-          "messaging_android_auto_init_enabled": true,
-          "messaging_android_notification_channel_id": "high_importance_channel",
-          "messaging_android_notification_color": "@color/notification_icon_color",
-          "messaging_android_notification_icon": "@mipmap/ic_notification"
-        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "GEMINI_API_KEY": "",
-      "GEMINI_BASE_URL": "",
-      "firebaseApiKey": "AIzaSyBCcrWxgO0wRa0-QL0DTLdExN01tbQrzhY",
-      "firebaseAuthDomain": "pureflow-system.firebasestorage.app",
-      "firebaseProjectId": "pureflow-system",
-      "firebaseStorageBucket": "pureflow-system.firebasestorage.app",
-      "firebaseMessagingSenderId": "817474825207",
-      "firebaseAppId": "1:817474825207:web:cfb188a35d073158575cf2",
-      "firebaseMeasurementId": "G-T7X7JB8428"
+      "GEMINI_API_KEY": "AIzaSyA1J4Ue-GM0pJT2rcILsJD52tTyuRbmuO0",
+      "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
+      "GEMINI_MODEL": "gemini-2.0-flash",
+      "firebase": {
+        "apiKey": "AIzaSyBCcrWxgO0wRa0-QL0DTLdExN01tbQrzhY",
+        "authDomain": "pureflow-system.firebaseapp.com",
+        "projectId": "pureflow-system",
+        "storageBucket": "pureflow-system.appspot.com",
+        "messagingSenderId": "817474825207",
+        "appId": "1:817474825207:web:cfb188a35d073158575cf2",
+        "measurementId": "G-T7X7JB8428"
+      },
+      "router": {},
+      "eas": {
+        "projectId": "d24fac03-1b41-4b93-ab04-8593c0f6095d"
+      }
     }
   }
 }
