@@ -37,6 +37,8 @@ export const exportAsPdf = async ({ reportData, componentRef }) => {
       quality: 0.8,
       result: 'tmpfile',
     });
+
+    console.log('Captured component URI:', uri);
     
     if (!uri) {
       throw new Error('Failed to capture component');
@@ -67,19 +69,26 @@ export const exportAsPdf = async ({ reportData, componentRef }) => {
     `;
 
     // Generate and save the PDF
-    const { uri: pdfUri } = await Print.printToFileAsync({
-      html,
-      base64: false,
-    });
+    try {
+      const { uri: pdfUri } = await Print.printToFileAsync({
+        html,
+        base64: false,
+      });
 
-    // Share the PDF
-    await Sharing.shareAsync(pdfUri, {
+      console.log('Generated PDF URI:', pdfUri);
+
+      // Share the PDF
+      await Sharing.shareAsync(pdfUri, {
       mimeType: 'application/pdf',
       dialogTitle: 'Share Water Quality Report',
       UTI: 'com.adobe.pdf',
     });
 
     return { success: true };
+    } catch (printError) {
+      console.error('Print to file failed:', printError);
+      throw new Error('Failed to generate PDF file');
+    }
   } catch (error) {
     console.error('PDF export failed:', error);
     throw new Error('Failed to export as PDF');

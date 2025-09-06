@@ -1,22 +1,11 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import { LinearGradient } from "expo-linear-gradient";
-import { forwardRef, useRef, useImperativeHandle } from 'react';
+import { forwardRef } from 'react';
 import { SafeAreaView, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const GlobalWrapper = forwardRef(({ children, disableScrollView = false, style }, ref) => {
   const insets = useSafeAreaInsets();
-  const scrollViewRef = useRef(null);
-
-  // Forward the ref to the ScrollView when not disabled
-  useImperativeHandle(ref, () => ({
-    // Add any methods you want to expose
-    scrollTo: (options) => {
-      if (!disableScrollView && scrollViewRef.current) {
-        scrollViewRef.current.scrollTo(options);
-      }
-    },
-  }));
 
   const content = (
     <View
@@ -39,18 +28,19 @@ const GlobalWrapper = forwardRef(({ children, disableScrollView = false, style }
           {content}
         </View>
       ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingTop: insets.top + 60,
-            paddingBottom: 100,
-            paddingHorizontal: 16,
-          }}
-        >
-          {children}
-        </ScrollView>
+        <View ref={ref} style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingTop: insets.top + 60,
+              paddingBottom: 100,
+              paddingHorizontal: 16,
+            }}
+          >
+            {children}
+          </ScrollView>
+        </View>
       )}
       {/* Subtle bottom gradient overlay */}
       <View

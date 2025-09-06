@@ -48,66 +48,6 @@ const getStatusColor = (status) =>
     normal: "#10B981",
   }[status] || "#10B981");
 
-const ParameterPill = ({ name, value, status, unit }) => {
-  const Icon = PARAMETER_ICONS[name] || Droplet;
-  const color = getStatusColor(status);
-
-  return (
-    <View style={[styles.parameterPill, { borderColor: `${color}20` }]}>
-      <View style={[styles.parameterIcon, { backgroundColor: `${color}15` }]}>
-        <Icon size={16} color={color} />
-      </View>
-      <View>
-        <Text style={styles.parameterName}>{name}</Text>
-        <Text style={[styles.parameterValue, { color }]}>
-          {value?.toFixed(2)}
-          {unit}
-        </Text>
-      </View>
-    </View>
-  );
-};
-
-export default function WaterQualitySummaryCard({
-  qualityLevel = "normal",
-  lastUpdated = "Just now",
-  parameters = [],
-}) {
-  const level = QUALITY_LEVELS[qualityLevel] || QUALITY_LEVELS.normal;
-  const IconComponent = level.icon;
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={[styles.statusIcon, { backgroundColor: level.bg }]}>
-          <IconComponent size={28} color={level.color} />
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Water Quality Status</Text>
-          <Text style={styles.subtitle}>Last updated: {lastUpdated}</Text>
-        </View>
-      </View>
-
-      <View style={[styles.statusBanner, { backgroundColor: level.bg }]}>
-        <Text style={[styles.statusLabel, { color: level.color }]}>
-          {level.label}
-        </Text>
-        <Text style={styles.statusDescription}>{level.description}</Text>
-      </View>
-
-      {parameters.length > 0 && (
-        <View style={styles.parametersGrid}>
-          {parameters.map((param) => (
-            <ParameterPill key={param.name} {...param} />
-          ))}
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ... (previous imports and component code remains the same) ...
-
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#fff",
@@ -194,3 +134,61 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+
+const ParameterPill = ({ name, value, status, unit }) => {
+  const Icon = PARAMETER_ICONS[name] || Droplet;
+  const color = getStatusColor(status);
+
+  return (
+    <View style={[styles.parameterPill, { borderColor: `${color}20` }]}>
+      <View style={[styles.parameterIcon, { backgroundColor: `${color}15` }]}>
+        <Icon size={16} color={color} />
+      </View>
+      <View>
+        <Text style={styles.parameterName}>{name}</Text>
+        <Text style={[styles.parameterValue, { color }]}>
+          {value?.toFixed(2)}
+          {unit}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+export default function WaterQualitySummaryCard({
+  qualityLevel = "normal",
+  lastUpdated = "Just now",
+  parameters = [],
+}) {
+  const level = QUALITY_LEVELS[qualityLevel] || QUALITY_LEVELS.normal;
+  const IconComponent = level.icon;
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={[styles.statusIcon, { backgroundColor: level.bg }]}>
+          <IconComponent size={28} color={level.color} />
+        </View>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>Water Quality Status</Text>
+          <Text style={styles.subtitle}>Last updated: {lastUpdated}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statusBanner, { backgroundColor: level.bg }]}>
+        <Text style={[styles.statusLabel, { color: level.color }]}>
+          {level.label}
+        </Text>
+        <Text style={styles.statusDescription}>{level.description}</Text>
+      </View>
+
+      {parameters.length > 0 && (
+        <View style={styles.parametersGrid}>
+          {parameters.map((param) => (
+            <ParameterPill key={param.name} {...param} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}

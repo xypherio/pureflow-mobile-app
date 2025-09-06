@@ -1,7 +1,6 @@
 import { listenToForegroundMessages, listenToBackgroundMessages, requestUserPermission } from "@/services/pushNotifications";
 import { globalStyles } from "@/styles/globalStyles";
 import { useData } from "@contexts/DataContext";
-import { useSuggestions } from "@contexts/SuggestionContext";
 import AlertsCard from "@data-display/alerts-card";
 import InsightsCard from "@data-display/insights-card";
 import LineChartCard from "@data-display/linechart-card";
@@ -28,16 +27,6 @@ export default function HomeScreen() {
     lastUpdate,
     getHomepageAlerts,
   } = useData();
-
-  const {
-    suggestions,
-    loading: suggestionsLoading,
-    fetchSuggestions,
-  } = useSuggestions();
-
-  useEffect(() => {
-    fetchSuggestions();
-  }, [sensorData]);
 
   useEffect(() => {
     // Initialize Firebase and notifications
@@ -144,19 +133,15 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            {suggestionsLoading ? (
+            {loading ? (
               <ActivityIndicator size="large" color="#4a90e2" style={{ marginTop: 20 }} />
             ) : (
-              suggestions.map((insight, index) => (
-                <InsightsCard
-                  key={index}
-                  type={insight.type}
-                  title={insight.title}
-                  description={insight.description}
-                  suggestion={insight.suggestion}
-                  timestamp={insight.timestamp}
-                />
-              ))
+              <InsightsCard
+                type="info"
+                title="Water Quality Insights"
+                sensorData={sensorData}
+                timestamp={lastUpdate}
+              />
             )}
           </View>
         </ScrollView>

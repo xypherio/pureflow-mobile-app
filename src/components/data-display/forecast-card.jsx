@@ -7,7 +7,7 @@ import {
   Thermometer,
   Waves,
 } from "lucide-react-native";
-import { Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const iconMap = {
   pH: <Gauge size={36} color="#3b82f6" />,
@@ -34,6 +34,55 @@ const backgroundArrowMap = {
   stable: null,
 };
 
+const stylesheet = StyleSheet.create({
+  risingArrow: {
+    position: "absolute",
+    bottom: -5,
+    right: -5,
+  },
+  fallingArrow: {
+    position: "absolute",
+    bottom: -5,
+    right: -5,
+  },
+  baseContainer: {
+    backgroundColor: "#f6fafd",
+    padding: 16,
+    marginRight: 12,
+    width: 190,
+    height: 130,
+    borderRadius: 16,
+    ...globalStyles.boxShadow,
+  },
+  breach: {
+    borderWidth: 1,
+    borderColor: "#ef4444",
+    backgroundColor: "#fee2e2",
+  },
+  title: {
+    fontSize: 13,
+    color: "#6b7280",
+    fontWeight: "600",
+    zIndex: 2,
+  },
+  valueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    zIndex: 2,
+  },
+  value: {
+    fontSize: 30,
+    fontWeight: "700",
+    marginLeft: 10,
+  },
+  trend: {
+    fontSize: 13,
+    marginTop: 6,
+    zIndex: 2,
+  },
+});
+
 export default function ForecastCard({
   title,
   value,
@@ -55,69 +104,45 @@ export default function ForecastCard({
       ? "#ef4444"
       : "#9ca3af";
 
-  const baseContainerStyle = {
-    backgroundColor: "#f6fafd",
-    padding: 16,
-    marginRight: 12,
-    width: 190,
-    height: 130,
-    borderRadius: 16,
-    ...globalStyles.boxShadow,
-  };
+  const breachStyles = breachPredicted ? stylesheet.breach : {};
 
-  const breachStyles = breachPredicted
-    ? { borderWidth: 1, borderColor: "#ef4444", backgroundColor: "#fee2e2" }
-    : {};
+  const getValueColor = () => {
+    switch (title) {
+      case "pH":
+        return "#007bff"; // purple
+      case "Temperature":
+        return "#e83e8c"; // amber
+      case "Turbidity":
+        return "#28a745"; // sky blue
+      case "Salinity":
+        return "#8b5cf6"; // indigo
+      default:
+        return "#1f2937"; // default
+    }
+  };
 
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      style={{ ...baseContainerStyle, ...breachStyles }}
+      style={[stylesheet.baseContainer, breachStyles]}
     >
       {/* Background Arrow */}
       {backgroundArrowMap[trend]}
 
       {/* Foreground Content */}
-      <Text
-        style={{ fontSize: 13, color: "#6b7280", fontWeight: "600", zIndex: 2 }}
-      >
-        {title}
-      </Text>
+      <Text style={stylesheet.title}>{title}</Text>
 
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginTop: 10,
-          zIndex: 2,
-        }}
-      >
+      <View style={stylesheet.valueContainer}>
         {iconMap[title]}
         <Text
-          style={{
-            fontSize: 30,
-            fontWeight: "700",
-            marginLeft: 10,
-            color:
-              title === "pH"
-                ? "#007bff" // purple
-                : title === "Temperature"
-                ? "#e83e8c" // amber
-                : title === "Turbidity"
-                ? "#28a745" // sky blue
-                : title === "Salinity"
-                ? "#8b5cf6" // indigo
-                : "#1f2937", // default
-          }}
+          style={[stylesheet.value, { color: getValueColor() }]}
         >
           {value}
         </Text>
       </View>
 
-      <Text
-        style={{ fontSize: 13, marginTop: 6, color: trendColor, zIndex: 2 }}
-      >
+      <Text style={[stylesheet.trend, { color: trendColor }]}>
         {trendLabel}
       </Text>
     </TouchableOpacity>

@@ -1,7 +1,9 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowRight,
   CheckCircle,
   CloudRain,
   Droplet,
@@ -9,113 +11,163 @@ import {
   Info,
   Thermometer,
   Waves,
-  XCircle
-} from 'lucide-react-native';
-import React from 'react';
-import { Text, View } from 'react-native';
+  XCircle,
+} from "lucide-react-native";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-// Icon and default color mapping
-const parameterIcons = {
-  ph: { icon: Gauge, label: 'pH' },
-  temperature: { icon: Thermometer, label: 'Temperature' },
-  turbidity: { icon: Droplet, label: 'Turbidity' },
-  salinity: { icon: Waves, label: 'Salinity' },
-  rain: { icon: CloudRain, label: 'Rainy' },
+const getAlertColors = (type) => {
+  switch (type?.toLowerCase()) {
+    case "error":
+    case "critical":
+      return {
+        iconBg: ["#FF416C", "#FF4B2B"],
+        iconColor: "#FFFFFF",
+        textColor: "#DC2626",
+        bg: "#FEF2F2",
+      };
+    case "warning":
+      return {
+        iconBg: ["#FFB74D", "#FF9800"],
+        iconColor: "#FFFFFF",
+        textColor: "#B45309",
+        bg: "#FFFBEB",
+      };
+    case "success":
+      return {
+        iconBg: ["#4CAF50", "#66BB6A"],
+        iconColor: "#FFFFFF",
+        textColor: "#065F46",
+        bg: "#ECFDF5",
+      };
+    default: // info
+      return {
+        iconBg: ["#3B82F6", "#60A5FA"],
+        iconColor: "#FFFFFF",
+        textColor: "#1E40AF",
+        bg: "#EFF6FF",
+      };
+  }
+};
+
+export default NotificationCard = ({
+  type = "info",
+  title,
+  message,
+  timestamp,
+  icon = null,
+  dotColor = "#3B82F6",
+  bg,
+  iconColor
+}) => {
+  const colors = getAlertColors(type);
+  const navigation = useNavigation();
+
+ const renderIcon = () => {
+    let IconComponent = AlertCircle;
+    let alertIconColor = iconColor || colors.iconColor; // Use prop if available, otherwise default
+    let alertBgColor = bg || colors.iconBg[0];
+
+    if (type?.toLowerCase() === "rain") {
+      IconComponent = CloudRain;
+    } else if (icon && alertIcons[icon]) {
+      IconComponent = alertIcons[icon];
+    }
+
+    return (
+      <View style={[styles.iconContainer, { backgroundColor: alertBgColor }]}>
+        <IconComponent size={24} color={alertIconColor} strokeWidth={2} />
+      </View>
+    );
+  };
+
+  const renderTimestamp = () => {
+    if (!timestamp) return null;
+
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - new Date(timestamp)) / (1000 * 60));
+
+    let timeAgo;
+    if (diffInMinutes < 1) timeAgo = "Just now";
+    else if (diffInMinutes < 60) timeAgo = `${diffInMinutes}m ago`;
+    else if (diffInMinutes < 1440)
+      timeAgo = `${Math.floor(diffInMinutes / 60)}h ago`;
+    else timeAgo = new Date(timestamp).toLocaleDateString();
+
+    return <Text style={styles.timestamp}>{timeAgo}</Text>;
+  };
+
+  return (
+    <View style={styles.container}>
+      {renderIcon()}
+      <View style={styles.contentContainer}>
+        <View style={styles.header}>
+          {renderTimestamp()}
+          <Text style={styles.title}>{title}</Text>
+        </View>
+        <Text style={styles.message}>{message}</Text>
+      </View>
+      <View style={[styles.dotIndicator, { backgroundColor: dotColor }]} />
+    </View>
+  );
 };
 
 const alertIcons = {
   "check-circle": CheckCircle,
   "alert-triangle": AlertTriangle,
   "x-circle": XCircle,
-  "info": Info,
+  info: Info,
 };
 
-const NotificationCard = ({
-  type = 'status',
-  title,
-  message,
-  parameter = null,
-  icon = null, // <-- Accept icon prop
-  alertLevel = { bg: '#F3F4F6', iconColor: '#007AFF' },
-  onClose,
-  onPrimaryAction,
-  onSecondaryAction,
-  primaryLabel = 'Go',
-  secondaryLabel = 'Dismiss',
-}) => {
-  const navigation = useNavigation();
-
-  const renderIcon = () => {
-    // 1. Use alert icon if provided
-    if (icon && alertIcons[icon]) {
-      const IconComponent = alertIcons[icon];
-      return <IconComponent size={24} color={alertLevel.iconColor} />;
-    }
-    // 2. Use parameter icon if available
-    if (parameter && parameterIcons[parameter.toLowerCase()]) {
-      const IconComponent = parameterIcons[parameter.toLowerCase()].icon;
-      return <IconComponent size={24} color={alertLevel.iconColor} />;
-    }
-    // 3. Fallback
-    return <AlertCircle size={24} color={alertLevel.iconColor} />;
-  };
-
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        marginVertical: 8,
-        shadowColor: '#1a2e51',
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-      }}
-    >
-      {/* Icon container with dynamic background */}
-      <View
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 12,
-          backgroundColor: alertLevel.bg,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginRight: 12,
-        }}
-      >
-        {renderIcon()}
-      </View>
-
-      {/* Texts */}
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          {parameter && parameterIcons[parameter.toLowerCase()] && (
-            <View style={{ marginRight: 8 }}>
-              {React.createElement(parameterIcons[parameter.toLowerCase()].icon, {
-                size: 16,
-                color: '#1E40AF' // Deep blue color
-              }, null)}
-            </View>
-          )}
-          <Text style={{ 
-            fontWeight: '700', 
-            fontSize: 14, 
-            color: '#1E40AF', // Deep blue color
-            textTransform: 'capitalize'
-          }}>
-            {parameter ? parameterIcons[parameter.toLowerCase()]?.label || parameter : ''}
-          </Text>
-        </View>
-        <Text style={{ fontWeight: '600', fontSize: 16, color: '#111', marginBottom: 4 }}>{title}</Text>
-        <Text style={{ fontSize: 14, color: '#4B5563' }}>{message}</Text>
-      </View>
-    </View>
-  );
-};
-
-export default NotificationCard;
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 12,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+    position: "relative",
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  title: {
+    fontWeight: "600",
+    fontSize: 16,
+    color: "#111",
+  },
+  message: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  timestamp: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  dotIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#3B82F6",
+    position: "absolute",
+    top: 12,
+    right: 12,
+  },
+});

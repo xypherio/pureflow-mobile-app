@@ -1,6 +1,6 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import { Eye, Gauge, Thermometer, Waves } from "lucide-react-native";
-import { Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PARAMETER_CONFIG = {
   pH: {
@@ -33,6 +33,68 @@ const PARAMETER_CONFIG = {
   },
 };
 
+const stylesheet = StyleSheet.create({
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 150,
+    flexBasis: "48%",
+    flexShrink: 0,
+    justifyContent: "space-between",
+    ...globalStyles.boxShadow,
+    marginBottom: 16,
+  },
+  iconContainer: {
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    width: 48,
+    height: 48,
+  },
+  parameterName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 4,
+  },
+  valueText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  statusContainer: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "capitalize",
+  },
+  normalRangeText: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  noDataContainer: { 
+    padding: 20, 
+    alignItems: 'center' 
+  },
+  noDataText: { 
+    color: '#6B7280' 
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  }
+});
+
 const ParameterCard = ({ parameter, value, status, onPress }) => {
   console.log(`ParameterCard rendering: ${parameter}, value: ${value}, status: ${status}`);
   
@@ -63,83 +125,46 @@ const ParameterCard = ({ parameter, value, status, onPress }) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 16,
-        minHeight: 150,
-        flexBasis: "48%",
-        flexShrink: 0,
-        justifyContent: "space-between",
-        ...globalStyles.boxShadow,
-        marginBottom: 16,
-      }}
+      style={stylesheet.card}
     >
       <View style={{ alignItems: "center" }}>
         <View
-          style={{
-            borderRadius: 24,
+          style={[stylesheet.iconContainer, {
             backgroundColor: config.bgColor,
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 12,
-            width: 48,
-            height: 48,
-          }}
+          }]}
         >
           <IconComponent size={24} color={config.iconColor} />
         </View>
 
         <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "600",
-            color: "#374151",
-            marginBottom: 4,
-          }}
+          style={stylesheet.parameterName}
         >
           {parameter}
         </Text>
 
         <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: "#111827",
-            marginBottom: 4,
-          }}
+          style={stylesheet.valueText}
         >
           {value}
           {config.unit}
         </Text>
 
         <View
-          style={{
+          style={[stylesheet.statusContainer, {
             backgroundColor: getStatusColor(status) + "20",
-            paddingHorizontal: 8,
-            paddingVertical: 2,
-            borderRadius: 8,
-          }}
+          }]}
         >
           <Text
-            style={{
-              fontSize: 12,
-              fontWeight: "600",
+            style={[stylesheet.statusText, {
               color: getStatusColor(status),
-              textTransform: "capitalize",
-            }}
+            }]}
           >
             {status}
           </Text>
         </View>
 
         <Text
-          style={{
-            fontSize: 10,
-            color: "#6B7280",
-            marginTop: 4,
-            textAlign: "center",
-          }}
+          style={stylesheet.normalRangeText}
         >
           Normal: {config.normalRange}
         </Text>
@@ -155,18 +180,14 @@ export default function ParameterGridCard({ parameters, onParameterPress }) {
   if (!parameters || Object.keys(parameters).length === 0) {
     console.log('No parameters available, showing empty state');
     return (
-      <View style={{ padding: 20, alignItems: 'center' }}>
-        <Text style={{ color: '#6B7280' }}>No parameter data available.</Text>
+      <View style={stylesheet.noDataContainer}>
+        <Text style={stylesheet.noDataText}>No parameter data available.</Text>
       </View>
     );
   }
 
   return (
-    <View style={{
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-    }}>
+    <View style={stylesheet.gridContainer}>
       {Object.entries(parameters).map(([name, data]) => {
         // Normalize parameter name to handle case sensitivity
         const normalizedName = name.toLowerCase();

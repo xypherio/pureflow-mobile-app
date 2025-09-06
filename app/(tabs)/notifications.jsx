@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { colors } from "../../src/constants/colors";
 
 // Alert type mappings for display
 const getAlertIcon = (type) => {
@@ -226,6 +227,21 @@ export default function NotificationsScreen() {
     return configs[type] || configs.info;
   };
 
+  const getParameterColor = (parameter) => {
+    switch (parameter) {
+      case "pH":
+        return colors.phColor;
+      case "temperature":
+        return colors.tempColor;
+      case "turbidity":
+        return colors.turbidityColor;
+      case "salinity":
+        return colors.salinityColor;
+      default:
+        return colors.primary;
+    }
+  };
+
   // Render alert item using NotificationCard
   const renderAlertItem = ({ item }) => {
     const alertLevel = getAlertLevelConfig(item.type);
@@ -247,8 +263,9 @@ export default function NotificationsScreen() {
           parameter={item.parameter}
           icon={icon}
           alertLevel={alertLevel}
-          primaryLabel="View Details"
-          secondaryLabel="Dismiss"
+          bg={alertLevel.bg}
+          iconColor={alertLevel.iconColor}
+          dotColor={getParameterColor(item.parameter)}
           onPrimaryAction={() => navigation.navigate("forecast")}
           onSecondaryAction={() => console.log("Dismissed alert:", item.id)}
         />

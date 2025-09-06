@@ -15,7 +15,7 @@ const PARAMETER_COLORS = {
 
 const getParameterIcon = (paramName) => {
   const iconSize = 170;
-  const iconStyles = { position: 'absolute', bottom: 0, right: -40 };
+  const iconStyles = stylesheet.iconStyles;
   
   if (!paramName) return null;
   
@@ -34,182 +34,7 @@ const getParameterIcon = (paramName) => {
   }
 };
 
-const ParameterCard = ({ 
-  parameter, 
-  value, 
-  unit, 
-  safeRange, 
-  status, 
-  analysis, 
-  chartData,
-  minValue,
-  maxValue,
-  style 
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  
-  const statusColors = {
-    normal: {
-      borderColor: '#10B981',
-      shadowColor: '#10B981',
-      bgColor: '#ECFDF5',
-      iconColor: '#059669',
-      gradientColors: ['#D1FAE5', '#A7F3D0']
-    },
-    caution: {
-      borderColor: '#F59E0B',
-      shadowColor: '#F59E0B',
-      bgColor: '#FFFBEB',
-      iconColor: '#D97706',
-      gradientColors: ['#FEF3C7', '#FDE68A']
-    },
-    critical: {
-      borderColor: '#EF4444',
-      shadowColor: '#EF4444',
-      bgColor: '#FEF2F2',
-      iconColor: '#DC2626',
-      gradientColors: ['#FEE2E2', '#FECACA']
-    }
-  };
-  
-  const statusConfig = statusColors[status] || statusColors.normal;
-
-  const backgroundIcon = getParameterIcon(parameter);
-  
-  return (
-    <View style={[
-        styles.card, 
-        style, 
-        { 
-          shadowColor: statusConfig.shadowColor,
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: statusConfig.borderColor + '80',
-          overflow: 'hidden',
-        }
-      ]}>
-      {backgroundIcon && (
-        <View style={styles.backgroundIconContainer}>
-          {backgroundIcon}
-        </View>
-      )}
-      <View style={[styles.gradientOverlay, { 
-        backgroundColor: statusConfig.borderColor + '30',
-        opacity: 0.3
-      }]} />
-      <TouchableOpacity 
-        style={styles.header} 
-        onPress={() => setExpanded(!expanded)}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.parameterHeader}>
-            <Text style={[
-              styles.parameterName, 
-              { color: PARAMETER_COLORS[parameter] || '#1e293b' }
-            ]}>
-              {parameter}
-            </Text>
-            <View style={styles.valueContainer}>
-              <Text style={styles.value}>{value}</Text>
-              <Text style={styles.unit}>{unit}</Text>
-            </View>
-          </View>
-        </View>
-        {expanded ? (
-          <ChevronUp size={24} color="#64748b" />
-        ) : (
-          <ChevronDown size={24} color="#64748b" />
-        )}
-      </TouchableOpacity>
-
-      <View style={[styles.content, { backgroundColor: statusConfig.bgColor + '40' }]}>
-        <View style={styles.statusRow}>
-          <View style={[styles.statusDot, { backgroundColor: statusConfig.borderColor }]} />
-          <Text style={styles.statusText}>{status.toUpperCase()}</Text>
-          <Text style={styles.safeRange}>Safe range: {safeRange}</Text>
-        </View>
-        
-        {expanded && (minValue !== undefined || maxValue !== undefined) && (
-          <View style={styles.valueRangeContainer}>
-            <View style={styles.rangeItem}>
-              <Minus size={14} color="#64748b" />
-              <Text style={styles.rangeText}>
-                Min: {minValue !== undefined ? minValue.toFixed(2) : 'N/A'} {unit}
-              </Text>
-            </View>
-            <View style={styles.rangeItem}>
-              <Plus size={14} color="#64748b" />
-              <Text style={styles.rangeText}>
-                Max: {maxValue !== undefined ? maxValue.toFixed(2) : 'N/A'} {unit}
-              </Text>
-            </View>
-          </View>
-        )}
-        <Text style={styles.analysis} numberOfLines={expanded ? undefined : 1}>
-          {analysis}
-        </Text>
-
-        {expanded && chartData && (
-          <View style={styles.chartContainer}>
-            <BarChart
-              data={chartData}
-              width={350}
-              height={220}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                barPercentage: chartData.timeRange === 'daily' ? 0.5 : 0.7,
-                style: { 
-                  borderRadius: 16,
-                  marginLeft: -20, 
-                  paddingRight: 15,
-                },
-                propsForBackgroundLines: {
-                  strokeWidth: 0.5,
-                  stroke: '#e2e8f0',
-                },
-                propsForLabels: {
-                  fontSize: chartData.labels?.length > 10 ? 8 : 10,
-                },
-                barRadius: 4,
-                fillShadowGradient: PARAMETER_COLORS[parameter] || '#007bff',
-                fillShadowGradientOpacity: 1,
-              }}
-              verticalLabelRotation={chartData.labels?.length > 7 ? -45 : 0}
-              fromZero={true}
-              showBarTops={false}
-              withInnerLines={true}
-              showValuesOnTopOfBars={false}
-              withCustomBarColorFromData={true}
-              flatColor={true}
-              style={styles.chart}
-              segments={chartData.timeRange === 'weekly' ? 7 : chartData.timeRange === 'monthly' ? 12 : 6}
-              yAxisSuffix={unit ? ` ${unit}` : ''}
-              yAxisInterval={1}
-              formatYLabel={(value) => {
-                // Format Y-axis labels to be more compact
-                if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
-                return value.toString();
-              }}
-              formatXLabel={(value, index) => {
-                // For dates, show just the day number if it's a date string
-                if (typeof value === 'string' && value.includes('-')) {
-                  return value.split('-').pop();
-                }
-                return value;
-              }}
-            />
-          </View>
-        )}
-      </View>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
+const stylesheet = StyleSheet.create({
   card: {
     borderRadius: 20,
     padding: 20,
@@ -255,7 +80,6 @@ const styles = StyleSheet.create({
   parameterName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
     textTransform: 'capitalize',
   },
   valueContainer: {
@@ -291,7 +115,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748b',
     marginRight: 12,
     textTransform: 'uppercase',
   },
@@ -312,6 +135,200 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 8,
   },
+  iconStyles: { 
+    position: 'absolute', 
+    bottom: 0, 
+    right: -40 
+  },
+  rangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  rangeText: {
+    fontSize: 14,
+    color: '#64748b',
+    marginLeft: 4,
+  },
+  valueRangeContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  }
 });
+
+const ParameterCard = ({ 
+  parameter, 
+  value, 
+  unit, 
+  safeRange, 
+  status, 
+  analysis, 
+  chartData,
+  minValue,
+  maxValue,
+  style 
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  const statusColors = {
+    normal: {
+      borderColor: '#10B981',
+      shadowColor: '#10B981',
+      bgColor: '#ECFDF5',
+      iconColor: '#059669',
+      gradientColors: ['#D1FAE5', '#A7F3D0']
+    },
+    caution: {
+      borderColor: '#F59E0B',
+      shadowColor: '#F59E0B',
+      bgColor: '#FFFBEB',
+      iconColor: '#D97706',
+      gradientColors: ['#FEF3C7', '#FDE68A']
+    },
+    critical: {
+      borderColor: '#EF4444',
+      shadowColor: '#EF4444',
+      bgColor: '#FEF2F2',
+      iconColor: '#DC2626',
+      gradientColors: ['#FEE2E2', '#FECACA']
+    }
+  };
+  
+  const statusConfig = statusColors[status] || statusColors.normal;
+
+  const backgroundIcon = getParameterIcon(parameter);
+  
+  return (
+    <View style={[
+        stylesheet.card, 
+        style, 
+        { 
+          shadowColor: statusConfig.shadowColor,
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: statusConfig.borderColor + '80',
+          overflow: 'hidden',
+        }
+      ]}>
+      {backgroundIcon && (
+        <View style={stylesheet.backgroundIconContainer}>
+          {backgroundIcon}
+        </View>
+      )}
+      <View style={[stylesheet.gradientOverlay, { 
+        backgroundColor: statusConfig.borderColor + '30',
+        opacity: 0.3
+      }]} />
+      <TouchableOpacity 
+        style={stylesheet.header} 
+        onPress={() => setExpanded(!expanded)}
+      >
+        <View style={stylesheet.headerContent}>
+          <View style={stylesheet.parameterHeader}>
+            <Text style={[
+              stylesheet.parameterName, 
+              { color: PARAMETER_COLORS[parameter] || '#1e293b' }
+            ]}>
+              {parameter}
+            </Text>
+            <View style={stylesheet.valueContainer}>
+              <Text style={stylesheet.value}>{value}</Text>
+              <Text style={stylesheet.unit}>{unit}</Text>
+            </View>
+          </View>
+        </View>
+        {expanded ? (
+          <ChevronUp size={24} color="#64748b" />
+        ) : (
+          <ChevronDown size={24} color="#64748b" />
+        )}
+      </TouchableOpacity>
+
+      <View style={[stylesheet.content, { backgroundColor: statusConfig.bgColor + '40' }]}>
+        <View style={stylesheet.statusRow}>
+          <View style={[stylesheet.statusDot, { backgroundColor: statusConfig.borderColor }]} />
+          <Text style={stylesheet.statusText}>{status.toUpperCase()}</Text>
+          <Text style={stylesheet.safeRange}>Safe range: {safeRange}</Text>
+        </View>
+        
+        {expanded && (minValue !== undefined || maxValue !== undefined) && (
+          <View style={stylesheet.valueRangeContainer}>
+            <View style={stylesheet.rangeItem}>
+              <Minus size={14} color="#64748b" />
+              <Text style={stylesheet.rangeText}>
+                Min: {minValue !== undefined ? minValue.toFixed(2) : 'N/A'} {unit}
+              </Text>
+            </View>
+            <View style={stylesheet.rangeItem}>
+              <Plus size={14} color="#64748b" />
+              <Text style={stylesheet.rangeText}>
+                Max: {maxValue !== undefined ? maxValue.toFixed(2) : 'N/A'} {unit}
+              </Text>
+            </View>
+          </View>
+        )}
+        <Text style={stylesheet.analysis} numberOfLines={expanded ? undefined : 1}>
+          {analysis}
+        </Text>
+
+        {expanded && chartData && (
+          <View style={stylesheet.chartContainer}>
+            <BarChart
+              data={chartData}
+              width={350}
+              height={220}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 1,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                barPercentage: chartData.timeRange === 'daily' ? 0.5 : 0.7,
+                style: { 
+                  borderRadius: 16,
+                  marginLeft: -20, 
+                  paddingRight: 15,
+                },
+                propsForBackgroundLines: {
+                  strokeWidth: 0.5,
+                  stroke: '#e2e8f0',
+                },
+                propsForLabels: {
+                  fontSize: chartData.labels?.length > 10 ? 8 : 10,
+                },
+                barRadius: 4,
+                fillShadowGradient: PARAMETER_COLORS[parameter] || '#007bff',
+                fillShadowGradientOpacity: 1,
+              }}
+              verticalLabelRotation={chartData.labels?.length > 7 ? -45 : 0}
+              fromZero={true}
+              showBarTops={false}
+              withInnerLines={true}
+              showValuesOnTopOfBars={false}
+              withCustomBarColorFromData={true}
+              flatColor={true}
+              style={stylesheet.chart}
+              segments={chartData.timeRange === 'weekly' ? 7 : chartData.timeRange === 'monthly' ? 12 : 6}
+              yAxisSuffix={unit ? ` ${unit}` : ''}
+              yAxisInterval={1}
+              formatYLabel={(value) => {
+                // Format Y-axis labels to be more compact
+                if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                return value.toString();
+              }}
+              formatXLabel={(value, index) => {
+                // For dates, show just the day number if it's a date string
+                if (typeof value === 'string' && value.includes('-')) {
+                  return value.split('-').pop();
+                }
+                return value;
+              }}
+            />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+};
 
 export default ParameterCard;

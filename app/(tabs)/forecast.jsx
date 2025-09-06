@@ -7,41 +7,9 @@ import WeatherBanner from "@ui/weather-banner";
 
 import { getMockForecast } from "@services/mockForecastService";
 import React from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 export default function HomeScreen() {
-  const insights = [
-    {
-      type: "positive",
-      title: "AI Forecast: Optimal Water Quality Maintained",
-      description:
-        "ML predicts stable conditions for 48h. pH (7.2-7.4), DO (6.8-7.2 mg/L) optimal. No action needed.",
-      suggestion:
-        "Continue current maintenance schedule. Monitor for any sudden changes.",
-      timestamp: "Updated 15 min ago",
-    },
-    {
-      type: "warning",
-      title: "AI Alert: Potential Turbidity Spike Predicted",
-      description:
-        "ML detects 23% turbidity increase in 6-8h. 87% accuracy. Recommend filter maintenance.",
-      suggestion:
-        "Schedule filter replacement within 4 hours. Increase monitoring frequency to hourly.",
-      action: "View AI Analysis",
-      timestamp: "Updated 1 hour ago",
-    },
-    {
-      type: "info",
-      title: "AI Insights: Seasonal Pattern Detected",
-      description:
-        "Neural network shows rainfall-conductivity correlation. Monitor salinity during weather events.",
-      suggestion:
-        "Prepare backup filtration systems. Stock up on treatment chemicals.",
-      action: "View Pattern Analysis",
-      timestamp: "Updated 3 hours ago",
-    },
-  ];
-
   const [isModalVisible, setIsModalVisible] = React.useState(false);
   const [selectedParam, setSelectedParam] = React.useState(null);
   const [forecastDetails, setForecastDetails] = React.useState(null);
@@ -155,20 +123,15 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          {insights.map((insight, index) => (
+          {forecastPredicted ? (
             <InsightsCard
-              key={index}
-              type={insight.type}
-              title={insight.title}
-              description={insight.description}
-              suggestion={insight.suggestion}
-              action={insight.action}
-              onActionPress={() => {
-                console.log("button pressed");
-              }}
-              timestamp={insight.timestamp}
+              type="info"
+              title="Forecast Insights"
+              sensorData={forecastPredicted}
             />
-          ))}
+          ) : (
+            <ActivityIndicator size="large" color="#4a90e2" style={{ marginTop: 20 }} />
+          )}
         </View>
 
         <ForecastDetailModal

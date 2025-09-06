@@ -32,6 +32,116 @@ const getParameterColor = (parameter) => {
   return parameterColors[parameter?.toLowerCase()] || colors.primary;
 };
 
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#f6fafd",
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 20,
+    marginBottom: 10,
+    justifyContent: "flex-start",
+    ...globalStyles.boxShadow,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  refreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+  },
+  refreshText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  filterContainer: {
+    marginBottom: 16,
+  },
+  segmentedFilter: {
+    marginBottom: 0,
+  },
+  chartContainer: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  chartWrapper: {
+    position: "relative",
+    width: screenWidth - CHART_DIMENSIONS.containerWidth,
+    alignItems: "center",
+  },
+  chart: {
+    borderRadius: 16,
+  },
+  legendContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    marginTop: 16,
+    gap: 16,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  legendText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.text,
+  },
+  lastUpdated: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingState: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  infoContainer: {
+    alignItems: "center",
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  infoText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  subInfoText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    textAlign: "center",
+  },
+});
+
 const LineChartCard = ({
   title = "Water Quality Trends",
   data: propData,
@@ -286,115 +396,5 @@ const LineChartCard = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#f6fafd",
-    borderRadius: 16,
-    padding: 12,
-    marginTop: 20,
-    marginBottom: 10,
-    justifyContent: "flex-start",
-    ...globalStyles.boxShadow,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  refreshButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-  },
-  refreshText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  filterContainer: {
-    marginBottom: 16,
-  },
-  segmentedFilter: {
-    marginBottom: 0,
-  },
-  chartContainer: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  chartWrapper: {
-    position: "relative",
-    width: screenWidth - CHART_DIMENSIONS.containerWidth,
-    alignItems: "center",
-  },
-  chart: {
-    borderRadius: 16,
-  },
-  legendContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    marginTop: 16,
-    gap: 16,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  legendText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.text,
-  },
-  lastUpdated: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  infoContainer: {
-    alignItems: "center",
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  subInfoText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    textAlign: "center",
-  },
-});
 
 export default LineChartCard;

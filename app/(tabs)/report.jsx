@@ -1,12 +1,14 @@
 // app/(tabs)/report.jsx
 import ExportToggleButton from "@/components/forms/export-toggle-button";
 import PureFlowLogo from "@components/ui/ui-header";
-import ConclusionCard from "@data-display/conclusion-card";
+import InsightsCard from "@data-display/InsightsCard";
+import SuggestionCard from "@data-display/SuggestionCard";
 import ParameterCard from "@data-display/parameter-card";
 import WaterQualitySummaryCard from "@data-display/water-quality-summary-card";
 import { Ionicons } from "@expo/vector-icons";
 import { useChartData } from "@hooks/useChartData";
 import SegmentedFilter from "@navigation/segmented-filters";
+import { generateInsight } from "@services/ai/geminiAPI";
 import EmptyState from "@ui/empty-state";
 import GlobalWrapper from "@ui/global-wrapper";
 import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
@@ -67,6 +69,8 @@ const ReportScreen = () => {
   });
   const [error, setError] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [geminiResponse, setGeminiResponse] = useState(null);
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
   const reportRef = useRef();
 
   // Use the useChartData hook to fetch data
@@ -140,6 +144,28 @@ const ReportScreen = () => {
       });
     }
   }, [chartData, chartError, activeFilter]);
+
+  useEffect(() => {
+    if (reportData && reportData.parameters && Object.keys(reportData.parameters).length > 0) {
+      const getInsight = async () => {
+        setIsGeminiLoading(true);
+        setGeminiResponse(null);
+        try {
+          const insight = await generateInsight(reportData);
+          setGeminiResponse(insight);
+          console.log("Gemini API Response:", insight);
+        } catch (error) {
+          console.error("Error fetching Gemini insight:", error);
+          setGeminiResponse(null); // Or some error object
+        } finally {
+          setIsGeminiLoading(false);
+        }
+      };
+      getInsight();
+    } else {
+      setGeminiResponse(null);
+    }
+  }, [reportData]);
 
   const onRefresh = useCallback(() => {
     refreshData();
@@ -237,6 +263,7 @@ const ReportScreen = () => {
             <Text style={styles.loadingText}>Loading report data...</Text>
           </View>
         </View>
+        </GlobalWrapper>
 
         <ExportToggleButton 
           reportData={reportData}
@@ -245,7 +272,6 @@ const ReportScreen = () => {
           onExportComplete={handleExportComplete}
           onExportError={handleExportError}
         />
-        </GlobalWrapper>
       </>
     );
   }
@@ -359,22 +385,18 @@ const ReportScreen = () => {
                 <Text style={sectionLabelStyle}>
                   Quality Report and Recommendation
                 </Text>
-                <ConclusionCard
-                  status={reportData.overallStatus || "normal"}
-                  message={
-                    reportData.overallStatus === "critical"
-                      ? "Immediate action required for critical parameters."
-                      : reportData.overallStatus === "warning"
-                      ? "Some parameters require attention."
-                      : "All parameters are within normal ranges."
-                  }
-                  recommendations={
-                    reportData.recommendations || [
-                      "Regularly monitor all parameters",
-                      "Check system for any anomalies",
-                    ]
-                  }
-                />
+                {isGeminiLoading ? (
+                  <ActivityIndicator style={{ marginVertical: 20 }} color="#3b82f6" />
+                ) : geminiResponse ? (
+                  <>
+                    <InsightsCard insight={geminiResponse?.insights?.overallInsight || ""} />
+                    {geminiResponse?.suggestions?.map((suggestion, index) => (
+                      <SuggestionCard key={index} suggestion={suggestion} />
+                    ))}
+                  </>
+                ) : (
+                  <Text>Failed to load insights. Please check your Gemini API quota or try again later.</Text>
+                )}
               </View>
             </>
           )}

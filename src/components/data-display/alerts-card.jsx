@@ -1,7 +1,7 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import * as Lucide from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Animated, Easing, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 const parameterIconMap = {
   ph: Lucide.Droplet,
@@ -42,8 +42,59 @@ const typeStyles = {
   },
 };
 
+const styles = StyleSheet.create({
+  cardContainer: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    minHeight: 80,
+    height: 80,
+    ...globalStyles.boxShadow,
+    position: "relative",
+  },
+  indicatorBar: {
+    position: "absolute",
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 6,
+    borderRadius: 3,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    marginLeft: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  textContainer: {
+    flex: 1,
+  },
+  titleText: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  messageText: {
+    fontSize: 14,
+  },
+  thresholdText: {
+    color: "#6b7280",
+    fontSize: 12,
+    marginTop: 2,
+  },
+});
+
 export default function AlertsCard({ alerts = [], interval = 4000 }) {
-  console.log("alerts", alerts);
+  console.log("Number of alerts:", alerts.length);
   const [current, setCurrent] = useState(0);
   const [scaleAnim] = useState(new Animated.Value(1));
   const [opacityAnim] = useState(new Animated.Value(2));
@@ -137,90 +188,106 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
+  const getIndicatorColor = () => {
+    switch (alert.type) {
+      case "success":
+        return "#22c55e";
+      case "warning":
+        return "#f59e42";
+      case "error":
+        return "#ef4444";
+      default:
+        return "#2563eb";
+    }
+  };
+
   return (
     <Animated.View
-      style={{
-        opacity: opacityAnim,
-        transform: [{ scale: scaleAnim }],
-        backgroundColor: style.bg,
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 10,
-        minHeight: 80,
-        height: 80,
-        ...globalStyles.boxShadow,
-        position: "relative" // Ensure it appears above other elements
-      }}
+      style={[
+        stylesheet.cardContainer,
+        {
+          opacity: opacityAnim,
+          transform: [{ scale: scaleAnim }],
+          backgroundColor: style.bg,
+        },
+      ]}
     >
       {/* Color indicator bar */}
       <View
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 10,
-          bottom: 10,
-          width: 6,
-          borderRadius: 3,
-          backgroundColor:
-            alert.type === "success"
-              ? "#22c55e"
-              : alert.type === "warning"
-              ? "#f59e42"
-              : alert.type === "error"
-              ? "#ef4444"
-              : "#2563eb",
-        }}
+        style={[stylesheet.indicatorBar, { backgroundColor: getIndicatorColor() }]}
       />
       {/* Parameter icon */}
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          backgroundColor: "#fff",
-          alignItems: "center",
-          justifyContent: "center",
-          marginRight: 12,
-          marginLeft: 10,
-          borderWidth: 1,
-          borderColor: "#e5e7eb",
-        }}
-      >
+      <View style={stylesheet.iconContainer}>
         <ParameterIcon size={22} color={style.iconColor} />
       </View>
       {/* Texts */}
-      <View style={{ flex: 1 }}>
+      <View style={stylesheet.textContainer}>
         <Text
-          style={{
-            fontWeight: "bold",
-            color: style.title,
-            fontSize: 16,
-            marginBottom: 2,
-          }}
+          style={[stylesheet.titleText, { color: style.title }]}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {capitalizeWords(alert.title)}
         </Text>
         <Text
-          style={{ color: style.message, fontSize: 14 }}
+          style={[stylesheet.messageText, { color: style.message }]}
           numberOfLines={2}
           ellipsizeMode="tail"
         >
           {capitalizeFirst(alert.message)}
         </Text>
-        {/* Normal range display */}
-        {alert.threshold &&
-          alert.threshold.min !== undefined &&
-          alert.threshold.max !== undefined && (
-            <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
-              Normal range: {alert.threshold.min} - {alert.threshold.max}
-            </Text>
-          )}
       </View>
     </Animated.View>
   );
 }
+
+const stylesheet = StyleSheet.create({
+  cardContainer: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    minHeight: 80,
+    height: 80,
+    ...globalStyles.boxShadow,
+    position: "relative",
+  },
+  indicatorBar: {
+    position: "absolute",
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 6,
+    borderRadius: 3,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    marginLeft: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  textContainer: {
+    flex: 1,
+  },
+  titleText: {
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  messageText: {
+    fontSize: 14,
+  },
+  thresholdText: {
+    color: "#6b7280",
+    fontSize: 12,
+    marginTop: 2,
+  },
+});

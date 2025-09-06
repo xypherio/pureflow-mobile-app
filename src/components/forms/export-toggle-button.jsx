@@ -1,6 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { FileSpreadsheet, FileText, Share } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
+
+
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { handleExport } from '../../utils/exportUtils';
 
@@ -37,6 +39,7 @@ export default function ExportToggleButton({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [activeExport, setActiveExport] = useState(null);
   const buttonRef = useRef();
 

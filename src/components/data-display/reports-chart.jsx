@@ -4,6 +4,100 @@ import { colors } from '../../constants/colors';
 import ChartTooltip from '../ui/ChartTooltip';
 import LinearChart from './LinearChart';
 
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 20,
+    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  refreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+  },
+  refreshText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  filterContainer: {
+    marginBottom: 16,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  filterButtonTextActive: {
+    color: colors.white,
+  },
+  chartContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  infoText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subInfoText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+});
+
 const ReportsChart = ({ title = 'Water Quality Reports', height = 350 }) => {
   const [timeFilter, setTimeFilter] = useState('daily');
   const [tooltipData, setTooltipData] = useState(null);
@@ -124,98 +218,4 @@ const ReportsChart = ({ title = 'Water Quality Reports', height = 350 }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  refreshButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-  },
-  refreshText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  filterContainer: {
-    marginBottom: 16,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  filterButtonTextActive: {
-    color: colors.white,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  infoContainer: {
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  subInfoText: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    textAlign: 'center',
-  },
-});
-
-export default ReportsChart; 
+export default ReportsChart;

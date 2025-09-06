@@ -1,5 +1,17 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
-import { Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+
+const safeString = (value) => {
+  if (value === null || value === undefined) {
+    return "No data available";
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+};
+import { generateInsight } from '../../services/ai/geminiAPI';
 
 const INSIGHT_TYPES = {
   positive: {
@@ -36,6 +48,79 @@ const INSIGHT_TYPES = {
   }
 };
 
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 5,
+    borderWidth: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    opacity: 0.3,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  contentContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start' 
+  },
+  title: { 
+    fontSize: 18, 
+    fontWeight: '800', 
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  description: { 
+    fontSize: 15, 
+    color: '#4B5563',
+    lineHeight: 22,
+    marginBottom: 8,
+    fontWeight: '400',
+  },
+  lastUpdated: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  suggestionContainer: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+  },
+  suggestionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  suggestionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  }
+});
+
 export default function InsightsCard({ 
   type = 'info', 
   title, 
@@ -43,48 +128,41 @@ export default function InsightsCard({
   suggestion,
   action, 
   onActionPress,
-  timestamp 
+  timestamp,
+  sensorData
 }) {
+  const [insight, setInsight] = useState(description);
+  const [loading, setLoading] = useState(false);
   const config = INSIGHT_TYPES[type] || INSIGHT_TYPES.info;
   const IconComponent = config.icon;
 
+  useEffect(() => {
+    const fetchInsight = async () => {
+      if (sensorData) {
+        setLoading(true);
+        const generatedInsight = await generateInsight(sensorData);
+        setInsight(generatedInsight);
+        setLoading(false);
+      }
+    };
+
+    fetchInsight();
+  }, [sensorData]);
+
   return (
-    <View style={{
-      backgroundColor: '#fff',
-      borderRadius: 16,
-      padding: 20,
-      marginVertical: 5,
-      borderWidth: 1,
+    <View style={[styles.container, {
       borderColor: config.borderColor,
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
+    }]}>
       {/* Gradient overlay */}
-      <View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 4,
+      <View style={[styles.gradientOverlay, {
         backgroundColor: config.borderColor,
-        opacity: 0.3,
-      }} />
+      }]} />
       
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <View style={{
-          width: 48,
-          height: 48,
-          borderRadius: 24,
+      <View style={styles.contentContainer}>
+        <View style={[styles.iconContainer, {
           backgroundColor: config.bgColor,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: 16,
           shadowColor: config.iconColor,
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 3,
-        }}>
+        }]}>
           <IconComponent
             size={24}
             color={config.iconColor}
@@ -92,67 +170,34 @@ export default function InsightsCard({
         </View>
         
         <View style={{ flex: 1 }}>
-          <Text style={{ 
-            fontSize: 18, 
-            fontWeight: '800', 
-            color: '#111827',
-            marginBottom: 8,
-            letterSpacing: -0.5,
-          }}>
-            {title}
+          <Text style={styles.title}>
+            {safeString(title)}
           </Text>
           
-          <Text style={{ 
-            fontSize: 15, 
-            color: '#4B5563',
-            lineHeight: 22,
-            marginBottom: 8,
-            fontWeight: '400',
-          }}>
-            {description}
+          <Text style={styles.description}>
+            {loading ? 'Generating insight...' : safeString(insight?.overallInsight || '')}
           </Text>
-          
+           <Text style={styles.lastUpdated}>
+                Last updated: {new Date().toLocaleString()}
+              </Text>
           {suggestion && (
-            <View style={{
+            <View style={[styles.suggestionContainer, {
               backgroundColor: config.bgColor,
-              padding: 12,
-              borderRadius: 12,
-              marginBottom: 12,
-              borderLeftWidth: 3,
               borderLeftColor: config.iconColor,
-            }}>
-              <Text style={{
-                fontSize: 13,
+            }]}>
+              <Text style={[styles.suggestionTitle, {
                 color: config.iconColor,
-                fontWeight: '600',
-                marginBottom: 4,
-              }}>
+              }]}>
                 💡 AI Suggestion
               </Text>
-              <Text style={{
-                fontSize: 14,
-                color: '#374151',
-                lineHeight: 20,
-                fontWeight: '500',
-              }}>
-                {suggestion}
+              <Text style={styles.suggestionText}>
+                {safeString(suggestion)}
               </Text>
             </View>
           )}
-          
-          {timestamp && (
-            <Text style={{ 
-              fontSize: 12, 
-              color: '#9CA3AF',
-              fontWeight: '500',
-              fontStyle: 'italic',
-              marginTop: 8,
-            }}>
-              {timestamp}
-            </Text>
-          )}
+
         </View>
       </View>
     </View>
   );
-} 
+}

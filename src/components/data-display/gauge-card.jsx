@@ -1,8 +1,55 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import React from "react";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    minHeight: 140,
+    width: "100%",
+  },
+  contentContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  gaugeContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  percentageText: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  breakdownContainer: {
+    flex: 1,
+    paddingLeft: 10,
+  },
+  parameterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  progressBarContainer: {
+    height: 6,
+    flex: 1,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 4,
+    marginLeft: 8,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+  },
+});
 
 export default function WaterQualityGauge({ percentage, parameters: paramValues }) {
   const progress = Math.min(Math.max(percentage, 0), 100);
@@ -34,22 +81,10 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
   };
 
   return (
-    <View
-      style={[
-        {
-          backgroundColor: "#fff",
-          borderRadius: 20,
-          padding: 20,
-          marginBottom: 16,
-          minHeight: 140,
-          width: "100%",
-        },
-        globalStyles.boxShadow,
-      ]}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
+    <View style={[stylesheet.container, globalStyles.boxShadow]}>
+      <View style={stylesheet.contentContainer}>
         {/* Gauge section (left) */}
-        <View style={{ flex: 1, alignItems: "center" }}>
+        <View style={stylesheet.gaugeContainer}>
           <Svg height={center + 10} width={center * 2}>
             {/* Background semi-circle */}
             <Path
@@ -68,51 +103,43 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
               fill="none"
             />
           </Svg>
-          <Text style={{ fontSize: 16, fontWeight: "800", color: statusColor }}>
+          <Text style={[stylesheet.percentageText, { color: statusColor }]}>
             {progress}%
           </Text>
-          <Text style={{ fontSize: 10, fontWeight: "600", color: statusColor }}>
+          <Text style={[stylesheet.statusText, { color: statusColor }]}>
             {status}
           </Text>
         </View>
 
         {/* Breakdown section (right) */}
-        <View style={{ flex: 1, paddingLeft: 10 }}>
-          {parameters.map((param, idx) => {
-            const Icon = param.icon;
-            return (
-              <View
-                key={idx}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}
-              >
-                <Icon color={param.color} size={16} />
-                <View
-                  style={{
-                    height: 6,
-                    flex: 1,
-                    backgroundColor: "#E5E7EB",
-                    borderRadius: 4,
-                    marginLeft: 8,
-                    overflow: "hidden",
-                  }}
-                >
-                  <View
-                    style={{
+        <View style={stylesheet.breakdownContainer}>
+          {parameters.map((param, idx) => (
+            <View key={idx} style={stylesheet.parameterRow}>
+              <IconComponent 
+                icon={param.icon} 
+                color={param.color} 
+                size={16} 
+              />
+              <View style={stylesheet.progressBarContainer}>
+                <View 
+                  style={[
+                    stylesheet.progressBar, 
+                    { 
                       width: `${param.value}%`,
-                      height: "100%",
-                      backgroundColor: param.color,
-                    }}
-                  />
-                </View>
+                      backgroundColor: param.color 
+                    }
+                  ]} 
+                />
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
       </View>
     </View>
   );
 }
+
+// Helper component for consistent icon rendering
+const IconComponent = ({ icon: Icon, color, size }) => (
+  <Icon color={color} size={size} />
+);
