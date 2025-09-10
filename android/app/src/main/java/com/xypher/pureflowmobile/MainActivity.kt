@@ -1,4 +1,4 @@
-package com.anonymous.pureflowmobile
+package com.xypher.pureflowmobile
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

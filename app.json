@@ -20,8 +20,9 @@
       },
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.pureflowmobile"
+      "package": "com.xypher.pureflowmobile"
     },
+
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -49,7 +50,8 @@
             "buildToolsVersion": "33.0.0"
           },
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "bundleIdentifier": "com.pureflow.mobile"
           }
         }
       ]

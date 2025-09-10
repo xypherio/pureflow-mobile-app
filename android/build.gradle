@@ -10,7 +10,6 @@ buildscript {
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
-    classpath("com.android.tools.build:gradle:8.3.2") 
   }
 }
 
@@ -36,4 +35,4 @@ allprojects {
 }
 
 apply plugin: "expo-root-project"
-apply plugin: "com.facebook.react.rootproject"
+// apply plugin: "com.facebook.react.rootproject"

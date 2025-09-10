@@ -1,4 +1,4 @@
-package com.anonymous.pureflowmobile
+package com.xypher.pureflowmobile
 
 import android.app.Application
 import android.content.res.Configuration

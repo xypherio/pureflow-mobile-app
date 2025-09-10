@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.pureflowmobile'
+    namespace 'com.xypher.pureflowmobile'
     defaultConfig {
-        applicationId 'com.anonymous.pureflowmobile'
+        applicationId 'com.xypher.pureflowmobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
