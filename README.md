@@ -1,50 +1,107 @@
-# Welcome to your Expo app 👋
+# PureFlow Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
 
-## Get started
+PureFlow Mobile is an Expo-based mobile application designed for comprehensive water quality monitoring and management. It provides real-time data visualization, intelligent alerts, predictive forecasting, and actionable insights to ensure optimal water conditions.
 
-1. Install dependencies
+## Prerequisites
 
-   ```bash
-   npm install
-   ```
+Necessarry component/module to complete the funtioning system of PureFlow
 
-2. Start the app
+- **DATM Module:** A separate deployable module/device for data acquisition using sensors and is integrated with Firebase to transmit data to the Firebase Collection.
 
-   ```bash
-   npx expo start
-   ```
+## Features
 
-In the output, you'll find options to open the app in a
+- **Real-time Data Monitoring:** Visualize water quality parameters real-time data cards.
+- **Interactive Charts & Reports:** Generate detailed reports and view historical data through interactive line charts.
+- **Smart Notifications & Alerts:** Receive timely alerts based on predefined thresholds and critical water quality events.
+- **AI-Powered Insights & Forecasting:** Leverage Gemini AI for insightful suggestions regarding water quality trends.
+- **Firebase Integration:** Cloud-based data storage (Firestore), and push notifications (FCM).
+- **Data Export & Sharing:** Easily export reports as PDFs and share critical information with others.
+- **Cross-Platform Compatibility:** Built with Expo, ensuring a consistent experience on Android, iOS, and web platforms.
+- **Theming & Modern UI:** A clean, responsive user interface powered by NativeWind and Tailwind CSS.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Installation
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+To get started with the PureFlow Mobile App, follow these steps:
 
-## Get a fresh project
+1.  **Clone the repository:**
 
-When you're ready, run:
+    ```bash
+    git clone https://github.com/xypherio/pureflow-mobile-app.git
+    cd pureflow-mobile-app
+    ```
 
-```bash
-npm run reset-project
+2.  **Install dependencies:**
+
+    ```bash
+    npm install
+    ```
+
+3.  **Set up Firebase:**
+    - Create a Firebase project on Firebase Console and configure it for Android.
+    - Download `google-services.json` for Android and place it in `android/app/`.
+    - Update `app.json` with your Firebase configuration details under `expo.extra.firebase`.
+
+4.  **Configure Gemini API Key:**
+    - Obtain a Gemini API key from Google AI Studio.
+    - Update `app.json` with your Gemini API key under `expo.extra.GEMINI_API_KEY`.
+
+## Setting-up Additional Root Files for Expo
+
+Before having the ability to run the project, do this:
+
+1.  **Set up .env with your Gemini and Firebase credentials:**
+
+    ```
+    FIREBASE_API_KEY=YOUR_FIREBASE_API_KEY
+    FIREBASE_AUTH_DOMAIN=YOUR_FIREBASE_AUTH_DOMAIN
+    FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
+    FIREBASE_STORAGE_BUCKET=YOUR_FIREBASE_STORAGE_BUCKET
+    FIREBASE_MESSAGING_SENDER_ID=YOUR_FIREBASE_MESSAGING_ID
+    FIREBASE_APP_ID=YOUR_FIREBASE_APP_ID
+    FIREBASE_MEASUREMENT_ID=YOUR_FIREBASE_MEASUREMENT_ID
+
+    GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+    GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+    ```
+
+## Running the App
+
+To run the application in development mode:
+
+1.  **Start the Expo development server:**
+
+    ```bash
+    npx expo start --dev-client
+    ```
+
+2.  **Choose your platform:**
+    - **Android:** Press `a` in the terminal or run `expo run:android`.
+    - **iOS:** Press `i` in the terminal or run `expo run:ios`.
+    - **Web:** Press `w` in the terminal or run `expo start --web --entry-point ./index.web.js`.
+
+    You can open the app in a development build, Android emulator, iOS simulator, or Expo Go.
+
+## Project Structure
+
+The project follows a standard Expo and React Native structure:
+
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+.
+├── app/                  # Main application code with file-based routing
+├── assets/               # Static assets like images, fonts, icons
+├── src/                  # Source code for components, contexts, hooks, services, and utilities
+│   ├── components/       # Reusable UI components (data-display, forms, navigation, ui)
+│   ├── constants/        # Application-wide constants (colors, thresholds)
+│   ├── contexts/         # React Context API for global state management
+│   ├── hooks/            # Custom React hooks
+│   ├── services/         # Business logic, API integrations, and data handling
+│   ├── styles/           # Global styles
+│   └── utils/            # Utility functions
+├── android/              # Android specific native code
+├── ios/                  # iOS specific native code (generated by Expo)
+├── package.json          # Project dependencies and scripts
+├── app.json              # Expo application configuration
+└── README.md             # Project documentation
+```
