@@ -1,7 +1,7 @@
 import { DataProvider } from "@contexts/DataContext";
 import { SuggestionProvider } from "@contexts/SuggestionContext";
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
-import SplashScreenComponent from "@ui/splash-screen";
+import SplashScreenComponent from "@ui/SplashScreen";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from "react";

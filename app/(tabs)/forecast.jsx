@@ -1,9 +1,9 @@
-import ForecastCard from "@data-display/forecast-card";
-import InsightsCard from "@data-display/insights-card";
-import ForecastDetailModal from "@ui/forecast-detail-modal";
-import GlobalWrapper from "@ui/global-wrapper";
-import PureFlowLogo from "@ui/ui-header";
-import WeatherBanner from "@ui/weather-banner";
+import ForecastCard from "@dataDisplay/ForecastCard";
+import InsightsCard from "@dataDisplay/InsightsCard";
+import ForecastDetailModal from "@ui/ForecastDetailModal";
+import GlobalWrapper from "@ui/GlobalWrapper";
+import PureFlowLogo from "@ui/UiHeader";
+import WeatherBanner from "@ui/WeatherBanner";
 
 import { getMockForecast } from "@services/mockForecastService";
 import React from "react";

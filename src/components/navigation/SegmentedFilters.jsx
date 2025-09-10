@@ -71,10 +71,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f8fe",
     borderRadius: 20,
     padding: 4,
-    shadowColor: colors.shadow.dark,
-    shadowOffset: { width: 0, height: 2 },
     borderWidth: 1,
-    borderColor: "#2455a9",
+    borderColor: "#2d7ee3",
   },
   option: {
     flex: 1,

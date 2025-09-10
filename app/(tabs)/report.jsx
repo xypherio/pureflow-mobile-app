@@ -1,20 +1,22 @@
 // app/(tabs)/report.jsx
-import ExportToggleButton from "@/components/forms/export-toggle-button";
-import PureFlowLogo from "@components/ui/ui-header";
-import InsightsCard from "@data-display/InsightsCard";
-import SuggestionCard from "@data-display/SuggestionCard";
-import ParameterCard from "@data-display/parameter-card";
-import WaterQualitySummaryCard from "@data-display/water-quality-summary-card";
+import ExportToggleButton from "@components/forms/ExportToggleButton";
+import PureFlowLogo from "@components/ui/UiHeader";
+import InsightsCard from "@dataDisplay/InsightsCard";
+import ParameterCard from "@dataDisplay/ParameterCard";
+import SuggestionCard from "@dataDisplay/SuggestionCard";
+import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
 import { Ionicons } from "@expo/vector-icons";
 import { useChartData } from "@hooks/useChartData";
-import SegmentedFilter from "@navigation/segmented-filters";
+import SegmentedFilter from "@navigation/SegmentedFilters";
 import { generateInsight } from "@services/ai/geminiAPI";
-import EmptyState from "@ui/empty-state";
-import GlobalWrapper from "@ui/global-wrapper";
+import EmptyState from "@ui/EmptyState";
+import GlobalWrapper from "@ui/GlobalWrapper";
+import { generateReport } from "@utils/exportUtils"; // Import new functions
 import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react"; // Removed useRef
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -71,7 +73,7 @@ const ReportScreen = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [geminiResponse, setGeminiResponse] = useState(null);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
-  const reportRef = useRef();
+  const [chartImageBase64, setChartImageBase64] = useState(null); // State to hold chart Base64
 
   // Use the useChartData hook to fetch data
   const {
@@ -167,28 +169,6 @@ const ReportScreen = () => {
     }
   }, [reportData]);
 
-  const onRefresh = useCallback(() => {
-    refreshData();
-  }, [refreshData]);
-
-  const handleExportStart = (format) => {
-    console.log(`Starting ${format} export...`);
-    setIsExporting(true);
-  };
-
-  const handleExportComplete = (format) => {
-    console.log(`${format} export completed successfully`);
-    setIsExporting(false);
-    // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  const handleExportError = (format, error) => {
-    console.error(`${format} export error:`, error);
-    setIsExporting(false);
-    // Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    // Alert.alert('Export Failed', `Could not export as ${format.toUpperCase()}. ${error?.message || ''}`);
-  };
-
   // Error handling for the report generation
   useEffect(() => {
     if (error) {
@@ -238,6 +218,52 @@ const ReportScreen = () => {
     }
   );
 
+  const onRefresh = useCallback(() => {
+    refreshData();
+  }, [refreshData]);
+
+  const generateAndHandleReport = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const dataForReport = processedParameters.map(p => ({
+        param: p.parameter,
+        value: p.value,
+        status: p.status,
+        unit: p.unit,
+      }));
+
+      const insightsForReport = geminiResponse?.insights?.overallInsight || "No AI insights available.";
+
+      const { filePath } = await generateReport(
+        dataForReport,
+        insightsForReport,
+        chartImageBase64, // Pass the chart Base64 if available
+      );
+
+      Alert.alert(
+        `PDF Report Generated`,
+        `Report saved to: ${filePath}`,
+        [
+          {
+            text: "OK",
+            style: "cancel",
+          },
+        ]
+      );
+      return { filePath };
+    } catch (error) {
+      console.error("Report generation failed:", error);
+      Alert.alert("Export Failed", error.message);
+      return null;
+    } finally {
+      setIsExporting(false);
+    }
+  }, [processedParameters, geminiResponse, chartImageBase64]);
+
+  const handleExportPdf = useCallback(async () => {
+    await generateAndHandleReport();
+  }, [generateAndHandleReport]);
+
   // Render loading state
   if (loading || (chartData === null && !error)) {
     return (
@@ -265,13 +291,10 @@ const ReportScreen = () => {
         </View>
         </GlobalWrapper>
 
-        <ExportToggleButton 
-          reportData={reportData}
-          componentRef={reportRef}
-          onExportStart={handleExportStart}
-          onExportComplete={handleExportComplete}
-          onExportError={handleExportError}
-        />
+      <ExportToggleButton 
+        onExportPdf={handleExportPdf}
+        isExporting={isExporting}
+      />
       </>
     );
   }
@@ -322,8 +345,7 @@ const ReportScreen = () => {
         style={styles.filter}
       />
 
-      {/* Wrap the report content in GlobalWrapper with the reportRef */}
-      <GlobalWrapper ref={reportRef}>
+      <GlobalWrapper>
         <ScrollView
           refreshControl={
             <RefreshControl
@@ -404,11 +426,8 @@ const ReportScreen = () => {
       </GlobalWrapper>
       
       <ExportToggleButton 
-        reportData={reportData}
-        componentRef={reportRef}
-        onExportStart={handleExportStart}
-        onExportComplete={handleExportComplete}
-        onExportError={handleExportError}
+        onExportPdf={handleExportPdf}
+        isExporting={isExporting}
       />
     </>
   );

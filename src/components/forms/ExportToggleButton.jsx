@@ -1,153 +1,121 @@
-import * as Haptics from 'expo-haptics';
-import { FileSpreadsheet, FileText, Share } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import { FileDown, FileJson, FileText } from "lucide-react-native";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  StyleSheet, // Re-added Text
+  TouchableOpacity,
+  View
+} from "react-native";
 
-
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
-import { handleExport } from '../../utils/exportUtils';
-
-const EXPORT_OPTIONS = [
-  {
-    id: 'pdf',
-    icon: FileText,
-    label: 'PDF',
-    color: '#DC2626',
-    bgColor: '#FEE2E2'
-  },
-  {
-    id: 'csv',
-    icon: FileSpreadsheet,
-    label: 'CSV',
-    color: '#059669',
-    bgColor: '#D1FAE5'
-  },
-  {
-    id: 'share',
-    icon: Share,
-    label: 'Share',
-    color: '#D97706',
-    bgColor: '#FEF3C7'
-  }
-];
-
-export default function ExportToggleButton({ 
-  reportData = {},
-  componentRef,
-  onExportStart,
-  onExportComplete,
-  onExportError
+export default function ExportToggleButton({
+  isExporting,
+  onExportPdf, // New prop for exporting PDF
+  onExportCsv, // New prop for exporting CSV
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [activeExport, setActiveExport] = useState(null);
-  const buttonRef = useRef();
+  const animation = React.useRef(new Animated.Value(0)).current;
 
-  const handleToggle = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsExpanded(prev => !prev);
-  }, []);
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => {
+      const newState = !prev;
+      Animated.spring(animation, {
+        toValue: newState ? 1 : 0,
+        friction: 8,
+        tension: 120,
+        useNativeDriver: false,
+      }).start();
+      return newState;
+    });
+  }, [animation]);
 
-  const handleExportAction = useCallback(
-    async (actionId) => {
-      console.log('Export action triggered:', actionId);
-      console.log('Component ref in handler:', componentRef);
-      
-      if (!componentRef) {
-        const error = new Error('Component reference is undefined');
-        console.error(error);
-        Alert.alert('Error', 'Component reference is not available for export');
-        onExportError?.(actionId, error);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        console.log('Starting export with data:', { actionId, hasReportData: !!reportData });
-        
-        await handleExport(actionId, {
-          reportData,
-          componentRef,
-          onStart: onExportStart,
-          onComplete: onExportComplete,
-          onError: onExportError,
-        });
-        
-        console.log('Export completed successfully');
-      } catch (error) {
-        console.error('Export error:', error);
-        onExportError?.(actionId, error);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [reportData, componentRef, onExportStart, onExportComplete, onExportError]
-  );
-
-  const handleActionPress = useCallback((actionId) => {
-    handleExportAction(actionId);
-  }, [handleExportAction]);
-
-  const renderButtonContent = (option) => {
-    if (isExporting && activeExport === option.id) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator 
-            size="small" 
-            color={option.color} 
-            style={styles.loadingSpinner} 
-          />
-        </View>
-      );
+  const handleExportPdfPress = useCallback(async () => {
+    setIsExpanded(false); // Collapse after action
+    Animated.spring(animation, {
+      toValue: 0,
+      friction: 8,
+      tension: 120,
+      useNativeDriver: false,
+    }).start();
+    if (onExportPdf) {
+      await onExportPdf();
     }
-    
-    const Icon = option.icon;
-    return (
-      <View style={[styles.iconContainer, { backgroundColor: option.bgColor }]}>
-        <Icon size={18} color={option.color} />
-      </View>
-    );
-  };
+  }, [onExportPdf, animation]);
+
+  const handleExportCsvPress = useCallback(async () => {
+    setIsExpanded(false); // Collapse after action
+    Animated.spring(animation, {
+      toValue: 0,
+      friction: 8,
+      tension: 120,
+      useNativeDriver: false,
+    }).start();
+    if (onExportCsv) {
+      await onExportCsv();
+    }
+  }, [onExportCsv, animation]);
+
+  const pdfButtonTranslateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -20], // First option, reduced spacing
+  });
+
+  const csvButtonTranslateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -30], // Second option, reduced spacing
+  });
+
+  const opacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
 
   return (
-    <View style={styles.container} ref={buttonRef}>
-      {/* Export Options */}
+    <View style={styles.container}>
       {isExpanded && (
-        <View style={{
-          position: 'absolute',
-          bottom: 60,
-          right: -5,
-          borderRadius: 12,
-          padding: 8,
-        }}>
-          {EXPORT_OPTIONS.map((option, index) => (
+        <>
+          <Animated.View
+            style={[
+              styles.optionButtonWrapper,
+              { transform: [{ translateY: csvButtonTranslateY }], opacity },
+            ]}
+          >
             <TouchableOpacity
-              key={option.id}
-              style={[styles.optionButton, { backgroundColor: option.bgColor }]}
-              onPress={() => handleActionPress(option.id)}
+              style={[styles.optionButton, { backgroundColor: "#d1fae5" }]} // Green for CSV
+              onPress={handleExportCsvPress}
               disabled={isExporting}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              {renderButtonContent(option)}
-              <Text style={[styles.optionText, { color: option.color }]}>
-                {option.label}
-              </Text>
+              <FileJson size={20} color="#059669" />
             </TouchableOpacity>
-          ))}
-        </View>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.optionButtonWrapper,
+              { transform: [{ translateY: pdfButtonTranslateY }], opacity },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.optionButton, { backgroundColor: "#bfdbfe" }]} // Blue for PDF
+              onPress={handleExportPdfPress}
+              disabled={isExporting}
+              activeOpacity={0.8}
+            >
+              <FileDown size={20} color="#2563eb" />
+            </TouchableOpacity>
+          </Animated.View>
+        </>
       )}
 
-      {/* Main Button */}
       <TouchableOpacity
-        style={[styles.mainButton, isExpanded && styles.mainButtonExpanded]}
-        onPress={handleToggle}
+        style={[styles.mainButton, isExporting && styles.mainButtonLoading]}
+        onPress={toggleExpanded}
         disabled={isExporting}
         activeOpacity={0.8}
       >
-        {isExporting && activeExport ? (
+        {isExporting ? (
           <ActivityIndicator size="small" color="#fff" />
-        ) : isExpanded ? (
-          <FileText size={24} color="#fff" />
         ) : (
           <FileText size={24} color="#fff" />
         )}
@@ -158,62 +126,42 @@ export default function ExportToggleButton({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 110,
     right: 20,
     zIndex: 9999,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   mainButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2455a9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#2455a9",
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  mainButtonExpanded: {
-    backgroundColor: '#ef4444',
+  mainButtonLoading: {
+    backgroundColor: "#31a354",
+  },
+  optionButtonWrapper: {
+    alignItems: "center",
+    marginBottom: 5, // Reduced margin
   },
   optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    borderRadius: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    minWidth: 100,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  loadingSpinner: {
-    marginRight: 0,
   },
 });

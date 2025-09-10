@@ -1,202 +1,190 @@
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import * as Print from 'expo-print';
-import { captureRef } from 'react-native-view-shot';
-import * as Haptics from 'expo-haptics';
-import { Alert } from 'react-native';
+import { Platform } from 'react-native';
+
+let generateReport;
+let shareFiles;
+
+if (Platform.OS === 'web') {
+  // Import web-specific implementations
+  const webExports = require('./exportUtils.web');
+  generateReport = webExports.generateReport;
+  shareFiles = webExports.shareFiles;
+} else {
+  // Import native-specific implementations
+  const RNHTMLtoPDF = require('react-native-html-to-pdf').default;
+  // RNFS is removed as CSV exporting is no longer supported.
+
+  /**
+   * Generates a water quality report in PDF format for mobile.
+   * @param {Array<Object>} data - Array of { param, value, status } for parameters table.
+   * @param {string} insights - AI-generated insights string.
+   * @param {string | null} chartBase64 - Optional Base64 string of a chart image.
+   * @returns {Promise<{ filePath: string }>} - Path to the generated file.
+   */
+  generateReport = async (data, insights, chartBase64 = null) => {
+    try {
+      // --- PDF Generation ---
+      const htmlContent = createHtmlContent(data, insights, chartBase64);
+
+      const options = {
+        html: htmlContent,
+        fileName: 'Water_Quality_Report',
+        directory: 'Documents',
+        base64: false,
+        height: 792, // Short bond paper height in pts
+        width: 612,  // Short bond paper width in pts
+      };
+
+      const file = await RNHTMLtoPDF.convert(options);
+      console.log('PDF generated at:', file.filePath);
+      return { filePath: file.filePath };
+    } catch (error) {
+      console.error('Error generating report:', error);
+      throw new Error(`Failed to generate report: ${error.message}`);
+    }
+  };
+
+  /**
+   * Placeholder for shareFiles as the feature is removed.
+   */
+  shareFiles = async () => {
+    console.warn('File sharing feature is not implemented.');
+    throw new Error('File sharing is not available.');
+  };
+}
 
 /**
- * Exports data as a PDF file
- * @param {Object} options - Export options
- * @param {Object} options.reportData - The report data to export
- * @param {Object} options.componentRef - Reference to the component for capture
- * @returns {Promise<void>}
+ * Creates the HTML content for the PDF report.
+ * This function is common to both web and native, so it's defined once.
  */
-export const exportAsPdf = async ({ reportData, componentRef }) => {
-  try {
-    console.log('Starting PDF export...');
-    console.log('Component ref:', componentRef);
-    
-    if (!componentRef) {
-      throw new Error('Component reference is undefined');
-    }
-    
-    if (!componentRef.current) {
-      console.warn('Component ref current is null, attempting to use ref directly');
-      // Try to use the ref directly if current is not available
-      if (typeof componentRef.measure === 'function') {
-        componentRef = { current: componentRef };
-      } else {
-        throw new Error('Component reference is not valid for capture');
-      }
-    }
-
-    console.log('Capturing component as image...');
-    const uri = await captureRef(componentRef, {
-      format: 'png',
-      quality: 0.8,
-      result: 'tmpfile',
-    });
-
-    console.log('Captured component URI:', uri);
-    
-    if (!uri) {
-      throw new Error('Failed to capture component');
-    }
-
-    // Create HTML content for the PDF
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial; padding: 20px; }
-            h1 { color: #1a2d51; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .content { margin-top: 20px; }
-            .timestamp { font-size: 12px; color: #666; }
-          </style>
-        </head>
-        <body>
+const createHtmlContent = (data, insights, chartBase64) => {
+  return `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+          }
+          .container {
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          h1 {
+            color: #1a2d51;
+            font-size: 28px;
+            margin-bottom: 5px;
+          }
+          .timestamp {
+            font-size: 14px;
+            color: #666;
+          }
+          .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #eee;
+          }
+          h2 {
+            color: #1a2d51;
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+          }
+          p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+          }
+          th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            font-size: 15px;
+          }
+          th {
+            background-color: #eef;
+            font-weight: bold;
+            color: #1a2d51;
+          }
+          .status-normal { color: #22c55e; font-weight: bold; }
+          .status-warning { color: #eab308; font-weight: bold; }
+          .status-critical { color: #ef4444; font-weight: bold; }
+          .chart-container {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+          }
+          .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
           <div class="header">
             <h1>Water Quality Report</h1>
             <p class="timestamp">Generated on: ${new Date().toLocaleString()}</p>
           </div>
-          <div class="content">
-            <img src="${uri}" style="width: 100%;" />
+
+          ${insights ? `
+            <div class="section">
+              <h2>AI-Generated Insights</h2>
+              <p>${insights}</p>
+            </div>
+          ` : ''}
+
+          <div class="section">
+            <h2>Parameter Overview</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Value</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(item => `
+                  <tr>
+                    <td>${item.param}</td>
+                    <td>${item.value} ${item.unit || ''}</td>
+                    <td class="status-${item.status.toLowerCase()}">${item.status}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
-        </body>
-      </html>
-    `;
 
-    // Generate and save the PDF
-    try {
-      const { uri: pdfUri } = await Print.printToFileAsync({
-        html,
-        base64: false,
-      });
-
-      console.log('Generated PDF URI:', pdfUri);
-
-      // Share the PDF
-      await Sharing.shareAsync(pdfUri, {
-      mimeType: 'application/pdf',
-      dialogTitle: 'Share Water Quality Report',
-      UTI: 'com.adobe.pdf',
-    });
-
-    return { success: true };
-    } catch (printError) {
-      console.error('Print to file failed:', printError);
-      throw new Error('Failed to generate PDF file');
-    }
-  } catch (error) {
-    console.error('PDF export failed:', error);
-    throw new Error('Failed to export as PDF');
-  }
+          ${chartBase64 ? `
+            <div class="section chart-container">
+              <h2>Data Visualization</h2>
+              <img src="data:image/png;base64,${chartBase64}" alt="Water Quality Chart" />
+            </div>
+          ` : ''}
+        </div>
+      </body>
+    </html>
+  `;
 };
 
-/**
- * Exports data as a CSV file
- * @param {Object} options - Export options
- * @param {Object} options.reportData - The report data to export
- * @returns {Promise<void>}
- */
-export const exportAsCsv = async ({ reportData }) => {
-  try {
-    if (!reportData || !reportData.readings || !Array.isArray(reportData.readings)) {
-      throw new Error('Invalid report data for CSV export');
-    }
-
-    // Extract headers from the first reading
-    const headers = ['Date', 'pH', 'Temperature', 'Salinity', 'Turbidity', 'Status'];
-    
-    // Convert each reading to a CSV row
-    const rows = reportData.readings.map(reading => {
-      return [
-        new Date(reading.datetime).toLocaleString(),
-        reading.pH?.toFixed(2) || 'N/A',
-        reading.temperature?.toFixed(2) || 'N/A',
-        reading.salinity?.toFixed(2) || 'N/A',
-        reading.turbidity?.toFixed(2) || 'N/A',
-        reading.status || 'unknown',
-      ].join(',');
-    });
-
-    // Combine headers and rows
-    const csvContent = [headers.join(','), ...rows].join('\n');
-
-    // Create a temporary file path
-    const fileUri = `${FileSystem.documentDirectory}water_quality_report_${Date.now()}.csv`;
-    
-    // Write the CSV content to the file
-    await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
-
-    // Share the CSV file
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'text/csv',
-      dialogTitle: 'Export Water Quality Data',
-      UTI: 'public.comma-separated-values-text',
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('CSV export failed:', error);
-    throw new Error('Failed to export as CSV');
-  }
-};
-
-/**
- * Handles the export action based on the selected format
- * @param {string} format - The export format ('pdf', 'csv', 'share')
- * @param {Object} options - Export options
- * @param {Object} options.reportData - The report data to export
- * @param {Object} options.componentRef - Reference to the component for capture
- * @param {Function} options.onStart - Callback when export starts
- * @param {Function} options.onComplete - Callback when export completes
- * @param {Function} options.onError - Callback when export fails
- */
-export const handleExport = async (format, { reportData, componentRef, onStart, onComplete, onError }) => {
-  console.log(`Starting export with format: ${format}`);
-  console.log('Export options:', { hasReportData: !!reportData, hasComponentRef: !!componentRef });
-  
-  try {
-    onStart?.(format);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    let result;
-    switch (format) {
-      case 'pdf':
-        console.log('Exporting as PDF...');
-        if (!componentRef) {
-          throw new Error('Component reference is required for PDF export');
-        }
-        result = await exportAsPdf({ reportData, componentRef });
-        break;
-      case 'csv':
-        console.log('Exporting as CSV...');
-        if (!reportData) {
-          throw new Error('Report data is required for CSV export');
-        }
-        result = await exportAsCsv({ reportData });
-        break;
-      case 'share':
-        console.log('Preparing share...');
-        if (!componentRef) {
-          throw new Error('Component reference is required for sharing');
-        }
-        result = await exportAsPdf({ reportData, componentRef });
-        break;
-      default:
-        throw new Error(`Unsupported export format: ${format}`);
-    }
-
-    onComplete?.(format, result);
-    return result;
-  } catch (error) {
-    console.error(`Export failed (${format}):`, error);
-    onError?.(format, error);
-    throw error;
-  }
-};
+export { generateReport, shareFiles };

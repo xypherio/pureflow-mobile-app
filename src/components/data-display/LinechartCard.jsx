@@ -17,8 +17,8 @@ import {
   getParameterOptions,
 } from "../../utils/chart-config";
 import { processChartData } from "../../utils/data-processing";
-import SegmentedFilter from "../navigation/segmented-filters";
-import ChartTooltip from "../ui/chart-tool-tip";
+import SegmentedFilter from "../navigation/SegmentedFilters";
+import ChartTooltip from "../ui/ChartToolTip";
 
 const { width: screenWidth } = Dimensions.get("window");
 

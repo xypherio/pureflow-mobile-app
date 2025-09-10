@@ -6,57 +6,6 @@ import { StyleSheet, Text, View } from "react-native";
 
 const thresholds = getWaterQualityThresholds();
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#2455a9",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 10,
-  },
-  parametersContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 12,
-    columnGap: 12,
-  },
-  parameterCard: {
-    backgroundColor: "#f6fafd",
-    borderRadius: 12,
-    padding: 12,
-    height: 160,
-    flexBasis: "48%",
-    flexShrink: 0,
-    justifyContent: "space-between",
-  },
-  iconValueContainer: { 
-    flexDirection: "row", 
-    alignItems: "flex-end", 
-    marginTop: 8 
-  },
-  valueText: {
-    fontSize: 50,
-    fontWeight: "bold",
-    marginRight: 4,
-  },
-  unitText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    paddingBottom: 10,
-  },
-  labelText: {
-    color: "#224882",
-    fontSize: 14,
-    marginTop: 2,
-  },
-  thresholdText: {
-    color: "rgb(36, 85, 169, 0.2)",
-    fontSize: 10,
-    marginTop: 2,
-    fontStyle: "italic",
-  },
-});
-
 export default function RealTimeData({ data = [] }) {
   const { realtimeData } = useData();
   const [displayData, setDisplayData] = useState(0);
@@ -153,3 +102,54 @@ export default function RealTimeData({ data = [] }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#2455a9",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 10,
+  },
+  parametersContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+    columnGap: 12,
+  },
+  parameterCard: {
+    backgroundColor: "#f6fafd",
+    borderRadius: 12,
+    padding: 12,
+    height: 160,
+    flexBasis: "48%",
+    flexShrink: 0,
+    justifyContent: "space-between",
+  },
+  iconValueContainer: { 
+    flexDirection: "row", 
+    alignItems: "flex-end", 
+    marginTop: 8 
+  },
+  valueText: {
+    fontSize: 50,
+    fontWeight: "bold",
+    marginRight: 4,
+  },
+  unitText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    paddingBottom: 10,
+  },
+  labelText: {
+    color: "#224882",
+    fontSize: 14,
+    marginTop: 2,
+  },
+  thresholdText: {
+    color: "rgb(36, 85, 169, 0.2)",
+    fontSize: 10,
+    marginTop: 2,
+    fontStyle: "italic",
+  },
+});

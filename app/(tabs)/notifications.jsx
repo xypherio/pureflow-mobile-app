@@ -1,18 +1,19 @@
-import NotificationFilter from "@navigation/alerts-filter";
+import NotificationFilter from "@navigation/AlertsFilter";
 import { useNavigation } from "@react-navigation/native";
 import { historicalAlertsService } from "@services/historicalAlertsService";
-import GlobalWrapper from "@ui/global-wrapper";
-import NotificationCard from "@ui/notification-card";
-import PureFlowLogo from "@ui/ui-header";
+import GlobalWrapper from "@ui/GlobalWrapper";
+import NotificationCard from "@ui/NotificationCard";
+import PureFlowLogo from "@ui/UiHeader";
 import { AlertTriangle, Bell, CheckCircle, Info } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
   SectionList,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { colors } from "../../src/constants/colors";
 
@@ -248,14 +249,12 @@ export default function NotificationsScreen() {
     const icon = getNotificationIcon(item.type);
 
     // Enhanced message with metadata
-    const enhancedMessage = `${item.message}\n\n${item.parameter} • ${
-      item.dataAge
-    }${
+    const enhancedMessage = `${item.message}\n\n${item.dataAge}${
       item.occurrenceCount > 1 ? ` • ${item.occurrenceCount} occurrences` : ""
     }`;
 
     return (
-      <View className="mx-4">
+      <View style={styles.alertItemContainer}>
         <NotificationCard
           type="suggestion"
           title={item.title}
@@ -275,29 +274,32 @@ export default function NotificationsScreen() {
 
   // Render section header
   const renderSectionHeader = ({ section: { title } }) => (
-    <View className="px-4 py-2 bg-gray-50">
-      <Text className="text-lg font-semibold text-gray-800">{title}</Text>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionHeaderText}>{title}</Text>
     </View>
   );
 
   // Loading state
   if (loading && !historicalData) {
     return (
-      <GlobalWrapper className="flex-1 bg-[#e6fbff]">
-        <View className="mb-4 items-start">
-          <PureFlowLogo
-            weather={{
-              label: "Light Rain",
-              temp: "30°C",
-              icon: "partly",
-            }}
-          />
-        </View>
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text className="mt-2 text-gray-600">Loading alerts...</Text>
-        </View>
-      </GlobalWrapper>
+      <>
+        <PureFlowLogo
+          weather={{
+            label: "Light Rain",
+            temp: "30°C",
+            icon: "partly",
+          }}
+        />
+
+        <ActivityIndicator size="large" color="#007AFF" />
+
+        <GlobalWrapper className="flex-1 bg-[#e6fbff]">
+          <View style={{ marginBottom: 16, alignItems: "flex-start" }}></View>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading alerts...</Text>
+          </View>
+        </GlobalWrapper>
+      </>
     );
   }
 
@@ -305,7 +307,7 @@ export default function NotificationsScreen() {
   if (error && !historicalData) {
     return (
       <GlobalWrapper className="flex-1 bg-[#e6fbff]">
-        <View className="mb-4 items-start">
+        <View style={{ marginBottom: 16, alignItems: "flex-start" }}>
           <PureFlowLogo
             weather={{
               label: "Light Rain",
@@ -314,17 +316,17 @@ export default function NotificationsScreen() {
             }}
           />
         </View>
-        <View className="flex-1 justify-center items-center px-4">
-          <AlertTriangle size={48} color="#ef4444" />
-          <Text className="mt-4 text-lg font-semibold text-gray-900 text-center">
+        <View style={styles.errorContainer}>
+          <AlertTriangle size={48} color="#ef4444" style={styles.errorIcon} />
+          <Text style={styles.errorTitle}>
             Failed to Load Alerts
           </Text>
-          <Text className="mt-2 text-gray-600 text-center">{error}</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity
             onPress={() => fetchHistoricalAlerts()}
-            className="mt-4 px-6 py-3 bg-blue-500 rounded-lg"
+            style={styles.retryButton}
           >
-            <Text className="text-white font-medium">Try Again</Text>
+            <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       </GlobalWrapper>
@@ -349,45 +351,35 @@ export default function NotificationsScreen() {
     if (!showLoadMore || !isNearBottom) return null;
 
     return (
-      <View className="mx-4 mt-2 mb-6">
+      <View style={styles.loadMoreContainer}>
         <TouchableOpacity
           onPress={loadMoreAlerts}
           disabled={loadingMore}
-          style={{
-            backgroundColor: "#2455a9",
-            color: "#f0f8fe",
-            marginVertical: 10,
-            borderRadius: 15,
-            paddingVertical: 12,
-            paddingHorizontal: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: loadingMore ? 0.6 : 1,
-          }}
+          style={[
+            styles.loadMoreButton,
+            loadingMore && styles.loadMoreButtonDisabled,
+          ]}
         >
           {loadingMore ? (
-            <>
+            <View style={styles.loadMoreButtonContent}>
               <ActivityIndicator
                 size="small"
                 color="white"
-                style={{ marginRight: 8 }}
+                style={styles.activityIndicator}
               />
-              <Text style={{ color: "#f0f8fe", fontWeight: "700" }}>
+              <Text style={styles.loadMoreButtonText}>
                 Loading more alerts...
               </Text>
-            </>
+            </View>
           ) : (
-            <>
-              <Text style={{ color: "#f0f8fe", fontWeight: "700" }}>
+            <View style={styles.loadMoreButtonContent}>
+              <Text style={styles.loadMoreButtonText}>
                 Load More Alerts
               </Text>
-              <Text
-                style={{ color: "#f0f8fe", fontWeight: "500", marginLeft: 8 }}
-              >
+              <Text style={styles.loadMoreButtonSubtext}>
                 ({totalAlerts - displayedAlerts} remaining)
               </Text>
-            </>
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -404,9 +396,9 @@ export default function NotificationsScreen() {
         }}
       />
 
-      <GlobalWrapper className="flex-1 bg-[#e6fbff]" disableScrollView>
+      <GlobalWrapper disableScrollView>
         {/* Filters */}
-        <View style={{ marginTop: 65, marginHorizontal: 0 }}>
+        <View style={styles.filtersContainer}>
           <NotificationFilter
             selectedAlert={activeParameter}
             selectedParam={activeSeverity}
@@ -433,43 +425,24 @@ export default function NotificationsScreen() {
                   tintColor={"#007AFF"}
                 />
               }
-              contentContainerStyle={{
-                paddingBottom: showLoadMore && isNearBottom ? 0 : 24,
-                flexGrow: 1,
-              }}
+              contentContainerStyle={[
+                styles.sectionListContent,
+                {
+                  paddingBottom: showLoadMore && isNearBottom ? 0 : 24,
+                },
+              ]}
               showsVerticalScrollIndicator={false}
-              style={{ flex: 1 }}
+              style={styles.sectionListContainer}
             />
             {renderLoadMoreButton()}
           </>
         ) : (
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              padding: 16,
-            }}
-          >
-            <Bell size={48} color="#9ca3af" />
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "600",
-                color: "#4b5563",
-                textAlign: "center",
-              }}
-            >
+          <View style={styles.emptyStateContainer}>
+            <Bell size={48} color="#9ca3af" style={styles.emptyStateIcon} />
+            <Text style={styles.emptyStateTitle}>
               No Alerts Found
             </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                color: "#6b7280",
-                textAlign: "center",
-                marginTop: 8,
-              }}
-            >
+            <Text style={styles.emptyStateMessage}>
               {activeParameter !== "all" || activeSeverity !== "all"
                 ? "Try adjusting your filters to see more alerts."
                 : "No historical alerts available at the moment."}
@@ -480,3 +453,125 @@ export default function NotificationsScreen() {
     </>
   );
 }
+
+// Styles
+const styles = StyleSheet.create({
+  alertItemContainer: {
+  },
+  sectionHeader: {
+    paddingHorizontal: 8,
+    paddingBottom: 4,
+    paddingTop: 10,
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#1a2d51",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 8,
+    color: "#6b7280",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  errorIcon: {
+    marginBottom: 16,
+  },
+  errorTitle: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+    textAlign: "center",
+  },
+  errorMessage: {
+    marginTop: 8,
+    color: "#6b7280",
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: "#3b82f6",
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontWeight: "500",
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  emptyStateIcon: {
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#4b5563",
+    textAlign: "center",
+  },
+  emptyStateMessage: {
+    fontSize: 16,
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  loadMoreContainer: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  loadMoreButton: {
+    backgroundColor: "#2455a9",
+    marginVertical: 10,
+    borderRadius: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreButtonDisabled: {
+    opacity: 0.6,
+  },
+  loadMoreButtonText: {
+    color: "#f0f8fe",
+    fontWeight: "700",
+  },
+  loadMoreButtonSubtext: {
+    color: "#f0f8fe",
+    fontWeight: "500",
+    marginLeft: 8,
+  },
+  loadMoreButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  activityIndicator: {
+    marginRight: 8,
+  },
+  filtersContainer: {
+    marginTop: 65,
+    marginHorizontal: 0,
+  },
+  sectionListContainer: {
+    flex: 1,
+  },
+  sectionListContent: {
+    flexGrow: 1,
+  },
+});

@@ -1,20 +1,14 @@
 import { useNavigation } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
   CheckCircle,
   CloudRain,
-  Droplet,
-  Gauge,
   Info,
-  Thermometer,
-  Waves,
-  XCircle,
+  XCircle
 } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 const getAlertColors = (type) => {
   switch (type?.toLowerCase()) {
@@ -125,16 +119,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    padding: 12,
-    marginVertical: 8,
+    padding: 10,
+    marginVertical: 6,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
     position: "relative",
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -146,20 +140,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 4,
   },
   title: {
     fontWeight: "600",
     fontSize: 16,
-    color: "#111",
+    color: "#224986",
+    paddingBottom: 0,
   },
   message: {
     fontSize: 14,
     color: "#6B7280",
   },
   timestamp: {
-    fontSize: 12,
-    color: "#6B7280",
+    fontSize: 6,
+    color: "#6B7280"
   },
   dotIndicator: {
     width: 8,

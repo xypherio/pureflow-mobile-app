@@ -534,17 +534,6 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     turbidity: parameters.turbidity,
   });
 
-  // Create readings array for CSV export
-  const csvReadings = aggregatedData.labels.map((label, index) => {
-    const reading = {
-      datetime: label,
-    };
-    for (const param in parameters) {
-      reading[param] = parameters[param].chartData.values[index];
-    }
-    return reading;
-  });
-
   return {
     status: "success",
     timeRange,
@@ -557,7 +546,6 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
             "All parameters are within normal ranges. Maintain current conditions.",
           ],
     generatedAt: new Date().toISOString(),
-    readings: csvReadings, // Add readings to the report
   };
 };
 

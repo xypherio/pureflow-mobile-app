@@ -1,13 +1,13 @@
-import { listenToForegroundMessages, listenToBackgroundMessages, requestUserPermission } from "@/services/pushNotifications";
-import { globalStyles } from "@/styles/globalStyles";
+import { globalStyles } from "@styles/globalStyles";
 import { useData } from "@contexts/DataContext";
-import AlertsCard from "@data-display/alerts-card";
-import InsightsCard from "@data-display/insights-card";
-import LineChartCard from "@data-display/linechart-card";
-import RealTimeData from "@data-display/realtime-data-cards";
-import StatusCard from "@ui/device-status-card.jsx";
-import GlobalWrapper from "@ui/global-wrapper";
-import PureFlowLogo from "@ui/ui-header";
+import AlertsCard from "@dataDisplay/AlertsCard";
+import InsightsCard from "@dataDisplay/InsightsCard";
+import LineChartCard from "@dataDisplay/LinechartCard";
+import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
+import { listenToBackgroundMessages, listenToForegroundMessages, requestUserPermission } from "@services/pushNotifications";
+import StatusCard from "@ui/DeviceStatusCard.jsx";
+import GlobalWrapper from "@ui/GlobalWrapper";
+import PureFlowLogo from "@ui/UiHeader";
 import { useEffect } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 
@@ -109,7 +109,7 @@ export default function HomeScreen() {
           {/* Real-Time Data Section */}
           <View style={{ marginBottom: 12 }}>
             <Text style={sectionLabelStyle}>Real-Time Parameters</Text>
-            <RealTimeData data={sensorData} />
+            <RealtimeDataCards data={sensorData} />
           </View>
 
           {/* Historical Trends Section */}

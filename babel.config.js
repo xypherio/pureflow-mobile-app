@@ -19,7 +19,7 @@ module.exports = function (api) {
           alias: {
             "@components": "./src/components",
             "@ui": "./src/components/ui",
-            "@data-display": "./src/components/data-display",
+            "@dataDisplay": "./src/components/data-display",
             "@navigation": "./src/components/navigation",
             "@forms": "./src/components/forms",
             "@screens": "./app/(tabs)",
