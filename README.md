@@ -96,7 +96,7 @@ The project follows a standard Expo and React Native structure:
 │   ├── constants/        # Application-wide constants (colors, thresholds)
 │   ├── contexts/         # React Context API for global state management
 │   ├── hooks/            # Custom React hooks
-│   ├── services/         # Business logic, API integrations, and data handling
+│   ├── services/         # Logics, API integrations, and data handling
 │   ├── styles/           # Global styles
 │   └── utils/            # Utility functions
 ├── android/              # Android specific native code
