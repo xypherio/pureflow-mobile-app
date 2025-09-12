@@ -18,17 +18,21 @@ def reactNativeAndroidDir = new File(
     workingDir(rootDir)
     commandLine("node", "--print", "require.resolve('react-native/package.json')")
   }.standardOutput.asText.get().trim(),
-  "/android"
+  "../android"
 )
 
 allprojects {
-    repositories {
-        maven { url(reactNativeAndroidDir) }
-        google()
-        mavenCentral()
+  repositories {
+    maven {
+      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+      url(reactNativeAndroidDir)
     }
+
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
 }
 
-
 apply plugin: "expo-root-project"
-// apply plugin: "com.facebook.react.rootproject"
+apply plugin: "com.facebook.react.rootproject"
