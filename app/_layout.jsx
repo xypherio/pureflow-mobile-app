@@ -1,4 +1,5 @@
 import { DataProvider } from "@contexts/DataContext";
+import { InsightsProvider } from '@contexts/InsightsContext';
 import { SuggestionProvider } from "@contexts/SuggestionContext";
 import { Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold, useFonts } from '@expo-google-fonts/poppins';
 import SplashScreenComponent from "@ui/SplashScreen";
@@ -125,17 +126,19 @@ export default function RootLayout() {
   }
 
   return (
-    <DataProvider initialData={preloadedData}>
-      <SuggestionProvider>
-        <Stack>
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack>
-      </SuggestionProvider>
-    </DataProvider>
+    <InsightsProvider>
+      <DataProvider initialData={preloadedData}>
+        <SuggestionProvider>
+          <Stack>
+            <Stack.Screen
+              name="(tabs)"
+              options={{
+                headerShown: false,
+              }}
+            />
+          </Stack>
+        </SuggestionProvider>
+      </DataProvider>
+    </InsightsProvider>
   );
 }

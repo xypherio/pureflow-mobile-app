@@ -3,7 +3,6 @@ import ExportToggleButton from "@components/forms/ExportToggleButton";
 import PureFlowLogo from "@components/ui/UiHeader";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import ParameterCard from "@dataDisplay/ParameterCard";
-import SuggestionCard from "@dataDisplay/SuggestionCard";
 import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
 import { Ionicons } from "@expo/vector-icons";
 import { useChartData } from "@hooks/useChartData";
@@ -11,7 +10,7 @@ import SegmentedFilter from "@navigation/SegmentedFilters";
 import { generateInsight } from "@services/ai/geminiAPI";
 import EmptyState from "@ui/EmptyState";
 import GlobalWrapper from "@ui/GlobalWrapper";
-import { generateReport } from "@utils/exportUtils"; // Import new functions
+import { generateCsv, generateReport, shareFiles } from "@utils/exportUtils"; // Import new functions
 import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
 import { useCallback, useEffect, useState } from "react"; // Removed useRef
 import {
@@ -153,7 +152,7 @@ const ReportScreen = () => {
         setIsGeminiLoading(true);
         setGeminiResponse(null);
         try {
-          const insight = await generateInsight(reportData);
+          const insight = await generateInsight(reportData, "report-overall-insight"); // Pass reportData and unique componentId
           setGeminiResponse(insight);
           console.log("Gemini API Response:", insight);
         } catch (error) {
@@ -263,6 +262,35 @@ const ReportScreen = () => {
   const handleExportPdf = useCallback(async () => {
     await generateAndHandleReport();
   }, [generateAndHandleReport]);
+
+  // New CSV export handler
+  const handleExportCsv = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const insightsForReport = geminiResponse?.insights?.overallInsight || "No AI insights available.";
+      const { filePath } = await generateCsv(
+        chartData,
+        processedParameters,
+        insightsForReport
+      );
+
+      Alert.alert(
+        `CSV Report Generated`,
+        `Report saved to: ${filePath}`,
+        [
+          {
+            text: "OK",
+            onPress: () => shareFiles([filePath], "Share Water Quality Report"), // Offer to share
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("CSV Report generation failed:", error);
+      Alert.alert("Export Failed", error.message);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [chartData, processedParameters, geminiResponse]);
 
   // Render loading state
   if (loading || (chartData === null && !error)) {
@@ -411,9 +439,28 @@ const ReportScreen = () => {
                   <ActivityIndicator style={{ marginVertical: 20 }} color="#3b82f6" />
                 ) : geminiResponse ? (
                   <>
-                    <InsightsCard insight={geminiResponse?.insights?.overallInsight || ""} />
+                    {/* Overall Insight Card */}
+                    <InsightsCard
+                      type="info"
+                      title="Overall Water Quality Insight"
+                      description={geminiResponse?.insights?.overallInsight || ""}
+                      timestamp={reportData.generatedAt}
+                      componentId="report-overall-insight" // Unique componentId
+                      autoRefresh={false} // Insights for report are generated once
+                      sensorData={reportData} // Pass the entire reportData for overall insights
+                    />
+                    {/* Individual Parameter Insight Cards */}
                     {geminiResponse?.suggestions?.map((suggestion, index) => (
-                      <SuggestionCard key={index} suggestion={suggestion} />
+                      <InsightsCard
+                        key={suggestion.parameter || index}
+                        type={suggestion.status}
+                        title={`${suggestion.parameter} Parameter Insight`}
+                        description={suggestion.recommendation}
+                        timestamp={reportData.generatedAt}
+                        componentId={`report-param-insight-${suggestion.parameter}`} // Unique componentId
+                        autoRefresh={false} // Insights for report are generated once
+                        sensorData={suggestion} // Pass individual suggestion for parameter specific insight
+                      />
                     ))}
                   </>
                 ) : (
@@ -427,6 +474,7 @@ const ReportScreen = () => {
       
       <ExportToggleButton 
         onExportPdf={handleExportPdf}
+        onExportCsv={handleExportCsv}
         isExporting={isExporting}
       />
     </>
