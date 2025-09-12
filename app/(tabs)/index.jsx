@@ -1,10 +1,10 @@
-import { globalStyles } from "@styles/globalStyles";
 import { useData } from "@contexts/DataContext";
 import AlertsCard from "@dataDisplay/AlertsCard";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import LineChartCard from "@dataDisplay/LinechartCard";
 import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
 import { listenToBackgroundMessages, listenToForegroundMessages, requestUserPermission } from "@services/pushNotifications";
+import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/DeviceStatusCard.jsx";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
@@ -26,6 +26,7 @@ export default function HomeScreen() {
     refreshData,
     lastUpdate,
     getHomepageAlerts,
+    realtimeData,
   } = useData();
 
   useEffect(() => {
@@ -38,11 +39,6 @@ export default function HomeScreen() {
         if (hasPermission) {
           console.log('Notification permissions granted');
           
-          // Get FCM token (you'll need to pass the current user's ID)
-          // const fcmToken = await getFcmToken(currentUserId);
-          // console.log('FCM Token:', fcmToken);
-          
-          // Set up message listeners
           const unsubscribeForeground = listenToForegroundMessages();
           listenToBackgroundMessages();
           
@@ -59,10 +55,8 @@ export default function HomeScreen() {
       }
     };
     
-    // Call the setup function
     const cleanup = setupNotifications();
     
-    // Cleanup function
     return () => {
       if (cleanup && typeof cleanup.then === 'function') {
         cleanup.then(fn => fn && fn());
@@ -139,8 +133,10 @@ export default function HomeScreen() {
               <InsightsCard
                 type="info"
                 title="Water Quality Insights"
-                sensorData={sensorData}
+                sensorData={realtimeData} // Use realtimeData for insights
                 timestamp={lastUpdate}
+                componentId="home-insights" // Unique componentId
+                autoRefresh={true}
               />
             )}
           </View>

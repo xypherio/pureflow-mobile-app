@@ -1,15 +1,35 @@
 {
   "project_info": {
     "project_number": "817474825207",
+    "firebase_url": "https://pureflow-system-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "pureflow-system",
     "storage_bucket": "pureflow-system.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:817474825207:android:0be98cc3362f80b0575cf2",
+        "mobilesdk_app_id": "1:817474825207:android:7bba49f8e8ba21e4575cf2",
         "android_client_info": {
           "package_name": "com.anonymous.pureflowmobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCcrWxgO0wRa0-QL0DTLdExN01tbQrzhY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:817474825207:android:415bb2ffebdf8502575cf2",
+        "android_client_info": {
+          "package_name": "com.xypher.pureflowmobile"
         }
       },
       "oauth_client": [],

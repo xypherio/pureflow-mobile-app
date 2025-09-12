@@ -1,6 +1,7 @@
-import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
+import { useInsights } from '@contexts/InsightsContext';
+import { AlertCircle, AlertTriangle, CheckCircle, Info, RefreshCw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const safeString = (value) => {
   if (value === null || value === undefined) {
@@ -11,7 +12,6 @@ const safeString = (value) => {
   }
   return String(value);
 };
-import { generateInsight } from '../../services/ai/geminiAPI';
 
 const INSIGHT_TYPES = {
   positive: {
@@ -118,6 +118,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  refreshButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontStyle: 'italic',
   }
 });
 
@@ -129,25 +158,70 @@ export default function InsightsCard({
   action, 
   onActionPress,
   timestamp,
-  sensorData
+  sensorData,
+  componentId = 'insights-card',
+  autoRefresh = true
 }) {
+  const { 
+    generateComponentInsight, 
+    getComponentInsight, 
+    isComponentLoading, 
+    getComponentError 
+  } = useInsights();
+  
   const [insight, setInsight] = useState(description);
-  const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
   const config = INSIGHT_TYPES[type] || INSIGHT_TYPES.info;
   const IconComponent = config.icon;
+  const loading = isComponentLoading(componentId);
+  const error = getComponentError(componentId);
+  const cachedInsight = getComponentInsight(componentId);
+
+  // Use cached insight if available, otherwise use description prop
+  const currentInsight = cachedInsight?.insights?.overallInsight || insight;
+  const lastUpdated = cachedInsight?.lastUpdated || timestamp;
+  const insightSource = cachedInsight?.insights?.source || 'prop';
 
   useEffect(() => {
-    const fetchInsight = async () => {
-      if (sensorData) {
-        setLoading(true);
-        const generatedInsight = await generateInsight(sensorData);
-        setInsight(generatedInsight);
-        setLoading(false);
-      }
-    };
+    if (sensorData && autoRefresh) {
+      generateComponentInsight(componentId, sensorData);
+    }
+  }, [sensorData, componentId, autoRefresh, generateComponentInsight]);
 
-    fetchInsight();
-  }, [sensorData]);
+  // Update local insight when cached insight changes
+  useEffect(() => {
+    if (cachedInsight) {
+      setInsight(cachedInsight.insights?.overallInsight || description);
+    }
+  }, [cachedInsight, description]);
+
+  const handleRefresh = async () => {
+    if (!sensorData) return;
+    
+    setIsRefreshing(true);
+    try {
+      await generateComponentInsight(componentId, sensorData, true);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const getStatusColor = () => {
+    if (loading || isRefreshing) return '#3B82F6'; // Blue for loading
+    if (error) return '#EF4444'; // Red for error
+    if (insightSource === 'cached-fallback') return '#F59E0B'; // Orange for cached fallback
+    if (insightSource === 'gemini-ai') return '#10B981'; // Green for fresh AI data
+    return '#6B7280'; // Gray for default
+  };
+
+  const getStatusText = () => {
+    if (loading || isRefreshing) return 'Generating insight...';
+    if (error) return 'Error loading insight';
+    if (insightSource === 'cached-fallback') return 'Using cached data';
+    if (insightSource === 'gemini-ai') return 'AI Generated';
+    return 'Static content';
+  };
 
   return (
     <View style={[styles.container, {
@@ -157,6 +231,20 @@ export default function InsightsCard({
       <View style={[styles.gradientOverlay, {
         backgroundColor: config.borderColor,
       }]} />
+      
+      {/* Refresh button */}
+      {sensorData && (
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          disabled={loading || isRefreshing}
+        >
+          <RefreshCw 
+            size={16} 
+            color={loading || isRefreshing ? '#9CA3AF' : '#6B7280'} 
+          />
+        </TouchableOpacity>
+      )}
       
       <View style={styles.contentContainer}>
         <View style={[styles.iconContainer, {
@@ -175,11 +263,31 @@ export default function InsightsCard({
           </Text>
           
           <Text style={styles.description}>
-            {loading ? 'Generating insight...' : safeString(insight?.overallInsight || '')}
-          </Text>
-           <Text style={styles.lastUpdated}>
-                Last updated: {new Date().toLocaleString()}
+            {loading ? (
+              <Text style={styles.loadingText}>Generating AI insight...</Text>
+            ) : error ? (
+              <Text style={[styles.loadingText, { color: '#EF4444' }]}>
+                Error: {error}
               </Text>
+            ) : (
+              safeString(currentInsight)
+            )}
+          </Text>
+
+          {/* Status indicator */}
+          <View style={styles.statusIndicator}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+            <Text style={styles.statusText}>
+              {getStatusText()}
+            </Text>
+          </View>
+          
+          {lastUpdated && (
+            <Text style={styles.lastUpdated}>
+              Last updated: {new Date(lastUpdated).toLocaleString()}
+            </Text>
+          )}
+
           {suggestion && (
             <View style={[styles.suggestionContainer, {
               backgroundColor: config.bgColor,

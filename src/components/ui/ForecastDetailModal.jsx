@@ -1,39 +1,84 @@
+import { generateInsight } from "@services/ai/geminiAPI"; // Import generateInsight
 import {
   AlertCircle,
   Droplet,
   Filter,
-  Layers,
+  Layers, // Added Lightbulb icon
   Shuffle,
   Sun,
   Thermometer,
   Waves,
-  Wind,
+  Wind
 } from "lucide-react-native";
-import React from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import React, { useEffect, useState } from "react"; // Added useEffect, useState
+import { ActivityIndicator, Modal, ScrollView, Text, TouchableWithoutFeedback, View } from "react-native"; // Added ActivityIndicator
+import { formatInsightText } from "../../utils/textFormatter"; // Import textFormatter
+
+// Helper function to limit words
+function limitWords(text, limit) {
+  if (!text) return "";
+  const words = text.split(" ");
+  if (words.length > limit) {
+    return words.slice(0, limit).join(" ") + "...";
+  }
+  return text;
+}
 
 export default function ForecastDetailModal({ visible, onClose, param }) {
   const [timeframe, setTimeframe] = React.useState("6h");
   const [isTfDropdownOpen, setIsTfDropdownOpen] = React.useState(false);
+  const [geminiResponse, setGeminiResponse] = useState(null); // State for Gemini response
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false); // State for Gemini loading
+  const [geminiError, setGeminiError] = useState(null); // State for Gemini error
 
   React.useEffect(() => {
     if (!visible) {
       setIsTfDropdownOpen(false);
+      // Optionally clear Gemini response when modal closes
+      setGeminiResponse(null); 
+      setGeminiError(null);
     }
   }, [visible]);
 
+  // Fetch Gemini Insights when the modal becomes visible and param data is available
+  useEffect(() => {
+    if (visible && param?.key) {
+      const fetchGeminiInsights = async () => {
+        setIsGeminiLoading(true);
+        setGeminiError(null);
+        setGeminiResponse(null);
+        try {
+          // Construct sensor data relevant to this specific parameter
+          // Using param.key for parameter name and param.value for its current value
+          const paramSensorData = {
+            [param.key.toLowerCase()]: parseFloat(param.value || 0), // Ensure numeric value
+            timestamp: new Date().toISOString(), // Add a timestamp for context
+          };
+          const response = await generateInsight(paramSensorData, `forecast-modal-${param.key}`);
+          setGeminiResponse(response);
+        } catch (err) {
+          console.error(`Error fetching Gemini insights for ${param.key}:`, err);
+          setGeminiError("Failed to load AI insights. Please try again later.");
+        } finally {
+          setIsGeminiLoading(false);
+        }
+      };
+      fetchGeminiInsights();
+    }
+  }, [visible, param]); // Depend on visible and param changes
+
   function getFactorMeta(text) {
     const t = (text || "").toLowerCase();
-    if (t.includes("temperature")) return { Icon: Thermometer, color: "#f59e0b" };
-    if (t.includes("photosynthesis") || t.includes("sun")) return { Icon: Sun, color: "#facc15" };
-    if (t.includes("oxygen") || t.includes("do ")) return { Icon: Wind, color: "#14b8a6" };
-    if (t.includes("alkalinity") || t.includes("ph")) return { Icon: Droplet, color: "#06b6d4" };
-    if (t.includes("evaporation")) return { Icon: Droplet, color: "#fb7185" };
-    if (t.includes("inflow") || t.includes("dilution")) return { Icon: Waves, color: "#3b82f6" };
-    if (t.includes("sediment") || t.includes("turbidity")) return { Icon: Layers, color: "#92400e" };
-    if (t.includes("filter")) return { Icon: Filter, color: "#6366f1" };
-    if (t.includes("mixing") || t.includes("shuffle")) return { Icon: Shuffle, color: "#8b5cf6" };
-    return { Icon: AlertCircle, color: "#6b7280" };
+    if (t.includes("temperature")) return { Icon: Thermometer, color: "#f59e0b", category: "Temperature" };
+    if (t.includes("photosynthesis") || t.includes("sun")) return { Icon: Sun, color: "#facc15", category: "Sunlight" };
+    if (t.includes("oxygen") || t.includes("do ")) return { Icon: Wind, color: "#14b8a6", category: "Dissolved Oxygen" };
+    if (t.includes("alkalinity") || t.includes("ph")) return { Icon: Droplet, color: "#06b6d4", category: "pH/Alkalinity" };
+    if (t.includes("evaporation")) return { Icon: Droplet, color: "#fb7185", category: "Evaporation" };
+    if (t.includes("inflow") || t.includes("dilution")) return { Icon: Waves, color: "#3b82f6", category: "Inflow/Dilution" };
+    if (t.includes("sediment") || t.includes("turbidity")) return { Icon: Layers, color: "#92400e", category: "Turbidity" };
+    if (t.includes("filter")) return { Icon: Filter, color: "#6366f1", category: "Filtration" };
+    if (t.includes("mixing") || t.includes("shuffle")) return { Icon: Shuffle, color: "#8b5cf6", category: "Mixing" };
+    return { Icon: AlertCircle, color: "#6b7280", category: "General" }; // Default icon
   }
 
   function colorWithAlpha(hex, alpha) {
@@ -116,108 +161,103 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
               )}
 
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Timeframe Dropdown */}
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
-                    Timeframe of Prediction
-                  </Text>
-                  <View>
-                    <TouchableOpacity
-                      onPress={() => setIsTfDropdownOpen((v) => !v)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: "#2455a9",
-                        borderRadius: 10,
-                        paddingVertical: 10,
-                        paddingHorizontal: 12,
-                        backgroundColor: "#f6fafd",
-                      }}
-                    >
-                      <Text style={{ color: "#1a2d51", fontWeight: "600" }}>
-                        {timeframe}
-                      </Text>
-                    </TouchableOpacity>
-                    {isTfDropdownOpen ? (
-                      <View
-                        style={{
-                          borderWidth: 1,
-                          borderColor: "#e5e7eb",
-                          borderRadius: 10,
-                          marginTop: 6,
-                          overflow: "hidden",
-                        }}
-                      >
-                        {["6h", "12h", "24h"].map((tf) => (
-                          <TouchableOpacity
-                            key={tf}
-                            onPress={() => {
-                              setTimeframe(tf);
-                              setIsTfDropdownOpen(false);
-                            }}
-                            style={{
-                              paddingVertical: 10,
-                              paddingHorizontal: 12,
-                              backgroundColor:
-                                timeframe === tf ? "#eef2ff" : "#ffffff",
-                            }}
-                          >
-                            <Text style={{ color: "#1a2d51" }}>{tf}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
 
-                {/* Key Influencing Factors */}
+                {/* Key Influencing Factors from Gemini API */}
                 <View style={{ marginBottom: 12 }}>
                   <Text style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
                     Key Influencing Factors
                   </Text>
-                  {param?.factors?.map((factor, idx) => {
-                    const { Icon, color } = getFactorMeta(factor);
-                    const bg = colorWithAlpha(color, 0.08);
-                    return (
-                      <View
-                        key={idx}
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          marginBottom: 8,
-                          paddingVertical: 8,
-                          paddingHorizontal: 10,
-                          borderRadius: 10,
-                          backgroundColor: bg,
-                          borderLeftWidth: 3,
-                          borderLeftColor: color,
-                        }}
-                      >
-                        <Icon size={18} color={color} />
-                        <Text style={{ color: "#1f2937", flex: 1, marginLeft: 8 }}>{factor}</Text>
-                      </View>
-                    );
-                  })}
+                  {isGeminiLoading ? (
+                    <ActivityIndicator size="small" color="#3b82f6" style={{ marginVertical: 10 }} />
+                  ) : geminiError ? (
+                    <Text style={{ color: '#ef4444', fontSize: 13 }}>{geminiError}</Text>
+                  ) : geminiResponse?.insights?.overallInsight ? (
+                    // Split the overallInsight into sentences/phrases for individual display
+                    // Limiting to a few factors for brevity in the modal
+                    geminiResponse.insights.overallInsight.split(/[.!?]\s*/)
+                      .filter(s => s.trim().length > 0)
+                      .filter(factor => {
+                        const { category } = getFactorMeta(factor);
+                        // If param.key is not available or category is 'General', include the factor
+                        if (!param.key || category === "General") {
+                          return true;
+                        }
+                        // Otherwise, only include if the param.key includes the category
+                        return param.key.toLowerCase().includes(category.toLowerCase());
+                      })
+                      .slice(0, 3) // Limit to top 3 relevant factors
+                      .map((factor, idx) => {
+                        const { Icon, color, category } = getFactorMeta(factor);
+                        
+                        const bg = colorWithAlpha(color, 0.08);
+                        return (
+                          <View
+                            key={idx}
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              marginBottom: 8,
+                              paddingVertical: 8,
+                              paddingHorizontal: 10,
+                              borderRadius: 10,
+                              backgroundColor: bg,
+                              borderLeftWidth: 3,
+                              borderLeftColor: color,
+                            }}
+                          >
+                            <Icon size={18} color={color} />
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                              {formatInsightText(limitWords(factor, 8), 'info')} {/* Limit words to 8 and format */}
+                            </View>
+                          </View>
+                        );
+                      })
+                  ) : (
+                    <Text style={{ color: "#6b7280", fontSize: 13 }}>No key influencing factors available.</Text>
+                  )}
                 </View>
 
-                {/* Recommended Actions */}
+                {/* Recommended Actions from Gemini API */}
                 <View style={{ marginBottom: 4 }}>
                   <Text
                     style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}
                   >
                     Recommended Actions
                   </Text>
-                  <View
-                    style={{
-                      backgroundColor: "#2455a9",
-                      paddingVertical: 12,
-                      borderRadius: 10,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text style={{ color: "#f6fafd", fontWeight: "700" }}>
-                      {param?.actionLabel}
-                    </Text>
-                  </View>
+                  {isGeminiLoading ? (
+                    <ActivityIndicator size="small" color="#3b82f6" style={{ marginVertical: 10 }} />
+                  ) : geminiError ? (
+                    <Text style={{ color: '#ef4444', fontSize: 13 }}>{geminiError}</Text>
+                  ) : (geminiResponse?.suggestions && geminiResponse.suggestions.length > 0) ? (
+                    geminiResponse.suggestions.map((suggestion, idx) => {
+                      const { Icon, color } = getFactorMeta(suggestion.parameter); // Use parameter for icon, fallback to default
+                      const bg = colorWithAlpha(color, 0.08);
+                      return (
+                        <View
+                          key={idx}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "flex-start", // Align top for longer text
+                            marginBottom: 8,
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderRadius: 10,
+                            backgroundColor: bg,
+                            borderLeftWidth: 3,
+                            borderLeftColor: color,
+                          }}
+                        >
+                          <Icon size={18} color={color} style={{ marginTop: 2, marginRight: 8 }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontWeight: 'bold', color: color, marginBottom: 2 }}>{suggestion.parameter}</Text>
+                            {formatInsightText(limitWords(suggestion.recommendation, 8), suggestion.status)} {/* Limit words to 8 and format */}
+                          </View>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <Text style={{ color: "#6b7280", fontSize: 13 }}>No recommendations available.</Text>
+                  )}
                 </View>
               </ScrollView>
             </View>
