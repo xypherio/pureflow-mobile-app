@@ -20,13 +20,8 @@ if (Platform.OS === 'web') {
   };
 } else {
   // Native-specific implementations
-  const RNFS = require('react-native-fs');
+  const FileSystem = require('expo-file-system');
   const Share = require('react-native').Share;
-
-  generateReport = async () => {
-    console.warn('PDF generation is not supported on native platforms yet. Please use the web version for PDF export.');
-    throw new Error('PDF generation is not available on native platforms.');
-  };
 
   shareFiles = async (filePaths, title = 'Share Report') => {
     try {
@@ -42,7 +37,7 @@ if (Platform.OS === 'web') {
 
   generateCsv = async (chartData, processedParameters, insights) => {
     const csvFileName = `PureFlow_Report_${new Date().toISOString().split('T')[0]}.csv`;
-    const path = `${RNFS.DocumentDirectoryPath}/${csvFileName}`;
+    const path = `${FileSystem.documentDirectory}/${csvFileName}`;
 
     // CSV Header for raw data
     const allKeys = new Set();
@@ -86,7 +81,7 @@ if (Platform.OS === 'web') {
     }
 
     try {
-      await RNFS.writeFile(path, csvContent, 'utf8');
+      await FileSystem.writeAsStringAsync(path, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
       console.log('CSV file written to:', path);
 
       return { filePath: `file://${path}` };
@@ -99,5 +94,5 @@ if (Platform.OS === 'web') {
 
 // The createHtmlContent function is removed as it was only used by native PDF generation.
 
-export { generateCsv, generateReport, shareFiles };
+export { generateCsv, shareFiles };
 
