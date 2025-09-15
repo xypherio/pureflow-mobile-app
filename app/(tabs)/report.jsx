@@ -10,7 +10,7 @@ import SegmentedFilter from "@navigation/SegmentedFilters";
 import { generateInsight } from "@services/ai/geminiAPI";
 import EmptyState from "@ui/EmptyState";
 import GlobalWrapper from "@ui/GlobalWrapper";
-import { generateCsv, generateReport, shareFiles } from "@utils/exportUtils"; // Import new functions
+import { generateCsv, shareFiles } from "@utils/exportUtils"; // Import new functions
 import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
 import { useCallback, useEffect, useState } from "react"; // Removed useRef
 import {
@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import PdfGenerator from '../../src/PdfGenerator';
 
 const sectionLabelStyle = {
   fontSize: 12,
@@ -221,27 +222,47 @@ const ReportScreen = () => {
     refreshData();
   }, [refreshData]);
 
-  const generateAndHandleReport = useCallback(async () => {
+  // Removed the generateAndHandleReport function as it's no longer needed.
+
+  const handleExportPdf = useCallback(async () => {
     setIsExporting(true);
     try {
-      const dataForReport = processedParameters.map(p => ({
-        param: p.parameter,
-        value: p.value,
-        status: p.status,
-        unit: p.unit,
-      }));
+      // Construct the report data for PdfGenerator
+      const pdfReportData = {
+        overallStatus: reportData.overallStatus || "No overall status available.",
+        ph: {
+          value: reportData.parameters?.pH?.average?.toFixed(2) || "N/A",
+          status: reportData.parameters?.pH?.status || "unknown",
+          details: reportData.parameters?.pH?.trend?.message || "No pH details available.",
+        },
+        temperature: {
+          value: reportData.parameters?.temperature?.average?.toFixed(2) || "N/A",
+          status: reportData.parameters?.temperature?.status || "unknown",
+          details: reportData.parameters?.temperature?.trend?.message || "No temperature details available.",
+        },
+        turbidity: {
+          value: reportData.parameters?.turbidity?.average?.toFixed(2) || "N/A",
+          status: reportData.parameters?.turbidity?.status || "unknown",
+          details: reportData.parameters?.turbidity?.trend?.message || "No turbidity details available.",
+        },
+        salinity: {
+          value: reportData.parameters?.salinity?.average?.toFixed(2) || "N/A",
+          status: reportData.parameters?.salinity?.status || "unknown",
+          details: reportData.parameters?.salinity?.trend?.message || "No salinity details available.",
+        },
+        tds: {
+          value: reportData.parameters?.tds?.average?.toFixed(2) || "N/A",
+          status: reportData.parameters?.tds?.status || "unknown",
+          details: reportData.parameters?.tds?.trend?.message || "No TDS details available.",
+        },
+        aiInsights: geminiResponse?.insights?.overallInsight || "No AI insights available.",
+        forecast: geminiResponse?.forecast?.overallForecast || "No forecast available.", // Assuming forecast is part of geminiResponse
+      };
 
-      const insightsForReport = geminiResponse?.insights?.overallInsight || "No AI insights available.";
-
-      const { filePath } = await generateReport(
-        dataForReport,
-        insightsForReport,
-        chartImageBase64, // Pass the chart Base64 if available
-      );
-
+      await PdfGenerator(pdfReportData);
       Alert.alert(
         `PDF Report Generated`,
-        `Report saved to: ${filePath}`,
+        `Your water quality report has been successfully generated and shared.`,
         [
           {
             text: "OK",
@@ -249,19 +270,13 @@ const ReportScreen = () => {
           },
         ]
       );
-      return { filePath };
     } catch (error) {
-      console.error("Report generation failed:", error);
+      console.error("PDF generation failed:", error);
       Alert.alert("Export Failed", error.message);
-      return null;
     } finally {
       setIsExporting(false);
     }
-  }, [processedParameters, geminiResponse, chartImageBase64]);
-
-  const handleExportPdf = useCallback(async () => {
-    await generateAndHandleReport();
-  }, [generateAndHandleReport]);
+  }, [reportData, geminiResponse]);
 
   // New CSV export handler
   const handleExportCsv = useCallback(async () => {
@@ -545,5 +560,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
 export default ReportScreen;
+

@@ -3,7 +3,7 @@ import AlertsCard from "@dataDisplay/AlertsCard";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import LineChartCard from "@dataDisplay/LinechartCard";
 import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
-import { listenToBackgroundMessages, listenToForegroundMessages, requestUserPermission } from "@services/pushNotifications";
+import { listenToForegroundMessages, requestUserPermission } from "@services/pushNotifications";
 import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/DeviceStatusCard.jsx";
 import GlobalWrapper from "@ui/GlobalWrapper";
@@ -40,7 +40,6 @@ export default function HomeScreen() {
           console.log('Notification permissions granted');
           
           const unsubscribeForeground = listenToForegroundMessages();
-          listenToBackgroundMessages();
           
           return () => {
             if (unsubscribeForeground && typeof unsubscribeForeground === 'function') {

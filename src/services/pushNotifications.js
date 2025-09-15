@@ -1,8 +1,8 @@
-import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Platform } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
-import { collection, doc, setDoc, serverTimestamp, where, getDocs, query, updateDoc } from 'firebase/firestore';
 
 // Import Firebase services with dynamic import to avoid circular dependencies
 let db;
@@ -174,6 +174,22 @@ export async function getInitialNotification() {
   } catch (error) {
     console.error('Error getting initial notification:', error);
     return null;
+  }
+}
+
+export async function listenToBackgroundMessages(handler) {
+  try {
+    const response = await Notifications.getLastNotificationResponseAsync();
+    if (response && handler) {
+      handler(response);
+    }
+    // You might also want to set up a listener for background notifications here
+    // However, expo-notifications generally handles background notifications via the response listener
+    // or when the app is opened from a notification.
+    // If you need more advanced background fetching, you'd use `expo-task-manager`.
+
+  } catch (error) {
+    console.error('Error setting up background notification listener:', error);
   }
 }
 

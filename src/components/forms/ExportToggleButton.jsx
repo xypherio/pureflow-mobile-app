@@ -5,7 +5,7 @@ import {
   Animated,
   StyleSheet, // Re-added Text
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 export default function ExportToggleButton({
@@ -15,6 +15,8 @@ export default function ExportToggleButton({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const animation = React.useRef(new Animated.Value(0)).current;
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [csvLoading, setCsvLoading] = useState(false);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => {
@@ -32,13 +34,15 @@ export default function ExportToggleButton({
   const handleExportPdfPress = useCallback(async () => {
     setIsExpanded(false); // Collapse after action
     Animated.spring(animation, {
-      toValue: 0,
-      friction: 8,
-      tension: 120,
+      toValue: 5,
+      friction: 5,
+      tension: 180,
       useNativeDriver: false,
     }).start();
     if (onExportPdf) {
+      setPdfLoading(true); // Start PDF loading
       await onExportPdf();
+      setPdfLoading(false); // End PDF loading
     }
   }, [onExportPdf, animation]);
 
@@ -51,7 +55,9 @@ export default function ExportToggleButton({
       useNativeDriver: false,
     }).start();
     if (onExportCsv) {
+      setCsvLoading(true); // Start CSV loading
       await onExportCsv();
+      setCsvLoading(false); // End CSV loading
     }
   }, [onExportCsv, animation]);
 
@@ -83,10 +89,14 @@ export default function ExportToggleButton({
             <TouchableOpacity
               style={[styles.optionButton, { backgroundColor: "#d1fae5" }]} // Green for CSV
               onPress={handleExportCsvPress}
-              disabled={isExporting}
+              disabled={isExporting || csvLoading}
               activeOpacity={0.8}
             >
-              <FileJson size={20} color="#059669" />
+              {csvLoading ? (
+                <ActivityIndicator size="small" color="#059669" />
+              ) : (
+                <FileJson size={22} color="#059669" />
+              )}
             </TouchableOpacity>
           </Animated.View>
 
@@ -97,12 +107,16 @@ export default function ExportToggleButton({
             ]}
           >
             <TouchableOpacity
-              style={[styles.optionButton, { backgroundColor: "#bfdbfe" }]} // Blue for PDF
+              style={[styles.optionButton, { backgroundColor: "#ffa79e" }]}
               onPress={handleExportPdfPress}
-              disabled={isExporting}
+              disabled={isExporting || pdfLoading}
               activeOpacity={0.8}
             >
-              <FileDown size={20} color="#2563eb" />
+              {pdfLoading ? (
+                <ActivityIndicator size="small" color="#9e1e11" />
+              ) : (
+                <FileDown size={22} color="#9e1e11" />
+              )}
             </TouchableOpacity>
           </Animated.View>
         </>
@@ -111,7 +125,7 @@ export default function ExportToggleButton({
       <TouchableOpacity
         style={[styles.mainButton, isExporting && styles.mainButtonLoading]}
         onPress={toggleExpanded}
-        disabled={isExporting}
+        disabled={isExporting || pdfLoading || csvLoading}
         activeOpacity={0.8}
       >
         {isExporting ? (
