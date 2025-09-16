@@ -1,15 +1,22 @@
+import NotificationTestPanel from "@components/NotificationTestPanel";
 import { useData } from "@contexts/DataContext";
 import AlertsCard from "@dataDisplay/AlertsCard";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import LineChartCard from "@dataDisplay/LinechartCard";
 import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
-import { listenToForegroundMessages, requestUserPermission } from "@services/pushNotifications";
+import { useNotifications } from "@hooks/useNotifications";
 import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/DeviceStatusCard.jsx";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
 import { useEffect } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 const sectionLabelStyle = {
   fontSize: 12,
@@ -29,50 +36,159 @@ export default function HomeScreen() {
     realtimeData,
   } = useData();
 
+  const {
+    isInitialized,
+    hasPermission,
+    unreadCount,
+    addNotificationListener,
+    sendTemplateNotification,
+    requestPermission,
+  } = useNotifications();
+
   useEffect(() => {
-    // Initialize Firebase and notifications
+    // Initialize notifications and request permission if needed
     const setupNotifications = async () => {
       try {
-        // Request notification permissions
-        const hasPermission = await requestUserPermission();
-        
-        if (hasPermission) {
-          console.log('Notification permissions granted');
-          
-          const unsubscribeForeground = listenToForegroundMessages();
-          
-          return () => {
-            if (unsubscribeForeground && typeof unsubscribeForeground === 'function') {
-              unsubscribeForeground();
-            }
-          };
-        } else {
-          console.log('Notification permissions denied');
+        if (!hasPermission) {
+          console.log("Requesting notification permissions...");
+          const result = await requestPermission();
+          if (result.success) {
+            console.log("✅ Notification permissions granted");
+          } else {
+            console.log("❌ Notification permissions denied");
+          }
         }
+
+        // Set up notification listeners
+        const receivedListener = addNotificationListener(
+          "received",
+          (notification) => {
+            console.log(
+              "📱 Home screen received notification:",
+              notification.request.content.title
+            );
+
+            // You can add custom logic here for handling received notifications
+            // For example, refresh data, show in-app alerts, etc.
+          }
+        );
+
+        const responseListener = addNotificationListener(
+          "response",
+          (response) => {
+            console.log(
+              "👆 Home screen notification tapped:",
+              response.notification.request.content.title
+            );
+
+            // Handle notification tap - navigate to specific screen, refresh data, etc.
+            const notificationData = response.notification.request.content.data;
+
+            switch (notificationData?.type) {
+              case "water_quality_alert":
+                // Navigate to specific parameter or alerts screen
+                console.log("Navigate to water quality alerts");
+                break;
+              case "device_offline":
+                // Show device status or troubleshooting
+                console.log("Navigate to device status");
+                break;
+              case "maintenance_reminder":
+                // Navigate to maintenance screen
+                console.log("Navigate to maintenance");
+                break;
+              default:
+                console.log("Handle general notification tap");
+            }
+          }
+        );
+
+        // Return cleanup function
+        return () => {
+          if (receivedListener?.remove) receivedListener.remove();
+          if (responseListener?.remove) responseListener.remove();
+        };
       } catch (error) {
-        console.error('Error setting up notifications:', error);
+        console.error("Error setting up notifications:", error);
       }
     };
-    
-    const cleanup = setupNotifications();
-    
-    return () => {
-      if (cleanup && typeof cleanup.then === 'function') {
-        cleanup.then(fn => fn && fn());
-      }
-    };
-  }, []);
+
+    if (isInitialized) {
+      const cleanup = setupNotifications();
+      return () => {
+        if (cleanup && typeof cleanup.then === "function") {
+          cleanup.then((fn) => fn && fn());
+        } else if (typeof cleanup === "function") {
+          cleanup();
+        }
+      };
+    }
+  }, [
+    isInitialized,
+    hasPermission,
+    addNotificationListener,
+    requestPermission,
+  ]);
+
+  // Example: Send notifications based on sensor data changes
+  useEffect(() => {
+    if (realtimeData && isInitialized && hasPermission) {
+      // Check for critical values and send notifications
+      const checkAndNotify = async () => {
+        // pH critical check
+        if (
+          realtimeData.pH &&
+          (realtimeData.pH < 6.0 || realtimeData.pH > 9.0)
+        ) {
+          await sendTemplateNotification(
+            "waterQualityAlert",
+            "pH",
+            realtimeData.pH,
+            "critical"
+          );
+        }
+
+        // Temperature check
+        if (
+          realtimeData.temperature &&
+          (realtimeData.temperature > 35 || realtimeData.temperature < 20)
+        ) {
+          await sendTemplateNotification(
+            "waterQualityAlert",
+            "Temperature",
+            `${realtimeData.temperature}°C`,
+            "warning"
+          );
+        }
+
+        // Turbidity check
+        if (realtimeData.turbidity && realtimeData.turbidity > 100) {
+          await sendTemplateNotification(
+            "waterQualityAlert",
+            "Turbidity",
+            `${realtimeData.turbidity} NTU`,
+            "warning"
+          );
+        }
+      };
+
+      // Debounce notifications to avoid spam
+      const timeout = setTimeout(checkAndNotify, 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [realtimeData, isInitialized, hasPermission, sendTemplateNotification]);
 
   return (
     <>
       {/* Header */}
-        <PureFlowLogo
-          weather={{
-            label: "Light Rain",
-            temp: "30°C",
-            icon: "partly",
-          }}
-        />
+      <PureFlowLogo
+        weather={{
+          label: "Light Rain",
+          temp: "30°C",
+          icon: "partly",
+        }}
+        notificationBadge={unreadCount > 0 ? unreadCount : null}
+      />
 
       <GlobalWrapper style={globalStyles.pageBackground}>
         <ScrollView
@@ -127,7 +243,11 @@ export default function HomeScreen() {
             </View>
 
             {loading ? (
-              <ActivityIndicator size="large" color="#4a90e2" style={{ marginTop: 20 }} />
+              <ActivityIndicator
+                size="large"
+                color="#4a90e2"
+                style={{ marginTop: 20 }}
+              />
             ) : (
               <InsightsCard
                 type="info"
@@ -141,6 +261,9 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </GlobalWrapper>
+      
+      {/* Development Test Panel - Only visible in development mode */}
+      <NotificationTestPanel />
     </>
   );
 }

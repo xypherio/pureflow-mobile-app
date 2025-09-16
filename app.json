@@ -22,6 +22,10 @@
       "edgeToEdgeEnabled": true,
       "package": "com.xypher.pureflowmobile"
     },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#ffffff"
+    },
 
     "web": {
       "bundler": "metro",
@@ -29,6 +33,14 @@
       "favicon": "./assets/images/adaptive-icon.png"
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": ["./assets/notification-sound.wav"]
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

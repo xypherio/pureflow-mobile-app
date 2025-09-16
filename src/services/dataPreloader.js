@@ -2,7 +2,6 @@ import { fetchAllDocuments } from '@services/firebase/firestore';
 import { performanceMonitor } from '@utils/performance-monitor.js';
 import { alertManager } from './alertManager.js';
 import { historicalAlertsService } from './historicalAlertsService.js';
-import { notificationEvents } from './pushNotifications.js';
 import { getWaterQualityReport } from './water-quality-status.js';
 
 /**
@@ -111,12 +110,7 @@ class DataPreloader {
             chartDataPoints: dailyReport.chartData?.datasets?.[0]?.data?.length || 0,
             chartDataLabels: dailyReport.chartData?.labels?.length || 0
           });
-          // Notify that a fresh daily report is ready when not from cache
-          try {
-            if (sensorData?.length > 0) {
-              await notificationEvents.dailyReportReady();
-            }
-          } catch {}
+          // Daily report is ready (notifications handled by useWaterQualityNotifications hook)
         }
 
         // Update cache

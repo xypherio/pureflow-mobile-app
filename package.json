@@ -88,11 +88,13 @@
     "tailwindcss": "^3.4.1",
     "twrnc": "^4.9.1",
     "typescript": "~5.8.3",
+    "uuid": "^13.0.0",
     "victory-native": "^41.17.4"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",
     "@react-native-community/cli": "^20.0.1",
+    "@types/uuid": "^10.0.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "eslint": "^9.31.0",
     "eslint-config-expo": "~9.2.0",

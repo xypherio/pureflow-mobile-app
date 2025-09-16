@@ -98,12 +98,10 @@ const ReportScreen = () => {
 
   // Process the data when chartData changes
   useEffect(() => {
-    // Only process if we have chartData and we're not already in a loading state
     if (chartData && !loading) {
       try {
         if (chartData.length === 0) {
           console.log('No data available for the selected time period');
-          // Set empty state but keep the tab structure
           setReportData({
             wqi: { value: 0, status: "unknown" },
             parameters: {},
@@ -410,7 +408,7 @@ const ReportScreen = () => {
             />
           ) : (
             <>
-              <View style={{ marginBottom: 16, marginTop: 70 }}>
+              <View style={{ marginBottom: 16, marginTop: 50 }}>
                 <Text style={sectionLabelStyle}>Water Quality Summary</Text>
                 <WaterQualitySummaryCard
                   qualityLevel={reportData.overallStatus || "normal"}
