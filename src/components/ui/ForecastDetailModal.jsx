@@ -10,9 +10,9 @@ import {
   Waves,
   Wind
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react"; // Added useEffect, useState
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, Text, TouchableWithoutFeedback, View } from "react-native"; // Added ActivityIndicator
-import { formatInsightText } from "../../utils/textFormatter"; // Import textFormatter
+import { formatInsightText } from "../../utils/textFormatter";
 
 // Helper function to limit words
 function limitWords(text, limit) {
@@ -27,20 +27,18 @@ function limitWords(text, limit) {
 export default function ForecastDetailModal({ visible, onClose, param }) {
   const [timeframe, setTimeframe] = React.useState("6h");
   const [isTfDropdownOpen, setIsTfDropdownOpen] = React.useState(false);
-  const [geminiResponse, setGeminiResponse] = useState(null); // State for Gemini response
-  const [isGeminiLoading, setIsGeminiLoading] = useState(false); // State for Gemini loading
-  const [geminiError, setGeminiError] = useState(null); // State for Gemini error
+  const [geminiResponse, setGeminiResponse] = useState(null); 
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+  const [geminiError, setGeminiError] = useState(null);
 
   React.useEffect(() => {
     if (!visible) {
       setIsTfDropdownOpen(false);
-      // Optionally clear Gemini response when modal closes
       setGeminiResponse(null); 
       setGeminiError(null);
     }
   }, [visible]);
 
-  // Fetch Gemini Insights when the modal becomes visible and param data is available
   useEffect(() => {
     if (visible && param?.key) {
       const fetchGeminiInsights = async () => {
@@ -48,11 +46,9 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
         setGeminiError(null);
         setGeminiResponse(null);
         try {
-          // Construct sensor data relevant to this specific parameter
-          // Using param.key for parameter name and param.value for its current value
           const paramSensorData = {
-            [param.key.toLowerCase()]: parseFloat(param.value || 0), // Ensure numeric value
-            timestamp: new Date().toISOString(), // Add a timestamp for context
+            [param.key.toLowerCase()]: parseFloat(param.value || 0),
+            timestamp: new Date().toISOString(),
           };
           const response = await generateInsight(paramSensorData, `forecast-modal-${param.key}`);
           setGeminiResponse(response);
@@ -65,7 +61,7 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
       };
       fetchGeminiInsights();
     }
-  }, [visible, param]); // Depend on visible and param changes
+  }, [visible, param]);
 
   function getFactorMeta(text) {
     const t = (text || "").toLowerCase();
@@ -172,20 +168,16 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
                   ) : geminiError ? (
                     <Text style={{ color: '#ef4444', fontSize: 13 }}>{geminiError}</Text>
                   ) : geminiResponse?.insights?.overallInsight ? (
-                    // Split the overallInsight into sentences/phrases for individual display
-                    // Limiting to a few factors for brevity in the modal
                     geminiResponse.insights.overallInsight.split(/[.!?]\s*/)
                       .filter(s => s.trim().length > 0)
                       .filter(factor => {
                         const { category } = getFactorMeta(factor);
-                        // If param.key is not available or category is 'General', include the factor
                         if (!param.key || category === "General") {
                           return true;
                         }
-                        // Otherwise, only include if the param.key includes the category
                         return param.key.toLowerCase().includes(category.toLowerCase());
                       })
-                      .slice(0, 3) // Limit to top 3 relevant factors
+                      .slice(0, 3)
                       .map((factor, idx) => {
                         const { Icon, color, category } = getFactorMeta(factor);
                         
@@ -207,7 +199,7 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
                           >
                             <Icon size={18} color={color} />
                             <View style={{ flex: 1, marginLeft: 8 }}>
-                              {formatInsightText(limitWords(factor, 8), 'info')} {/* Limit words to 8 and format */}
+                              {formatInsightText(limitWords(factor, 20), 'info')} {/* Limit words to 8 and format */}
                             </View>
                           </View>
                         );
@@ -230,14 +222,14 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
                     <Text style={{ color: '#ef4444', fontSize: 13 }}>{geminiError}</Text>
                   ) : (geminiResponse?.suggestions && geminiResponse.suggestions.length > 0) ? (
                     geminiResponse.suggestions.map((suggestion, idx) => {
-                      const { Icon, color } = getFactorMeta(suggestion.parameter); // Use parameter for icon, fallback to default
+                      const { Icon, color } = getFactorMeta(suggestion.parameter); 
                       const bg = colorWithAlpha(color, 0.08);
                       return (
                         <View
                           key={idx}
                           style={{
                             flexDirection: "row",
-                            alignItems: "flex-start", // Align top for longer text
+                            alignItems: "flex-start",
                             marginBottom: 8,
                             paddingVertical: 8,
                             paddingHorizontal: 10,
@@ -250,7 +242,7 @@ export default function ForecastDetailModal({ visible, onClose, param }) {
                           <Icon size={18} color={color} style={{ marginTop: 2, marginRight: 8 }} />
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontWeight: 'bold', color: color, marginBottom: 2 }}>{suggestion.parameter}</Text>
-                            {formatInsightText(limitWords(suggestion.recommendation, 8), suggestion.status)} {/* Limit words to 8 and format */}
+                            {formatInsightText(limitWords(suggestion.recommendation, 20), suggestion.status)} {/* Limit words to 8 and format */}
                           </View>
                         </View>
                       );

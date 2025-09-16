@@ -166,29 +166,29 @@ const generateInsightFromAPI = async (sensorData) => {
     Please return a JSON object with the following structure:
     {
       "insights": {
-        "overallInsight": "A brief, 2-3 sentence summary of the water quality with specific observations.",
+        "overallInsight": "A brief, 2 sentence summary of the water quality with specific observations.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai"
       },
       "suggestions": [
         {
           "parameter": "pH",
-          "recommendation": "Detailed recommendation for pH based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for pH based on current readings.",
           "status": "normal|warning|critical"
         },
         {
           "parameter": "temperature",
-          "recommendation": "Detailed recommendation for temperature based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for temperature based on current readings.",
           "status": "normal|warning|critical"
         },
         {
           "parameter": "salinity",
-          "recommendation": "Detailed recommendation for salinity based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for salinity based on current readings.",
           "status": "normal|warning|critical"
         },
         {
           "parameter": "turbidity",
-          "recommendation": "Detailed recommendation for turbidity based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for turbidity based on current readings.",
           "status": "normal|warning|critical"
         }
       ]

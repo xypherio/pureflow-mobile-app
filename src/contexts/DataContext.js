@@ -1,9 +1,7 @@
-import { getWaterQualityThresholds } from "@constants/thresholds";
 import { alertManager } from "@services/alertManager";
 import dataPreloader from "@services/dataPreloader";
-import { notificationEvents, registerForPushNotificationsAsync } from "@services/pushNotifications";
 import { realtimeDataService } from "@services/realtimeDataService";
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 const DataContext = createContext();
 
@@ -94,26 +92,6 @@ export function DataProvider({ children, initialData = null }) {
         realtimeDataForAlerts = realtimeDataResult.value;
         setRealtimeData(realtimeDataForAlerts);
         console.log('✅ Real-time data updated');
-        // Push notifications for rain detection and approaching unsafe thresholds
-        try {
-          if (realtimeDataForAlerts?.isRaining) {
-            await notificationEvents.rainDetected();
-          }
-          const thresholds = getWaterQualityThresholds();
-          const params = ["pH", "temperature", "turbidity", "salinity"];
-          params.forEach((param) => {
-            const t = thresholds[param];
-            const value = realtimeDataForAlerts[param] ?? realtimeDataForAlerts[param?.toLowerCase?.()] ?? (param === 'pH' ? realtimeDataForAlerts['ph'] : realtimeDataForAlerts[param]);
-            if (t && typeof value === 'number') {
-              const margin = (t.max - t.min) * 0.1; // 10% of range
-              if ((value > t.max - margin && value <= t.max) || (value < t.min + margin && value >= t.min)) {
-                notificationEvents.parameterApproachingUnsafe(param, value, t);
-              }
-            }
-          });
-        } catch (e) {
-          console.warn('Notification checks failed', e);
-        }
       } else if (realtimeDataResult.status === 'rejected') {
         console.error('❌ Failed to fetch real-time data:', realtimeDataResult.reason);
       }
@@ -174,12 +152,6 @@ export function DataProvider({ children, initialData = null }) {
     isMountedRef.current = true;
 
     const initializeData = async () => {
-      // Initialize push notifications
-      try {
-        await registerForPushNotificationsAsync();
-      } catch (e) {
-        console.warn('Push notification registration failed', e);
-      }
       // If we have initial data, use it immediately
       if (initialData) {
         console.log('🚀 Using preloaded initial data');
@@ -228,10 +200,6 @@ export function DataProvider({ children, initialData = null }) {
             if (realtimeAlerts.newAlerts.length > 0) {
               console.log(`🚨 ${realtimeAlerts.newAlerts.length} new alerts from real-time data`);
               setAlerts(realtimeAlerts.alerts);
-              // Notify on new alerts
-              for (const a of realtimeAlerts.newAlerts) {
-                try { await notificationEvents.newAlert(a); } catch {}
-              }
             }
           }
         } catch (error) {

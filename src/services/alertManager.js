@@ -1,5 +1,4 @@
 import { addAlertToFirestore } from '@services/firebase/firestore.js';
-import { notificationEvents } from '@services/pushNotifications';
 import { getAlertsFromSensorData } from '@utils/alert-logic-handler.js';
 import { performanceMonitor } from '@utils/performance-monitor.js';
 
@@ -135,11 +134,7 @@ class AlertManager {
             newAlerts.push(enhancedAlert);
             
             // Trigger local notification for new high/medium severity alerts
-            try {
-              if (enhancedAlert.severity === 'high' || enhancedAlert.severity === 'medium') {
-                await notificationEvents.newAlert(enhancedAlert);
-              }
-            } catch {}
+            // Notifications handled by useWaterQualityNotifications hook
             
             // Queue new alert for Firebase sync (check for duplicates by signature)
             const isDuplicate = this.pendingFirebaseAlerts.some(existingAlert => 

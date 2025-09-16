@@ -1,7 +1,7 @@
 import { useInsights } from '@contexts/InsightsContext';
-import { AlertCircle, AlertTriangle, CheckCircle, Info, RefreshCw } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 const safeString = (value) => {
   if (value === null || value === undefined) {
@@ -231,20 +231,6 @@ export default function InsightsCard({
       <View style={[styles.gradientOverlay, {
         backgroundColor: config.borderColor,
       }]} />
-      
-      {/* Refresh button */}
-      {sensorData && (
-        <TouchableOpacity 
-          style={styles.refreshButton}
-          onPress={handleRefresh}
-          disabled={loading || isRefreshing}
-        >
-          <RefreshCw 
-            size={16} 
-            color={loading || isRefreshing ? '#9CA3AF' : '#6B7280'} 
-          />
-        </TouchableOpacity>
-      )}
       
       <View style={styles.contentContainer}>
         <View style={[styles.iconContainer, {

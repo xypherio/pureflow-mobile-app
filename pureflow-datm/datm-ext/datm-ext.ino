@@ -45,6 +45,11 @@ void buzzAlert() {
   tone(BUZZER_PIN, 1000, 500);
 }
 
+void batteryLevelChecker(){
+  
+  return batteryLevel;
+}
+
 void solarTracker() {
   int leftValue = analogRead(LDR_Left);
   int rightValue = analogRead(LDR_Right);
@@ -53,20 +58,18 @@ void solarTracker() {
   Serial.print("LDR Left: "); Serial.print(leftValue);
   Serial.print(" | LDR Right: "); Serial.println(rightValue);
 
-  // --- Debugging sunlight detection ---
   if (leftValue > sunlightThreshold || rightValue > sunlightThreshold) {
     Serial.println("☀️ Sunlight detected!");
   } else {
     Serial.println("🌑 No direct sunlight detected.");
   }
 
-  // --- Servo tracking ---
   if (abs(difference) > tolerance) {
     if (difference > 0 && servoPos < 180) {
-      servoPos++;  // Move right
+      servoPos++;
       Serial.println("➡️ Moving right");
     } else if (difference < 0 && servoPos > 0) {
-      servoPos--;  // Move left
+      servoPos--;
       Serial.println("⬅️ Moving left");
     }
     trackerServo.write(servoPos);
@@ -75,10 +78,8 @@ void solarTracker() {
 }
 
 void loop() {
-  // --- Solar Tracking ---
   solarTracker();
 
-  // --- Sensor Data Receiver ---
   if (Serial2.available()) {
     String input = Serial2.readStringUntil('\n');
     StaticJsonDocument<200> doc;

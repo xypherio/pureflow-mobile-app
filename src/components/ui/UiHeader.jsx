@@ -52,15 +52,8 @@ export default function PureFlowLogo({
           onPress={() => setModalVisible(false)}
         >
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Image
-              source={LOGO_PATH}
-              style={styles.modalLogo}
-              accessibilityLabel="pureflow_logo"
-            />
-            <Text style={styles.modalTitle}>PureFlow Mobile</Text>
-            <Text style={styles.modalVersion}>Version 1.0.0</Text>
             <Text style={styles.modalDescription}>
-              Water quality monitoring and analysis application.
+              PureFlow is a water quality monitoring system that utilizes IoT devices to track and analyze water parameters in real-time. It leverages AI to provide insights and recommendations based on real-time sensor data. Stay informed about your water quality with ease.
             </Text>
             <Text style={styles.modalCopyright}>
               © {new Date().getFullYear()} PureFlow. All rights reserved.
@@ -102,7 +95,7 @@ const styles = {
   },
   modalOverlay: {
     position: 'absolute',
-    top: 55,
+    top: 30,
     left: 0,
     right: 0,
     bottom: 0,
@@ -134,10 +127,10 @@ const styles = {
     marginBottom: 16,
   },
   modalDescription: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#334155',
-    textAlign: 'center',
-    marginBottom: 24,
+    textAlign: 'left',
+    marginBottom: 20,
     lineHeight: 24,
   },
   modalCopyright: {
