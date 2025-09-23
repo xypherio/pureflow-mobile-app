@@ -5,6 +5,7 @@ import InsightsCard from "@dataDisplay/InsightsCard";
 import LineChartCard from "@dataDisplay/LinechartCard";
 import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
 import { useNotifications } from "@hooks/useNotifications";
+import { useWaterQualityNotifications } from "@hooks/useWaterQualityNotifications";
 import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/DeviceStatusCard.jsx";
 import GlobalWrapper from "@ui/GlobalWrapper";
@@ -41,9 +42,10 @@ export default function HomeScreen() {
     hasPermission,
     unreadCount,
     addNotificationListener,
-    sendTemplateNotification,
     requestPermission,
   } = useNotifications();
+
+  useWaterQualityNotifications();
 
   useEffect(() => {
     // Initialize notifications and request permission if needed
@@ -130,54 +132,7 @@ export default function HomeScreen() {
     requestPermission,
   ]);
 
-  // Example: Send notifications based on sensor data changes
-  useEffect(() => {
-    if (realtimeData && isInitialized && hasPermission) {
-      // Check for critical values and send notifications
-      const checkAndNotify = async () => {
-        // pH critical check
-        if (
-          realtimeData.pH &&
-          (realtimeData.pH < 6.0 || realtimeData.pH > 9.0)
-        ) {
-          await sendTemplateNotification(
-            "waterQualityAlert",
-            "pH",
-            realtimeData.pH,
-            "critical"
-          );
-        }
-
-        // Temperature check
-        if (
-          realtimeData.temperature &&
-          (realtimeData.temperature > 35 || realtimeData.temperature < 20)
-        ) {
-          await sendTemplateNotification(
-            "waterQualityAlert",
-            "Temperature",
-            `${realtimeData.temperature}°C`,
-            "warning"
-          );
-        }
-
-        // Turbidity check
-        if (realtimeData.turbidity && realtimeData.turbidity > 100) {
-          await sendTemplateNotification(
-            "waterQualityAlert",
-            "Turbidity",
-            `${realtimeData.turbidity} NTU`,
-            "warning"
-          );
-        }
-      };
-
-      // Debounce notifications to avoid spam
-      const timeout = setTimeout(checkAndNotify, 5000);
-      return () => clearTimeout(timeout);
-    }
-  }, [realtimeData, isInitialized, hasPermission, sendTemplateNotification]);
-
+  
   return (
     <>
       {/* Header */}

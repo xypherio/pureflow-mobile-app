@@ -1,7 +1,8 @@
 import { DataProvider } from "@contexts/DataContext";
 import { InsightsProvider } from "@contexts/InsightsContext";
-import { NotificationProvider } from "@contexts/NotificationContext"; // 👈 ADD THIS LINE
+import { NotificationProvider } from "@contexts/NotificationContext";
 import { SuggestionProvider } from "@contexts/SuggestionContext";
+import { initializeServices } from '@services/ServiceContainer';
 import {
   Poppins_400Regular,
   Poppins_600SemiBold,
@@ -38,6 +39,7 @@ const styles = StyleSheet.create({
 });
 
 export default function RootLayout() {
+  const [servicesReady, setServicesReady] = useState(false);
   const [isAppReady, setIsAppReady] = useState(false);
   const [preloadedData, setPreloadedData] = useState(null);
 
@@ -49,14 +51,35 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Hide splash screen when fonts are loaded
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
+    let isMounted = true;
+
+    async function prepareApp() {
+      try {
+        console.log('🔧 Initializing application services...');
+        // Initialize all application services
+        await initializeServices();
+        console.log('✅ All services initialized, app is ready to launch.');
+        if (isMounted) {
+          setServicesReady(true);
+        }
+      } catch (e) {
+        console.error('❌ Failed to initialize app services', e);
+        // Set services as ready anyway to prevent app from being stuck
+        if (isMounted) {
+          setServicesReady(true);
+        }
+      } finally {
+        // The splash screen component will handle data loading and transitions
+        if (fontsLoaded && isMounted) {
+          SplashScreen.hideAsync();
+        }
+      }
     }
 
-    // Clean up listeners on unmount
-    return () => {
+    prepareApp();
 
+    return () => {
+      isMounted = false;
     };
   }, [fontsLoaded]);
 
@@ -83,12 +106,11 @@ export default function RootLayout() {
 
   // Show custom splash screen while loading fonts and data
   if (!fontsLoaded || !isAppReady) {
-    return <SplashScreenComponent onDataLoaded={handleDataLoaded} />;
+    return <SplashScreenComponent onDataLoaded={handleDataLoaded} servicesReady={servicesReady} />;
   }
 
   return (
     <NotificationProvider>
-      {" "}
       <InsightsProvider>
         <DataProvider initialData={preloadedData}>
           <SuggestionProvider>

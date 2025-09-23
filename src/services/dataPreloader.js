@@ -1,178 +1,52 @@
-import { fetchAllDocuments } from '@services/firebase/firestore';
-import { performanceMonitor } from '@utils/performance-monitor.js';
-import { alertManager } from './alertManager.js';
-import { historicalAlertsService } from './historicalAlertsService.js';
-import { getWaterQualityReport } from './water-quality-status.js';
-
 /**
- * Data preloader service for efficiently loading Firebase data during app startup
+ * Legacy DataPreloader Adapter
+ * This class is now a lightweight adapter that delegates to the new facade-based architecture.
+ * It maintains the original API for backward compatibility during the migration.
  */
 class DataPreloader {
   constructor() {
-    this.cache = {
-      sensorData: null,
-      alerts: null,
-      historicalAlerts: null,
-      dailyReport: null,
-      lastFetch: null,
-    };
-    this.isLoading = false;
-    this.loadPromise = null;
+    this.dashboardFacade = null;
+    this.performanceMonitor = null;
+    console.log('🔧 DataPreloader constructed');
   }
 
-  /**
-   * Preload all essential data for the dashboard
-   * @returns {Promise<Object>} Preloaded data object
-   */
+  postInitialize(dashboardFacade, performanceMonitor) {
+    this.dashboardFacade = dashboardFacade;
+    this.performanceMonitor = performanceMonitor;
+    console.log('✅ DataPreloader post-initialized');
+  }
+
   async preloadData() {
-    // If already loading, return the existing promise
-    if (this.isLoading && this.loadPromise) {
-      return this.loadPromise;
-    }
+    return await this.performanceMonitor.measureAsync('dataPreloader.preloadData', async () => {
+      const dashboardData = await this.dashboardFacade.getDashboardData();
 
-    // If data is fresh (less than 5 minutes old), return cached data
-    if (this.cache.lastFetch && Date.now() - this.cache.lastFetch < 5 * 60 * 1000) {
+      // Adapt the new facade output to the legacy format
       return {
-        sensorData: this.cache.sensorData,
-        alerts: this.cache.alerts,
-        historicalAlerts: this.cache.historicalAlerts,
-        dailyReport: this.cache.dailyReport,
-        fromCache: true,
+        sensorData: dashboardData.today.data,
+        alerts: dashboardData.alerts.active,
+        dailyReport: dashboardData.current,
+        // historicalAlerts is not part of the new facade's primary output, will be handled separately if needed
+        historicalAlerts: { sections: [], totalCount: 0 }, 
+        fromCache: dashboardData.metadata.fromCache || false,
       };
-    }
-
-    this.isLoading = true;
-    this.loadPromise = this._fetchAllData();
-
-    try {
-      const result = await this.loadPromise;
-      return result;
-    } finally {
-      this.isLoading = false;
-      this.loadPromise = null;
-    }
-  }
-
-  /**
-   * Internal method to fetch all required data
-   * @private
-   */
-  async _fetchAllData() {
-    return await performanceMonitor.measureAsync('dataPreloader.fetchAllData', async () => {
-      try {
-        console.log('🔄 Preloading Firebase data...');
-        
-        // Fetch sensor data and historical alerts in parallel for better performance
-        const [sensorData, historicalAlertsData] = await Promise.all([
-          performanceMonitor.measureAsync('fetchSensorData', () => 
-            fetchAllDocuments("datm_data", { 
-              limitCount: 500, // Limit to prevent excessive data loading
-              orderByField: 'timestamp',
-              orderDirection: 'desc'
-            }).catch(error => {
-              console.warn('Failed to fetch sensor data:', error);
-              return [];
-            })
-          ),
-          performanceMonitor.measureAsync('fetchHistoricalAlerts', () => 
-            historicalAlertsService.getHistoricalAlerts().catch(error => {
-              console.warn('Failed to fetch historical alerts:', error);
-              return { sections: [], totalCount: 0 };
-            })
-          ),
-        ]);
-
-        // Debug: Check the structure of sensor data
-        if (sensorData.length > 0) {
-          console.log('📊 Sensor data sample structure:', Object.keys(sensorData[0]));
-          console.log('📊 Sensor data sample values:', sensorData[0]);
-        }
-
-        // Process alerts from sensor data using AlertManager
-        const alertResult = await performanceMonitor.measureAsync('processAlerts', () => 
-          alertManager.processAlertsFromSensorData(sensorData)
-        );
-        const alerts = alertResult.alerts;
-
-        // Generate daily report from the preloaded sensor data
-        const dailyReport = await performanceMonitor.measureAsync('generateDailyReport', () =>
-          getWaterQualityReport('daily', sensorData)
-        );
-
-        console.log('📊 Generated daily report:', dailyReport);
-        if (!dailyReport) {
-          console.warn('⚠️ Daily report generation returned null/undefined');
-          console.warn('⚠️ This might indicate an error in getWaterQualityReport');
-        } else {
-          console.log('✅ Daily report generated successfully with:', {
-            wqi: dailyReport.wqi,
-            parametersCount: Object.keys(dailyReport.parameters || {}).length,
-            chartDataPoints: dailyReport.chartData?.datasets?.[0]?.data?.length || 0,
-            chartDataLabels: dailyReport.chartData?.labels?.length || 0
-          });
-          // Daily report is ready (notifications handled by useWaterQualityNotifications hook)
-        }
-
-        // Update cache
-        this.cache = {
-          sensorData,
-          alerts,
-          historicalAlerts: historicalAlertsData,
-          dailyReport,
-          lastFetch: Date.now(),
-        };
-
-        console.log(`✅ Data preloaded successfully`);
-        console.log(`📊 Preloaded: ${sensorData.length} sensor records, ${alerts.length} active alerts, ${historicalAlertsData.totalCount || 0} historical alerts`);
-        performanceMonitor.logMemoryUsage();
-
-        return {
-          sensorData,
-          alerts,
-          historicalAlerts: historicalAlertsData,
-          dailyReport,
-          fromCache: false,
-        };
-      } catch (error) {
-        console.error('❌ Error preloading data:', error);
-        throw error;
-      }
     });
   }
 
-  /**
-   * Get cached data without fetching
-   * @returns {Object|null} Cached data or null if not available
-   */
+  // The following methods are now obsolete as caching and loading state are managed by the new services.
+  // They are kept for backward compatibility but are now no-ops or return default values.
   getCachedData() {
-    if (!this.cache.lastFetch) return null;
-    
-    return {
-      sensorData: this.cache.sensorData,
-      alerts: this.cache.alerts,
-      dailyReport: this.cache.dailyReport,
-      fromCache: true,
-    };
+    console.warn('`getCachedData` is deprecated. Data is now cached at the facade level.');
+    return null;
   }
 
-  /**
-   * Clear the cache
-   */
   clearCache() {
-    this.cache = {
-      sensorData: null,
-      alerts: null,
-      dailyReport: null,
-      lastFetch: null,
-    };
+    console.warn('`clearCache` is deprecated. Caches are managed by their respective services.');
+    // Forward the call to the relevant services if needed, e.g., this.dashboardFacade.clearCache();
   }
 
-  /**
-   * Check if data is currently being loaded
-   * @returns {boolean}
-   */
   isDataLoading() {
-    return this.isLoading;
+    // This state is now managed within the UI components or context
+    return false;
   }
 }
 

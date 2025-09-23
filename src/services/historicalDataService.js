@@ -1,11 +1,31 @@
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import { db as firestore } from './firebase/config';
+import { fetchAllDocuments } from './firebase/firestore';
+import { DataProcessor } from './processing/DataProcessor';
 
 class HistoricalDataService {
   constructor() {
-    this.cache = new Map();
-    this.cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-    console.log('🔧 HistoricalDataService initialized with cache expiry:', this.cacheExpiry, 'ms');
+    this.dataCacheService = null;
+    this.dataProcessor = new DataProcessor();
+    this.initializeDataProcessingPipeline();
+    console.log('🔧 HistoricalDataService constructed with DataProcessor');
+  }
+
+  initializeDataProcessingPipeline() {
+    // Add basic validation rules
+    this.dataProcessor.addValidationRule('pH', value => value >= 0 && value <= 14);
+    this.dataProcessor.addValidationRule('temperature', value => value >= -10 && value <= 50);
+    this.dataProcessor.addValidationRule('turbidity', value => value >= 0);
+    this.dataProcessor.addValidationRule('salinity', value => value >= 0);
+
+    // Add transformation rules
+    this.dataProcessor.addTransformationRule('pH', value => parseFloat(value.toFixed(2)));
+    this.dataProcessor.addTransformationRule('temperature', value => parseFloat(value.toFixed(1)));
+    this.dataProcessor.addTransformationRule('turbidity', value => Math.round(value));
+    this.dataProcessor.addTransformationRule('salinity', value => Math.round(value * 100) / 100);
+  }
+
+  postInitialize(dataCacheService) {
+    this.dataCacheService = dataCacheService;
+    console.log('✅ HistoricalDataService post-initialized with DataCacheService');
   }
 
   // Get data for home tab - all readings for current day
@@ -16,130 +36,76 @@ class HistoricalDataService {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const cacheKey = `currentDay_${today.toISOString().split('T')[0]}`;
-    
+
     console.log('📅 Fetching current day data:', {
       today: today.toISOString(),
       tomorrow: tomorrow.toISOString(),
-      cacheKey,
-      cacheSize: this.cache.size
+      cacheKey
     });
-    
+
     // Check cache first
-    if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey);
-      const cacheAge = Date.now() - cached.timestamp;
-      console.log('📦 Cache hit:', {
-        cacheKey,
-        cacheAge: `${cacheAge}ms`,
-        cacheExpiry: `${this.cacheExpiry}ms`,
-        isExpired: cacheAge >= this.cacheExpiry,
-        dataCount: cached.data.length
-      });
-      
-      if (cacheAge < this.cacheExpiry) {
-        console.log('✅ Using cached data for current day');
-        return cached.data;
-      } else {
-        console.log('⏰ Cache expired, fetching fresh data');
-      }
-    } else {
-      console.log('❌ Cache miss for key:', cacheKey);
+    const cachedData = await this.dataCacheService.getCachedSensorData(cacheKey);
+    if (cachedData) {
+      console.log('✅ Using cached data for current day');
+      return cachedData;
     }
 
     try {
-      console.log('🔄 Executing Firestore query for current day data...');
-      console.log('📍 Collection: datm_data');
-      console.log('🔍 Query filters:', {
-        datetime: `>= ${today.toISOString()} AND < ${tomorrow.toISOString()}`,
-        orderBy: 'datetime desc'
+      // Fetch raw data from Firestore
+      const rawData = await fetchAllDocuments('datm_data', {
+        filters: [
+          { field: 'datetime', operator: '>=', value: today },
+          { field: 'datetime', operator: '<', value: tomorrow }
+        ],
+        orderBy: 'datetime',
+        orderDirection: 'desc'
       });
 
-      const q = query(
-        collection(firestore, 'datm_data'),
-        where('datetime', '>=', today),
-        where('datetime', '<', tomorrow),
-        orderBy('datetime', 'desc')
-      );
+      console.log(`✅ Fetched ${rawData.length} raw records from Firestore`);
 
-      console.log('⏱️ Starting Firestore query execution...');
-      const startTime = Date.now();
-      
-      const querySnapshot = await getDocs(q);
-      const queryTime = Date.now() - startTime;
-      
-      console.log('✅ Firestore query completed:', {
-        queryTime: `${queryTime}ms`,
-        totalDocs: querySnapshot.size,
-        empty: querySnapshot.empty
-      });
+      // Process each data point through the DataProcessor pipeline
+      const processedData = [];
+      const errors = [];
 
-      if (querySnapshot.empty) {
-        console.warn('⚠️ No documents found for current day');
-        return [];
-      }
-
-      const data = [];
-      let processedCount = 0;
-      
-      // Log all field names from the first document
-      if (!querySnapshot.empty) {
-        const firstDoc = querySnapshot.docs[0].data();
-        console.log('📋 Document fields in Firestore:', Object.keys(firstDoc));
-      }
-      
-      querySnapshot.forEach((doc) => {
-        const docData = doc.data();
-        const processedDoc = {
-          id: doc.id,
-          ...docData,
-          datetime: docData.datetime.toDate ? docData.datetime.toDate() : docData.datetime
-        };
-        
-        data.push(processedDoc);
-        processedCount++;
-        
-        // Log first few documents for debugging
-        if (processedCount <= 3) {
-          console.log(`📄 Document ${processedCount}:`, {
-            id: doc.id,
-            datetime: processedDoc.datetime,
-            pH: docData.pH,
-            ph: docData.ph, // Check for lowercase 'ph' as well
-            temperature: docData.temperature,
-            turbidity: docData.turbidity,
-            salinity: docData.salinity
+      for (const entry of rawData) {
+        try {
+          // Process the data through our pipeline
+          const result = await this.dataProcessor.processData(entry);
+          
+          if (result.isValid) {
+            processedData.push(result.data);
+          } else {
+            errors.push({
+              entry,
+              errors: result.errors
+            });
+          }
+        } catch (error) {
+          console.error('Error processing data entry:', error, entry);
+          errors.push({
+            entry,
+            error: error.message
           });
         }
-      });
+      }
 
-      console.log('📊 Data processing completed:', {
-        totalProcessed: processedCount,
-        sampleData: data.slice(0, 2).map(d => ({
-          datetime: d.datetime,
-          pH: d.pH,
-          temperature: d.temperature,
-          turbidity: d.turbidity,
-          salinity: d.salinity
-        }))
-      });
+      if (errors.length > 0) {
+        console.warn(`⚠️ Processed with ${errors.length} errors out of ${rawData.length} records`);
+      }
 
       // Sort by datetime ascending for chart display
-      data.sort((a, b) => a.datetime - b.datetime);
-      console.log('🔄 Data sorted by datetime (ascending)');
+      processedData.sort((a, b) => a.datetime - b.datetime);
+      console.log(`🔄 Processed ${processedData.length} valid records (${errors.length} errors)`);
 
-      // Cache the data
-      this.cache.set(cacheKey, {
-        data,
-        timestamp: Date.now()
-      });
+      // Cache the processed data
+      await this.dataCacheService.cacheSensorData(cacheKey, processedData);
       
-      console.log('💾 Data cached successfully:', {
+      console.log('💾 Processed data cached successfully:', {
         cacheKey,
-        cacheSize: this.cache.size,
-        dataCount: data.length
+        dataCount: processedData.length
       });
 
-      return data;
+      return processedData;
     } catch (error) {
       console.error('❌ Error fetching current day data:', {
         error: error.message,
@@ -148,14 +114,10 @@ class HistoricalDataService {
       });
       
       // Return cached data if available, even if expired
-      if (this.cache.has(cacheKey)) {
-        const cached = this.cache.get(cacheKey);
-        console.log('⚠️ Returning expired cached data due to error:', {
-          cacheKey,
-          cacheAge: `${Date.now() - cached.timestamp}ms`,
-          dataCount: cached.data.length
-        });
-        return cached.data;
+      const cachedData = await this.dataCacheService.getCachedSensorData(cacheKey);
+      if (cachedData) {
+        console.log('⚠️ Returning expired cached data due to error');
+        return cachedData;
       }
       
       console.log('❌ No cached data available, returning empty array');
@@ -166,189 +128,44 @@ class HistoricalDataService {
   // Get aggregated data for reports tab
   async getAggregatedData(timeFilter, startDate, endDate, useCache = true) {
     // Create cache key based on the filter and date range
-    const cacheKey = `aggregated_${timeFilter}_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}`;
-    
+    const dateRange = { start: startDate.toISOString().split('T')[0], end: endDate.toISOString().split('T')[0] };
+
     console.log('📊 Fetching aggregated data:', {
       timeFilter,
       startDate: startDate.toISOString(),
-      startLocal: startDate.toString(),
       endDate: endDate.toISOString(),
-      endLocal: endDate.toString(),
-      cacheKey,
-      useCache,
-      cacheSize: this.cache.size
+      useCache
     });
-    
+
     // Check cache first if useCache is true
-    if (useCache && this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey);
-      const cacheAge = Date.now() - cached.timestamp;
-      const isExpired = cacheAge >= this.cacheExpiry;
-      
-      console.log('📦 Cache check for aggregated data:', {
-        cacheKey,
-        cacheAge: `${cacheAge}ms`,
-        cacheExpiry: `${this.cacheExpiry}ms`,
-        isExpired,
-        dataCount: cached.data?.length || 0
-      });
-      
-      if (!isExpired) {
+    if (useCache) {
+      const cachedData = await this.dataCacheService.getCachedAggregatedData(timeFilter, dateRange);
+      if (cachedData) {
         console.log('✅ Using cached aggregated data');
-        return [...cached.data]; // Return a copy to prevent mutation
+        return cachedData;
       }
-      
-      console.log('⏰ Aggregated data cache expired, fetching fresh data');
-    } else if (useCache) {
-      console.log('❌ Cache miss for aggregated data key:', cacheKey);
+      console.log('❌ Cache miss for aggregated data');
     }
 
     try {
-      console.log('🔄 [getAggregatedData] Executing Firestore query with timezone handling...');
-      console.log('📍 Collection: datm_data');
-      
-      // Ensure we're working with Date objects
-      const queryStartDate = new Date(startDate);
-      const queryEndDate = new Date(endDate);
-      
-      // Log the exact query parameters being used
-      console.log('🔍 [getAggregatedData] Query parameters:', {
-        timeFilter,
-        startDate: {
-          iso: queryStartDate.toISOString(),
-          local: queryStartDate.toString(),
-          timestamp: queryStartDate.getTime()
-        },
-        endDate: {
-          iso: queryEndDate.toISOString(),
-          local: queryEndDate.toString(),
-          timestamp: queryEndDate.getTime()
-        },
-        timezoneOffset: new Date().getTimezoneOffset()
-      });
-
-      // Create the query with proper date range filtering
-      const q = query(
-        collection(firestore, 'datm_data'),
-        where('datetime', '>=', queryStartDate),
-        where('datetime', '<=', queryEndDate),
-        orderBy('datetime', 'asc')
-      );
-
-      console.log('⏱️ [getAggregatedData] Starting query execution...');
-      const startTime = Date.now();
-      
-      const querySnapshot = await getDocs(q);
-      const queryTime = Date.now() - startTime;
-      
-      console.log('✅ [getAggregatedData] Query completed:', {
-        queryTime: `${queryTime}ms`,
-        totalDocs: querySnapshot.size,
-        empty: querySnapshot.empty
-      });
-
-      if (querySnapshot.empty) {
-        console.warn('⚠️ [getAggregatedData] No documents found in query results');
-        return [];
-      }
-
-      const rawData = [];
-      let invalidDocs = 0;
-      
-      // Process each document in the query results
-      querySnapshot.forEach((doc) => {
-        try {
-          const docData = doc.data();
-          
-          // Skip if no data or no datetime
-          if (!docData || !docData.datetime) {
-            invalidDocs++;
-            return;
-          }
-          
-          // Handle Firestore timestamps
-          const timestamp = docData.datetime;
-          const datetime = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
-          
-          // Validate datetime
-          if (isNaN(datetime.getTime())) {
-            console.warn('⚠️ [getAggregatedData] Invalid datetime in document:', {
-              docId: doc.id,
-              timestamp: timestamp,
-              parsed: datetime.toString()
-            });
-            invalidDocs++;
-            return;
-          }
-          
-          // Prepare the data point
-          const dataPoint = {
-            id: doc.id,
-            ...docData,
-            datetime: datetime
-          };
-          
-          // Validate required fields
-          const requiredFields = ['pH', 'temperature', 'turbidity', 'salinity'];
-          const isValid = requiredFields.every(field => {
-            const value = dataPoint[field];
-            return value !== null && value !== undefined && !isNaN(value);
-          });
-          
-          if (!isValid) {
-            console.warn('⚠️ [getAggregatedData] Missing or invalid fields in document:', {
-              docId: doc.id,
-              datetime: datetime.toISOString(),
-              ...dataPoint
-            });
-            invalidDocs++;
-            return;
-          }
-          
-          // Add to results
-          rawData.push(dataPoint);
-          
-          // Log first few valid documents for debugging
-          if (rawData.length <= 3) {
-            console.log(`📄 [getAggregatedData] Sample document ${rawData.length}:`, {
-              id: doc.id,
-              datetime: datetime.toISOString(),
-              localTime: datetime.toString(),
-              pH: docData.pH,
-              temperature: docData.temperature,
-              turbidity: docData.turbidity,
-              salinity: docData.salinity
-            });
-          }
-        } catch (error) {
-          console.error('❌ Error processing document:', {
-            docId: doc.id,
-            error: error.message,
-            data: doc.data()
-          });
-        }
+      const rawData = await fetchAllDocuments('datm_data', {
+        startAfter: startDate,
+        endBefore: endDate,
+        orderByField: 'datetime',
+        orderDirection: 'asc'
       });
 
       // Log data collection summary
       console.log('📊 [getAggregatedData] Data collection summary:', {
-        totalDocs: querySnapshot.size,
-        validDocs: rawData.length,
-        invalidDocs: invalidDocs,
-        validityRate: `${Math.round((rawData.length / (rawData.length + invalidDocs)) * 100 || 0)}%`,
-        timeRange: rawData.length > 0 ? {
-          start: rawData[0]?.datetime?.toISOString(),
-          end: rawData[rawData.length - 1]?.datetime?.toISOString(),
-          duration: rawData.length > 1 
-            ? `${(rawData[rawData.length - 1].datetime - rawData[0].datetime) / (1000 * 60 * 60)} hours`
-            : 'N/A'
-        } : 'No valid data'
+        totalDocs: rawData.length,
+        empty: rawData.length === 0
       });
 
-      // If no valid data found, return empty array
       if (rawData.length === 0) {
-        console.warn('⚠️ [getAggregatedData] No valid data points found after processing');
+        console.warn('⚠️ [getAggregatedData] No documents found in query results');
         return [];
       }
+
 
       // Aggregate data based on time filter
       console.log(`🔄 [getAggregatedData] Starting data aggregation for ${timeFilter} filter...`);
@@ -388,16 +205,9 @@ class HistoricalDataService {
 
       // Cache the results if we have data
       if (aggregatedData.length > 0) {
-        this.cache.set(cacheKey, {
-          data: [...aggregatedData], // Store a copy to prevent mutation
-          timestamp: Date.now()
-        });
-        
+        await this.dataCacheService.cacheAggregatedData(timeFilter, dateRange, aggregatedData);
         console.log('💾 [getAggregatedData] Data cached successfully:', {
-          cacheKey,
-          cacheSize: this.cache.size,
-          dataPoints: aggregatedData.length,
-          cacheExpiry: new Date(Date.now() + this.cacheExpiry).toISOString()
+          dataPoints: aggregatedData.length
         });
       } else {
         console.log('ℹ️ [getAggregatedData] Not caching empty dataset');

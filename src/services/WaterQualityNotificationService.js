@@ -1,219 +1,44 @@
-// src/services/WaterQualityNotificationService.js
-import { notificationManager } from './notifications/NotificationManager';
 import { NotificationTemplates } from './notifications/NotificationTemplates';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * Service for handling water quality specific notifications
- * Integrates with your existing data flow and alert system
+ * Legacy WaterQualityNotificationService Adapter
+ * This class is now a lightweight adapter that delegates to the new facade-based architecture.
  */
 class WaterQualityNotificationService {
   constructor() {
-    this.lastNotificationTimes = new Map();
-    this.notificationCooldown = 5 * 60 * 1000; // 5 minutes cooldown
-    this.thresholds = {
-      pH: { min: 6.5, max: 8.5, critical: { min: 6.0, max: 9.0 } },
-      temperature: { min: 26, max: 30, critical: { min: 20, max: 35 } },
-      turbidity: { max: 50, critical: { max: 100 } },
-      salinity: { max: 5, critical: { max: 10 } },
-      tds: { max: 500, critical: { max: 1000 } }
-    };
-    this.isInitialized = false;
+    this.alertFacade = null;
+    this.waterQualityNotifier = null;
+    this.thresholdManager = null;
+    this.notificationService = null;
+    console.log('🔧 WaterQualityNotificationService constructed');
   }
 
-  /**
-   * Initialize the service
-   */
-  async initialize() {
-    if (this.isInitialized) return { success: true };
-
-    try {
-      // Load saved notification times
-      const savedTimes = await AsyncStorage.getItem('notification_cooldowns');
-      if (savedTimes) {
-        const parsed = JSON.parse(savedTimes);
-        this.lastNotificationTimes = new Map(Object.entries(parsed));
-      }
-
-      this.isInitialized = true;
-      console.log('✅ WaterQualityNotificationService initialized');
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Error initializing WaterQualityNotificationService:', error);
-      return { success: false, error: error.message };
-    }
+  postInitialize(alertFacade, waterQualityNotifier, thresholdManager, notificationService) {
+    this.alertFacade = alertFacade;
+    this.waterQualityNotifier = waterQualityNotifier;
+    this.thresholdManager = thresholdManager;
+    this.notificationService = notificationService;
+    console.log('✅ WaterQualityNotificationService post-initialized');
   }
 
-  /**
-   * Save notification cooldown times
-   */
-  async saveNotificationTimes() {
-    try {
-      const timesObject = Object.fromEntries(this.lastNotificationTimes);
-      await AsyncStorage.setItem('notification_cooldowns', JSON.stringify(timesObject));
-    } catch (error) {
-      console.error('Error saving notification times:', error);
-    }
-  }
 
-  /**
-   * Check if enough time has passed since last notification for a parameter
-   */
-  canSendNotification(parameter, severity = 'normal') {
-    const key = `${parameter}-${severity}`;
-    const lastTime = this.lastNotificationTimes.get(key);
-    
-    if (!lastTime) return true;
-    
-    const cooldown = severity === 'critical' ? this.notificationCooldown / 2 : this.notificationCooldown;
-    return Date.now() - lastTime > cooldown;
-  }
-
-  /**
-   * Record that a notification was sent
-   */
-  recordNotification(parameter, severity = 'normal') {
-    const key = `${parameter}-${severity}`;
-    this.lastNotificationTimes.set(key, Date.now());
-    this.saveNotificationTimes();
-  }
-
-  /**
-   * Determine alert level based on parameter value
-   */
-  getAlertLevel(parameter, value) {
-    const threshold = this.thresholds[parameter];
-    if (!threshold) return 'normal';
-
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) return 'normal';
-
-    // Check critical thresholds first
-    if (threshold.critical) {
-      if (threshold.critical.min && numValue < threshold.critical.min) return 'critical';
-      if (threshold.critical.max && numValue > threshold.critical.max) return 'critical';
-    }
-
-    // Check warning thresholds
-    if (threshold.min && numValue < threshold.min) return 'warning';
-    if (threshold.max && numValue > threshold.max) return 'warning';
-
-    return 'normal';
-  }
-
-  /**
-   * Process sensor data and send notifications if needed
-   */
   async processSensorData(sensorData) {
-    if (!this.isInitialized) {
-      await this.initialize();
-    }
-
-    if (!sensorData || typeof sensorData !== 'object') {
-      return { success: false, error: 'Invalid sensor data' };
-    }
-
-    const notificationsSent = [];
-    const errors = [];
-
-    try {
-      // Process each parameter
-      for (const [parameter, value] of Object.entries(sensorData)) {
-        if (value === null || value === undefined) continue;
-
-        const alertLevel = this.getAlertLevel(parameter, value);
-        
-        if (alertLevel !== 'normal') {
-          const canSend = this.canSendNotification(parameter, alertLevel);
-          
-          if (canSend) {
-            try {
-              const result = await this.sendWaterQualityAlert(parameter, value, alertLevel);
-              if (result.success) {
-                this.recordNotification(parameter, alertLevel);
-                notificationsSent.push({
-                  parameter,
-                  value,
-                  alertLevel,
-                  notificationId: result.notificationId
-                });
-              } else {
-                errors.push({
-                  parameter,
-                  error: result.error
-                });
-              }
-            } catch (error) {
-              errors.push({
-                parameter,
-                error: error.message
-              });
-            }
-          }
-        }
-      }
-
-      return {
-        success: true,
-        notificationsSent,
-        errors
-      };
-
-    } catch (error) {
-      console.error('❌ Error processing sensor data for notifications:', error);
-      return { success: false, error: error.message };
-    }
+    // The new AlertManagementFacade automatically processes data and triggers notifications.
+    // This method now delegates to the facade and adapts the response.
+    console.log('ℹ️ Delegating sensor data processing to AlertManagementFacade...');
+    const result = await this.alertFacade.processSensorData(sensorData);
+    return {
+      success: !result.errors || result.errors.length === 0,
+      notificationsSent: result.notificationsSent || 0,
+      errors: result.errors || [],
+    };
   }
 
-  /**
-   * Send water quality alert notification
-   */
   async sendWaterQualityAlert(parameter, value, alertLevel) {
-    try {
-      const formattedValue = this.formatParameterValue(parameter, value);
-      const status = alertLevel === 'critical' ? 'critical' : 'warning';
-      
-      const notification = NotificationTemplates.waterQualityAlert(
-        parameter.charAt(0).toUpperCase() + parameter.slice(1),
-        formattedValue,
-        status
-      );
-
-      const result = await notificationManager.sendLocalNotification(notification);
-      
-      if (result.success) {
-        console.log(`📱 Water quality alert sent: ${parameter} = ${formattedValue} (${alertLevel})`);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('❌ Error sending water quality alert:', error);
-      return { success: false, error: error.message };
-    }
+    // Delegate directly to the new WaterQualityNotifier service
+    return this.waterQualityNotifier.notifyWaterQualityAlert(parameter, value, alertLevel);
   }
 
-  /**
-   * Format parameter value for display
-   */
-  formatParameterValue(parameter, value) {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) return String(value);
-
-    switch (parameter.toLowerCase()) {
-      case 'ph':
-        return numValue.toFixed(2);
-      case 'temperature':
-        return `${numValue.toFixed(1)}°C`;
-      case 'turbidity':
-        return `${numValue.toFixed(1)} NTU`;
-      case 'salinity':
-        return `${numValue.toFixed(1)} ppt`;
-      case 'tds':
-        return `${numValue.toFixed(0)} ppm`;
-      default:
-        return numValue.toFixed(2);
-    }
-  }
 
   /**
    * Send device status notification
@@ -230,11 +55,21 @@ class WaterQualityNotificationService {
       } else if (status === 'low_battery') {
         const batteryLevel = additionalInfo.batteryLevel || 'Unknown';
         notification = NotificationTemplates.lowBattery(deviceName, batteryLevel);
+      } else if (status === 'system_alert') {
+        // Special handling for system alerts
+        notification = NotificationTemplates.systemStatus(
+          'system_alert',
+          additionalInfo.message || 'System alert triggered'
+        );
       } else {
-        notification = NotificationTemplates.systemStatus(status, additionalInfo.message || 'System status updated');
+        // Default to warning status for unknown status types
+        notification = NotificationTemplates.systemStatus(
+          'warning',
+          additionalInfo.message || `System status: ${status}`
+        );
       }
 
-      const result = await notificationManager.sendLocalNotification(notification);
+      const result = await this.notificationService.send(notification, 'local');
       
       if (result.success) {
         console.log(`📱 Device status notification sent: ${deviceName} - ${status}`);
@@ -271,7 +106,7 @@ class WaterQualityNotificationService {
         };
       }
 
-      const result = await notificationManager.scheduleNotification(notification, trigger);
+      const result = await this.notificationService.schedule(notification, trigger);
       
       if (result.success) {
         console.log(`⏰ Maintenance reminder scheduled: ${task} for ${dueDate}`);
@@ -294,7 +129,7 @@ class WaterQualityNotificationService {
         lastCalibrated
       );
 
-      const result = await notificationManager.sendLocalNotification(notification);
+      const result = await this.notificationService.send(notification, 'local');
       
       if (result.success) {
         console.log(`📱 Calibration reminder sent: ${parameter}`);
@@ -322,7 +157,7 @@ class WaterQualityNotificationService {
         notification = NotificationTemplates.dataSyncFailed(error);
       }
 
-      const result = await notificationManager.sendLocalNotification(notification);
+      const result = await this.notificationService.send(notification, 'local');
       
       if (result.success) {
         console.log(`📱 Data sync notification sent: ${success ? 'success' : 'failed'}`);
@@ -367,9 +202,9 @@ class WaterQualityNotificationService {
               priority: 'high'
             };
 
-            const result = await notificationManager.sendLocalNotification(notification);
+            const result = await this.notificationService.send(notification, 'local');
             if (result.success) {
-              this.recordNotification(`${parameter}_forecast`, 'warning');
+              this.alertFacade.recordNotificationSent(`${parameter}_forecast`, 'warning');
               notifications.push({
                 parameter,
                 type: 'forecast',
@@ -391,22 +226,13 @@ class WaterQualityNotificationService {
     }
   }
 
-  /**
-   * Update notification thresholds
-   */
   updateThresholds(newThresholds) {
-    try {
-      this.thresholds = {
-        ...this.thresholds,
-        ...newThresholds
-      };
-      
-      console.log('✅ Notification thresholds updated:', this.thresholds);
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Error updating thresholds:', error);
-      return { success: false, error: error.message };
+    // Delegate to the centralized ThresholdManager
+    console.log('ℹ️ Updating thresholds via ThresholdManager...');
+    for (const [param, threshold] of Object.entries(newThresholds)) {
+      this.thresholdManager.updateThreshold(param, threshold);
     }
+    return { success: true };
   }
 
   /**
@@ -464,4 +290,5 @@ class WaterQualityNotificationService {
 }
 
 const waterQualityNotificationService = new WaterQualityNotificationService();
+export { waterQualityNotificationService };
 export default waterQualityNotificationService;
