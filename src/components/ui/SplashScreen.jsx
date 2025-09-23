@@ -5,7 +5,7 @@ import { Animated, Dimensions, Image, Text, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
-export default function SplashScreen({ onDataLoaded }) {
+export default function SplashScreen({ onDataLoaded, servicesReady }) {
   const [loadingText, setLoadingText] = useState('Initializing...');
   const [progress, setProgress] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -27,9 +27,11 @@ export default function SplashScreen({ onDataLoaded }) {
       }),
     ]).start();
 
-    // Start data preloading
-    preloadAppData();
-  }, []);
+    if (servicesReady) {
+      // Start data preloading only when services are ready
+      preloadAppData();
+    }
+  }, [servicesReady]);
 
   const preloadAppData = async () => {
     try {

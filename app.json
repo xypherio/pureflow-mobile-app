@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pureflow-mobile",
+    "name": "PureFlow",
     "slug": "pureflow-mobile",
     "version": "1.0.0",
     "owner": "xy_pher",
@@ -36,7 +36,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/logo-emblem.png",
           "color": "#ffffff",
           "sounds": ["./assets/notification-sound.wav"]
         }
