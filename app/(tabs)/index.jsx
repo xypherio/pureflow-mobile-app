@@ -10,7 +10,7 @@ import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/DeviceStatusCard.jsx";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -37,6 +37,8 @@ export default function HomeScreen() {
     realtimeData,
   } = useData();
 
+  const [homepageAlerts, setHomepageAlerts] = useState([]);
+
   const {
     isInitialized,
     hasPermission,
@@ -46,6 +48,21 @@ export default function HomeScreen() {
   } = useNotifications();
 
   useWaterQualityNotifications();
+
+  // Fetch homepage alerts on component mount and when alerts change
+  useEffect(() => {
+    const fetchHomepageAlerts = async () => {
+      try {
+        const alerts = await getHomepageAlerts();
+        setHomepageAlerts(alerts || []);
+      } catch (error) {
+        console.error('Error fetching homepage alerts:', error);
+        setHomepageAlerts([]);
+      }
+    };
+
+    fetchHomepageAlerts();
+  }, [getHomepageAlerts, alerts]); // Re-fetch when alerts change
 
   useEffect(() => {
     // Initialize notifications and request permission if needed
@@ -161,13 +178,13 @@ export default function HomeScreen() {
           {/* System Status Section */}
           <View style={{ marginBottom: 16 }}>
             <Text style={sectionLabelStyle}>System Status</Text>
-            <StatusCard status="Active" battery="Low" />
+            <StatusCard status="Active" battery="Low" solarPowered={true} />
           </View>
 
           {/* Critical Alerts Section */}
           <View style={{ marginBottom: 12 }}>
             <Text style={sectionLabelStyle}>Active Alerts</Text>
-            <AlertsCard alerts={getHomepageAlerts()} />
+            <AlertsCard alerts={homepageAlerts} interval={2500} />
           </View>
 
           {/* Real-Time Data Section */}

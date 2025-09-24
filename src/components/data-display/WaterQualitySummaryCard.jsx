@@ -147,7 +147,7 @@ const ParameterPill = ({ name, value, status, unit }) => {
       <View>
         <Text style={styles.parameterName}>{name}</Text>
         <Text style={[styles.parameterValue, { color }]}>
-          {value?.toFixed(2)}
+          {value !== undefined && value !== null ? Number(value).toFixed(2) : 'N/A'}
           {unit}
         </Text>
       </View>

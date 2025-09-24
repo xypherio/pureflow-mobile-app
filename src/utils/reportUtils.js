@@ -357,9 +357,11 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
   if (
     !aggregatedData ||
     !aggregatedData.labels ||
-    aggregatedData.labels.length === 0
+    aggregatedData.labels.length === 0 ||
+    !aggregatedData.datasets ||
+    typeof aggregatedData.datasets !== 'object'
   ) {
-    console.log("No data after aggregation");
+    console.log("No valid data structure after aggregation");
     return {
       status: "error",
       message: "No data available after aggregation",
@@ -380,7 +382,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
       // Handle case-insensitive parameter access
       const paramLower = param.toLowerCase();
       const paramKey =
-        Object.keys(aggregatedData.datasets).find(
+        Object.keys(aggregatedData.datasets || {}).find(
           (key) => key.toLowerCase() === paramLower
         ) || paramLower; // Fallback to lowercase if not found
 
@@ -389,7 +391,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
       // Debug: Log all available dataset keys and their types
       console.log(
         "Available dataset keys:",
-        Object.entries(aggregatedData.datasets).map(([key, values]) => ({
+        Object.entries(aggregatedData.datasets || {}).map(([key, values]) => ({
           key,
           type: Array.isArray(values) ? "array" : typeof values,
           length: Array.isArray(values) ? values.length : "N/A",
@@ -397,7 +399,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
       );
 
       // Get values with case-insensitive access
-      const values = Array.isArray(aggregatedData.datasets[paramKey])
+      const values = Array.isArray(aggregatedData.datasets?.[paramKey])
         ? aggregatedData.datasets[paramKey]
         : [];
 

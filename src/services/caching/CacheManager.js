@@ -1,19 +1,61 @@
-// src/services/caching/CacheManager.js
+/**
+ * CacheManager.js
+ * 
+ * A robust caching solution that provides both in-memory and persistent caching
+ * capabilities with configurable TTL (Time To Live) for each cache entry.
+ * 
+ * Features:
+ * - Two-level caching: In-memory (fast) and persistent (AsyncStorage)
+ * - Automatic cache eviction based on TTL
+ * - Memory management with size limits
+ * - Cache statistics and monitoring
+ * - Thread-safe operations
+ * 
+ * @module CacheManager
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+/**
+ * Manages caching operations with both memory and persistent storage layers.
+ * Implements a least-recently-used (LRU) eviction policy for memory cache.
+ */
 export class CacheManager {
+  /**
+   * Initializes a new CacheManager instance.
+   * Sets up in-memory cache and initializes statistics tracking.
+   */
   constructor() {
+    /** @private */
     this.memoryCache = new Map();
+    
+    /** 
+     * @private
+     * @type {Object} Cache statistics
+     * @property {number} hits - Number of successful cache retrievals
+     * @property {number} misses - Number of failed cache retrievals
+     * @property {number} sets - Number of cache sets
+     * @property {number} deletes - Number of cache deletions
+     */
     this.cacheStats = {
       hits: 0,
       misses: 0,
       sets: 0,
       deletes: 0
     };
-    this.maxMemoryItems = 100; // Prevent memory bloat
+    
+    /** @private */
+    this.maxMemoryItems = 100; // Maximum number of items to store in memory
   }
 
-  // Memory cache operations (fastest)
+  /**
+   * Stores a value in the memory cache.
+   * 
+   * @param {string} key - The cache key
+   * @param {*} value - The value to cache
+   * @param {number} [ttlMs=null] - Time to live in milliseconds (null for no expiration)
+   * @returns {boolean} True if the operation was successful
+   */
   setMemory(key, value, ttlMs = null) {
     try {
       const cacheItem = {
@@ -51,6 +93,12 @@ export class CacheManager {
     }
   }
 
+  /**
+   * Retrieves a value from the memory cache.
+   * 
+   * @param {string} key - The cache key
+   * @returns {*|null} The cached value or null if not found/expired
+   */
   getMemory(key) {
     try {
       const cacheItem = this.memoryCache.get(key);
@@ -78,6 +126,12 @@ export class CacheManager {
     }
   }
 
+  /**
+   * Removes an entry from the memory cache.
+   * 
+   * @param {string} key - The cache key to remove
+   * @returns {boolean} True if the key existed and was removed
+   */
   deleteMemory(key) {
     try {
       const existed = this.memoryCache.delete(key);
@@ -92,7 +146,14 @@ export class CacheManager {
     }
   }
 
-  // Persistent cache operations (AsyncStorage)
+  /**
+   * Stores a value in the persistent cache (AsyncStorage).
+   * 
+   * @param {string} key - The cache key
+   * @param {*} value - The value to cache (must be serializable)
+   * @param {number} [ttlMs=null] - Time to live in milliseconds (null for no expiration)
+   * @returns {Promise<boolean>} True if the operation was successful
+   */
   async setPersistent(key, value, ttlMs = null) {
     try {
       const cacheItem = {
@@ -113,6 +174,12 @@ export class CacheManager {
     }
   }
 
+  /**
+   * Retrieves a value from the persistent cache.
+   * 
+   * @param {string} key - The cache key
+   * @returns {Promise<*|null>} The cached value or null if not found/expired
+   */
   async getPersistent(key) {
     try {
       const cached = await AsyncStorage.getItem(`cache_${key}`);
@@ -142,6 +209,12 @@ export class CacheManager {
     }
   }
 
+  /**
+   * Removes an entry from the persistent cache.
+   * 
+   * @param {string} key - The cache key to remove
+   * @returns {Promise<boolean>} True if the key existed and was removed
+   */
   async deletePersistent(key) {
     try {
       await AsyncStorage.removeItem(`cache_${key}`);
@@ -154,7 +227,14 @@ export class CacheManager {
     }
   }
 
-  // Hybrid operations (try memory first, fallback to persistent)
+  /**
+   * Retrieves a value from the cache, trying memory first and falling back to persistent storage.
+   * 
+   * @param {string} key - The cache key
+   * @param {boolean} [useMemory=true] - Whether to check memory cache
+   * @param {boolean} [usePersistent=true] - Whether to check persistent storage
+   * @returns {Promise<*|null>} The cached value or null if not found
+   */
   async get(key, useMemory = true, usePersistent = true) {
     // Try memory cache first
     if (useMemory) {
@@ -179,6 +259,16 @@ export class CacheManager {
     return null;
   }
 
+  /**
+   * Stores a value in the cache layers based on configuration.
+   * 
+   * @param {string} key - The cache key
+   * @param {*} value - The value to cache
+   * @param {number} [ttlMs=null] - Time to live in milliseconds
+   * @param {boolean} [useMemory=true] - Whether to store in memory
+   * @param {boolean} [usePersistent=true] - Whether to store persistently
+   * @returns {Promise<Object>} Results of each storage operation
+   */
   async set(key, value, ttlMs = null, useMemory = true, usePersistent = true) {
     const results = {};
 
@@ -193,6 +283,14 @@ export class CacheManager {
     return results;
   }
 
+  /**
+   * Removes an entry from the cache layers based on configuration.
+   * 
+   * @param {string} key - The cache key to remove
+   * @param {boolean} [useMemory=true] - Whether to remove from memory
+   * @param {boolean} [usePersistent=true] - Whether to remove from persistent storage
+   * @returns {Promise<Object>} Results of each deletion operation
+   */
   async delete(key, useMemory = true, usePersistent = true) {
     const results = {};
 
@@ -207,7 +305,11 @@ export class CacheManager {
     return results;
   }
 
-  // Cache maintenance operations
+  /**
+   * Removes all expired entries from the memory cache.
+   * 
+   * @returns {number} Number of entries removed
+   */
   cleanExpiredMemoryEntries() {
     const now = Date.now();
     let cleanedCount = 0;
@@ -226,6 +328,11 @@ export class CacheManager {
     return cleanedCount;
   }
 
+  /**
+   * Removes all expired entries from the persistent cache.
+   * 
+   * @returns {Promise<number>} Number of entries removed
+   */
   async cleanExpiredPersistentEntries() {
     try {
       const keys = await AsyncStorage.getAllKeys();
@@ -260,6 +367,11 @@ export class CacheManager {
     }
   }
 
+  /**
+   * Clears all cache entries from both memory and persistent storage.
+   * 
+   * @returns {Promise<Object>} Count of entries removed from each cache layer
+   */
   async cleanAll() {
     // Clean memory
     const memoryCount = this.memoryCache.size;
@@ -279,7 +391,18 @@ export class CacheManager {
     }
   }
 
-  // Statistics and monitoring
+  /**
+   * Returns cache statistics including hit rate and current size.
+   * 
+   * @returns {Object} Cache statistics
+   * @property {number} hits - Number of cache hits
+   * @property {number} misses - Number of cache misses
+   * @property {number} sets - Number of cache sets
+   * @property {number} deletes - Number of cache deletions
+   * @property {string} hitRate - Hit rate as a percentage
+   * @property {number} memorySize - Current number of items in memory cache
+   * @property {number} memoryLimit - Maximum allowed items in memory cache
+   */
   getStats() {
     const hitRate = this.cacheStats.hits + this.cacheStats.misses > 0 
       ? (this.cacheStats.hits / (this.cacheStats.hits + this.cacheStats.misses) * 100).toFixed(2) + '%'
@@ -293,6 +416,9 @@ export class CacheManager {
     };
   }
 
+  /**
+   * Resets all cache statistics to zero.
+   */
   resetStats() {
     this.cacheStats = {
       hits: 0,
@@ -302,7 +428,12 @@ export class CacheManager {
     };
   }
 
-  // Configuration
+  /**
+   * Sets the maximum number of items to store in the memory cache.
+   * If the new limit is lower than the current size, oldest items will be evicted.
+   * 
+   * @param {number} limit - Maximum number of items to store in memory
+   */
   setMaxMemoryItems(limit) {
     this.maxMemoryItems = limit;
     
@@ -318,7 +449,15 @@ export class CacheManager {
     }
   }
 
-  // Utility methods
+  /**
+   * Checks if a key exists in the cache.
+   * Note: For persistent storage, this only checks memory by default for performance.
+   * 
+   * @param {string} key - The key to check
+   * @param {boolean} [useMemory=true] - Whether to check memory cache
+   * @param {boolean} [usePersistent=false] - Whether to check persistent storage
+   * @returns {boolean} True if the key exists and is not expired
+   */
   has(key, useMemory = true, usePersistent = false) {
     if (useMemory && this.memoryCache.has(key)) {
       const item = this.memoryCache.get(key);
@@ -332,6 +471,12 @@ export class CacheManager {
     return false;
   }
 
+  /**
+   * Returns the current size of the cache.
+   * 
+   * @param {boolean} [memoryOnly=true] - If true, only returns memory cache size
+   * @returns {number} Number of items in the cache
+   */
   size(memoryOnly = true) {
     if (memoryOnly) {
       return this.memoryCache.size;

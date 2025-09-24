@@ -42,7 +42,7 @@ export class AlertRepository {
 
   async getAlerts(options = {}) {
     const {
-      limitCount = 100,
+      limitCount = 20,
       orderByField = 'timestamp',
       orderDirection = 'desc',
       filterType = null,
@@ -82,7 +82,7 @@ export class AlertRepository {
     // For now, we'll consider recent alerts as active
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
-    const alerts = await this.getAlerts({ limitCount: 50 });
+    const alerts = await this.getAlerts({ limitCount: 20 });
     return alerts.filter(alert => {
       const alertTime = this.parseTimestamp(alert.timestamp);
       return alertTime >= oneDayAgo;

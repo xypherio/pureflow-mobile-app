@@ -3,6 +3,27 @@ import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-nati
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+// Environment check for production
+const isProduction = __DEV__ === false;
+
+/**
+ * Silent logging that only shows in development
+ */
+const silentLog = (message, ...args) => {
+  if (!isProduction) {
+    console.log(message, ...args);
+  }
+};
+
+/**
+ * Silent error logging that only shows in development
+ */
+const silentError = (message, error) => {
+  if (!isProduction) {
+    console.error(message, error);
+  }
+};
+
 const safeString = (value) => {
   if (value === null || value === undefined) {
     return "No data available";
@@ -185,7 +206,9 @@ export default function InsightsCard({
 
   useEffect(() => {
     if (sensorData && autoRefresh) {
-      generateComponentInsight(componentId, sensorData);
+      generateComponentInsight(componentId, sensorData).catch(error => {
+        silentError(`Failed to generate insight for ${componentId}:`, error);
+      });
     }
   }, [sensorData, componentId, autoRefresh, generateComponentInsight]);
 
@@ -197,11 +220,17 @@ export default function InsightsCard({
   }, [cachedInsight, description]);
 
   const handleRefresh = async () => {
-    if (!sensorData) return;
-    
+    if (!sensorData) {
+      silentLog(`No sensor data available for refresh of ${componentId}`);
+      return;
+    }
+
     setIsRefreshing(true);
     try {
       await generateComponentInsight(componentId, sensorData, true);
+      silentLog(`✅ Successfully refreshed insight for ${componentId}`);
+    } catch (error) {
+      silentError(`Failed to refresh insight for ${componentId}:`, error);
     } finally {
       setIsRefreshing(false);
     }
@@ -221,6 +250,24 @@ export default function InsightsCard({
     if (insightSource === 'cached-fallback') return 'Using cached data';
     if (insightSource === 'gemini-ai') return 'AI Generated';
     return 'Static content';
+  };
+
+  // User-friendly error message
+  const getErrorMessage = () => {
+    if (!error) return null;
+
+    // Convert technical errors to user-friendly messages
+    if (error.includes('quota') || error.includes('limit')) {
+      return 'AI service quota exceeded. Please try again later.';
+    }
+    if (error.includes('network') || error.includes('fetch')) {
+      return 'Network error. Please check your connection.';
+    }
+    if (error.includes('timeout')) {
+      return 'Request timed out. Please try again.';
+    }
+
+    return 'Unable to generate insight at this time.';
   };
 
   return (
@@ -253,7 +300,7 @@ export default function InsightsCard({
               <Text style={styles.loadingText}>Generating AI insight...</Text>
             ) : error ? (
               <Text style={[styles.loadingText, { color: '#EF4444' }]}>
-                Error: {error}
+                {getErrorMessage()}
               </Text>
             ) : (
               safeString(currentInsight)

@@ -1,3 +1,24 @@
+/**
+ * DataCacheService.js
+ * 
+ * A high-level caching service that provides type-safe access to cached data
+ * with configurable caching policies for different data types.
+ * 
+ * Features:
+ * - Type-specific caching policies (TTL, storage layer preferences)
+ * - Automatic data compression for large datasets
+ * - Cache invalidation by data type or prefix
+ * - Monitoring and statistics
+ * 
+ * @module DataCacheService
+ */
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+/**
+ * Provides a type-safe interface for caching different types of application data
+ * with configurable caching policies for each data type.
+ */
 export class DataCacheService {
     constructor(cacheManager) {
       this.cache = cacheManager;
@@ -42,6 +63,12 @@ export class DataCacheService {
       );
     }
   
+    /**
+     * Retrieves cached sensor data.
+     * 
+     * @param {string} key - The cache key for the sensor data
+     * @returns {Promise<Object|null>} The cached data or null if not found/expired
+     */
     async getCachedSensorData(key) {
       const policy = this.cachePolicies.sensorData;
       return await this.cache.get(
@@ -65,6 +92,15 @@ export class DataCacheService {
       );
     }
   
+    /**
+     * Retrieves cached aggregated data.
+     * 
+     * @param {string} timeFilter - Time filter used for aggregation
+     * @param {Object} dateRange - Date range object with start and end dates
+     * @param {string} dateRange.start - Start date in ISO format
+     * @param {string} dateRange.end - End date in ISO format
+     * @returns {Promise<Object|null>} The cached data or null if not found/expired
+     */
     async getCachedAggregatedData(timeFilter, dateRange) {
       const key = `aggregated_${timeFilter}_${dateRange.start}_${dateRange.end}`;
       const policy = this.cachePolicies.aggregatedData;
@@ -88,6 +124,12 @@ export class DataCacheService {
       );
     }
   
+    /**
+     * Retrieves cached alert data.
+     * 
+     * @param {string} key - The cache key for the alerts
+     * @returns {Promise<Array<Object>|null>} The cached alerts or null if not found/expired
+     */
     async getCachedAlerts(key) {
       const policy = this.cachePolicies.alerts;
       return await this.cache.get(
@@ -111,6 +153,12 @@ export class DataCacheService {
       );
     }
   
+    /**
+     * Retrieves a cached daily report.
+     * 
+     * @param {string} date - Date string in YYYY-MM-DD format
+     * @returns {Promise<Object|null>} The cached report or null if not found/expired
+     */
     async getCachedDailyReport(date) {
       const key = `daily_report_${date}`;
       const policy = this.cachePolicies.dailyReport;
@@ -138,6 +186,13 @@ export class DataCacheService {
       );
     }
   
+    /**
+     * Retrieves cached historical data.
+     * Decompresses the data if it was compressed during storage.
+     * 
+     * @param {string} key - The cache key for the historical data
+     * @returns {Promise<Array<Object>|null>} The cached data or null if not found/expired
+     */
     async getCachedHistoricalData(key) {
       const policy = this.cachePolicies.historicalData;
       
@@ -164,6 +219,12 @@ export class DataCacheService {
       }
     }
   
+    /**
+     * Invalidates cached aggregated data.
+     * 
+     * @param {string|null} timeFilter - Specific time filter to invalidate, or null for all
+     * @returns {Promise<Object>} Results of the invalidation operation
+     */
     async invalidateAggregatedData(timeFilter = null) {
       if (timeFilter) {
         return await this.invalidateByPrefix(`aggregated_${timeFilter}_`);
@@ -172,18 +233,40 @@ export class DataCacheService {
       }
     }
   
+    /**
+     * Invalidates all cached alerts.
+     * 
+     * @returns {Promise<Object>} Results of the invalidation operation
+     */
     async invalidateAlerts() {
       return await this.invalidateByPrefix('alerts_');
     }
   
+    /**
+     * Invalidates all cached daily reports.
+     * 
+     * @returns {Promise<Object>} Results of the invalidation operation
+     */
     async invalidateDailyReports() {
       return await this.invalidateByPrefix('daily_report_');
     }
   
+    /**
+     * Invalidates all cached historical data.
+     * 
+     * @returns {Promise<Object>} Results of the invalidation operation
+     */
     async invalidateHistoricalData() {
       return await this.invalidateByPrefix('historical_');
     }
   
+    /**
+     * Invalidates all cache entries with the specified prefix.
+     * 
+     * @param {string} prefix - The key prefix to match for invalidation
+     * @returns {Promise<Object>} Results showing number of entries removed from each cache layer
+     * @private
+     */
     async invalidateByPrefix(prefix) {
       // For memory cache
       const memoryKeys = Array.from(this.cache.memoryCache.keys());
@@ -271,10 +354,21 @@ export class DataCacheService {
       }
     }
   
+    /**
+     * Retrieves the current cache policy for a data type.
+     * 
+     * @param {string} dataType - The data type to get policy for
+     * @returns {Object|null} The current policy or null if not found
+     */
     getCachePolicy(dataType) {
       return this.cachePolicies[dataType] || null;
     }
   
+    /**
+     * Retrieves all cache policies.
+     * 
+     * @returns {Object} All current cache policies
+     */
     getAllCachePolicies() {
       return { ...this.cachePolicies };
     }

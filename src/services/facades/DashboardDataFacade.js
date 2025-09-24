@@ -1,6 +1,37 @@
+/**
+ * DashboardDataFacade.js
+ * 
+ * A facade that provides a unified interface for retrieving and processing
+ * dashboard-related data from various sources.
+ * 
+ * Responsibilities:
+ * - Aggregate data from multiple sources for dashboard display
+ * - Handle data caching and performance optimization
+ * - Calculate metrics and indicators
+ * - Generate summaries and trends
+ * 
+ * @module DashboardDataFacade
+ */
+
 import { performanceMonitor } from '@utils/performance-monitor.js';
 
+/**
+ * Provides a high-level interface for accessing dashboard data.
+ * Handles data aggregation, caching, and transformation for the dashboard UI.
+ */
 export class DashboardDataFacade {
+  /**
+   * Creates a new DashboardDataFacade instance.
+   * 
+   * @param {Object} dependencies - Required dependencies
+   * @param {Object} dependencies.sensorDataRepository - Repository for accessing sensor data
+   * @param {Object} dependencies.alertRepository - Repository for accessing alert data
+   * @param {Object} dependencies.dataAggregationService - Service for data aggregation
+   * @param {Object} dependencies.waterQualityCalculator - Service for calculating WQI
+   * @param {Object} dependencies.dataCacheService - Service for caching dashboard data
+   * @param {Object} dependencies.alertProcessor - Service for processing alerts
+   * @param {Object} dependencies.dataProcessor - Service for processing raw sensor data
+   */
   constructor({
     sensorDataRepository,
     alertRepository,
@@ -20,17 +51,40 @@ export class DashboardDataFacade {
   }
 
   /**
-   * Get comprehensive dashboard data
+   * Retrieves comprehensive dashboard data including current readings, trends, and alerts.
+   * 
+   * This method orchestrates data retrieval from multiple sources, applies necessary
+   * transformations, and returns a unified dashboard data structure.
+   * 
+   * @param {Object} [options={}] - Configuration options
+   * @param {boolean} [options.useCache=true] - Whether to use cached data when available
+   * @param {boolean} [options.includeHistorical=true] - Whether to include historical data
+   * @param {boolean} [options.includeForecasts=false] - Whether to include forecast data
+   * @param {number} [options.historicalLimit=50] - Limit for historical data records
+   * @param {number} [options.hoursBack=24] - Hours back to fetch data from
+   * @returns {Promise<Object>} Dashboard data object containing:
+   * @property {Object} current - Current sensor readings and WQI
+   * @property {Object} today - Today's data points and trends
+   * @property {Object} alerts - Active alerts and summary
+   * @property {Object} metadata - Additional metadata about the data
+   * @throws {Error} If data retrieval or processing fails
    */
   async getDashboardData(options = {}) {
     const {
       useCache = true,
       includeHistorical = true,
-      includeForecasts = false
+      includeForecasts = false,
+      historicalLimit = 50,  // Smart default instead of unlimited
+      hoursBack = 24         // Reasonable time window
     } = options;
 
     return await performanceMonitor.measureAsync('dashboardFacade.getData', async () => {
-      console.log('🏠 Loading dashboard data...');
+      console.log('🏠 Loading optimized dashboard data...', {
+        useCache,
+        includeHistorical,
+        historicalLimit,
+        hoursBack
+      });
 
       try {
         // Check cache first
@@ -45,7 +99,7 @@ export class DashboardDataFacade {
         // Load data in parallel for better performance
         const [currentData, todayData, activeAlerts] = await Promise.all([
           this.getCurrentReading(),
-          includeHistorical ? this.getTodayData() : Promise.resolve([]),
+          includeHistorical ? this.getTodayData(historicalLimit) : Promise.resolve([]),
           this.getActiveAlerts()
         ]);
 
@@ -73,7 +127,13 @@ export class DashboardDataFacade {
           metadata: {
             lastUpdated: new Date().toISOString(),
             dataQuality: this.assessOverallDataQuality([currentData, ...todayData]),
-            systemStatus: this.assessSystemStatus(currentData, activeAlerts)
+            systemStatus: this.assessSystemStatus(currentData, activeAlerts),
+            optimization: {
+              historicalLimit,
+              hoursBack,
+              totalRecords: todayData.length,
+              isOptimized: true
+            }
           }
         };
 
@@ -82,7 +142,11 @@ export class DashboardDataFacade {
           await this.dataCacheService.cacheSensorData('dashboard', dashboardData);
         }
 
-        console.log('✅ Dashboard data loaded successfully');
+        console.log('✅ Optimized dashboard data loaded successfully', {
+          records: todayData.length,
+          alerts: activeAlerts.length,
+          optimization: dashboardData.metadata.optimization
+        });
         return dashboardData;
 
       } catch (error) {
@@ -93,7 +157,12 @@ export class DashboardDataFacade {
   }
 
   /**
-   * Get current sensor reading
+   * Retrieves the most recent sensor reading.
+   * 
+   * @returns {Promise<Object|null>} The most recent sensor reading or null if none available
+   * @property {number} timestamp - Unix timestamp of the reading
+   * @property {Object} parameters - Key-value pairs of sensor parameters
+   * @property {string} source - Data source identifier
    */
   async getCurrentReading() {
     try {
@@ -106,11 +175,13 @@ export class DashboardDataFacade {
   }
 
   /**
-   * Get today's data
+   * Get today's data with optimization
    */
-  async getTodayData() {
+  async getTodayData(limit = 50) {
     try {
-      const todayData = await this.sensorDataRepository.getCurrentDayData();
+      // Use the optimized repository method with limit
+      const todayData = await this.sensorDataRepository.getCurrentDayData(limit);
+      console.log(`📊 Retrieved ${todayData.length} records for today (limited to ${limit})`);
       return todayData || [];
     } catch (error) {
       console.error('❌ Error getting today\'s data:', error);
@@ -331,5 +402,96 @@ export class DashboardDataFacade {
     
     // Reload data
     return await this.getDashboardData({ useCache: false });
+  }
+
+  /**
+   * Get paginated historical data
+   * @param {Object} options - Pagination options
+   * @returns {Promise<{data: Array, hasMore: boolean, totalCount: number}>}
+   */
+  async getPaginatedHistoricalData(options = {}) {
+    const {
+      pageSize = 25,
+      page = 1,
+      startDate = null,
+      endDate = null,
+      hoursBack = 24
+    } = options;
+
+    console.log(`📄 Getting paginated historical data: page ${page}, size ${pageSize}`);
+
+    try {
+      const defaultEndDate = new Date();
+      const defaultStartDate = new Date(defaultEndDate.getTime() - (hoursBack * 60 * 60 * 1000));
+
+      const result = await this.sensorDataRepository.getPaginatedData({
+        pageSize,
+        page,
+        startDate: startDate || defaultStartDate,
+        endDate: endDate || defaultEndDate,
+        orderBy: 'datetime',
+        orderDirection: 'desc'
+      });
+
+      console.log(`✅ Paginated data retrieved: ${result.data.length} records`);
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error getting paginated historical data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get optimized dashboard data with smart defaults
+   * @param {Object} options - Optimization options
+   * @returns {Promise<Object>} Optimized dashboard data
+   */
+  async getOptimizedDashboardData(options = {}) {
+    const {
+      recentLimit = 50,
+      hoursBack = 24,
+      includeSummary = true
+    } = options;
+
+    console.log(`🏠 Getting optimized dashboard data (${recentLimit} records, ${hoursBack}h back)`);
+
+    try {
+      const result = await this.sensorDataRepository.getOptimizedDashboardData({
+        recentLimit,
+        hoursBack
+      });
+
+      // Add alerts to the result
+      const activeAlerts = await this.getActiveAlerts();
+
+      return {
+        ...result,
+        alerts: {
+          active: activeAlerts,
+          summary: this.generateAlertSummary(activeAlerts),
+          urgent: activeAlerts.filter(alert => alert.severity === 'high')
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Error getting optimized dashboard data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get data summary for a specific time range
+   * @param {Date} startDate - Start date
+   * @param {Date} endDate - End date
+   * @returns {Promise<Object>} Summary statistics
+   */
+  async getDataSummary(startDate, endDate) {
+    try {
+      return await this.sensorDataRepository.getDataSummary(startDate, endDate);
+    } catch (error) {
+      console.error('❌ Error getting data summary:', error);
+      return { totalRecords: 0, parameters: {}, timeSpan: null };
+    }
   }
 }

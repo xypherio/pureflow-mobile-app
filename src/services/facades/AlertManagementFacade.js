@@ -1,6 +1,36 @@
+/**
+ * AlertManagementFacade.js
+ * 
+ * A facade that provides a simplified interface for managing water quality alerts.
+ * Coordinates between alert generation, processing, notification, and persistence.
+ * 
+ * Responsibilities:
+ * - Process sensor data to generate alerts
+ * - Manage alert lifecycle (creation, processing, resolution)
+ * - Coordinate notifications for critical alerts
+ * - Handle alert persistence and retrieval
+ * 
+ * @module AlertManagementFacade
+ */
+
 import { performanceMonitor } from '@utils/performance-monitor';
 
+/**
+ * Provides a high-level interface for managing the entire alert lifecycle.
+ * This includes alert generation, processing, notification, and persistence.
+ */
 export class AlertManagementFacade {
+    /**
+     * Creates a new AlertManagementFacade instance.
+     * 
+     * @param {Object} dependencies - Required dependencies
+     * @param {Object} dependencies.alertEngine - Engine for generating alerts from sensor data
+     * @param {Object} dependencies.alertProcessor - Service for processing and enriching alerts
+     * @param {Object} dependencies.alertRepository - Repository for alert persistence
+     * @param {Object} dependencies.waterQualityNotifier - Service for sending notifications
+     * @param {Object} dependencies.thresholdManager - Manages alert thresholds
+     * @param {Object} dependencies.dataCacheService - Service for caching alert data
+     */
     constructor({
       alertEngine,
       alertProcessor,
@@ -18,7 +48,24 @@ export class AlertManagementFacade {
     }
   
     /**
-     * Process new sensor data and handle alerts
+     * Processes new sensor data through the alert pipeline.
+     * 
+     * This method orchestrates the entire alert processing workflow:
+     * 1. Generates alerts from sensor data
+     * 2. Processes alerts through the alert processor
+     * 3. Persists new alerts
+     * 4. Sends notifications for high-priority alerts
+     * 
+     * @param {Object} sensorData - Raw sensor data to process
+     * @param {string} sensorData.id - Unique identifier for the sensor reading
+     * @param {number} sensorData.timestamp - Unix timestamp of the reading
+     * @param {Object} sensorData.parameters - Key-value pairs of parameter readings
+     * @returns {Promise<Object>} Results containing processed alerts and notifications
+     * @property {Array} results.newAlerts - Newly created alerts
+     * @property {Array} results.processedAlerts - All processed alerts
+     * @property {Array} results.notifications - Sent notifications
+     * @property {Array} results.errors - Any errors that occurred during processing
+     * @property {string} results.dataSignature - Unique signature of the processed data
      */
     async processSensorData(sensorData) {
       return await performanceMonitor.measureAsync('alertFacade.processSensorData', async () => {
@@ -121,7 +168,7 @@ export class AlertManagementFacade {
       const {
         severity = null,
         parameter = null,
-        limit = 50,
+        limit = 20,
         useCache = true
       } = options;
   
