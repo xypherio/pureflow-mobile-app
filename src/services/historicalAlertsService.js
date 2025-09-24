@@ -2,21 +2,28 @@ import { fetchAllDocuments } from '@services/firebase/firestore.js';
 import { performanceMonitor } from '@utils/performance-monitor.js';
 
 /**
- * Historical Alerts Service for fetching and managing stored alerts from Firebase
+ * Service for managing historical water quality alerts
+ * Handles fetching, caching, and organizing alerts by time periods
  */
 class HistoricalAlertsService {
   constructor() {
+    // Initialize in-memory cache
     this.cache = {
-      alerts: null,
-      timestamp: null,
+      alerts: null,      // Cached alerts array
+      timestamp: null,   // When cache was last updated
     };
-    this.CACHE_DURATION = 60000; // 1 minute cache for historical alerts
+    this.CACHE_DURATION = 60000; // Cache expires after 1 minute
   }
 
   /**
-   * Fetch historical alerts from Firebase with proper sectioning by recency
-   * @param {Object} options - Query options
-   * @returns {Promise<Object>} Sectioned alerts data
+   * Fetches and returns historical alerts from Firebase
+   * @param {Object} options - Configuration options
+   *   - useCache: boolean - Use cached data if available (default: true)
+   *   - limitCount: number - Max number of alerts to fetch (default: 100)
+   *   - filterType: string - Filter by alert type
+   *   - filterSeverity: string - Filter by severity level
+   *   - filterParameter: string - Filter by water parameter
+   * @returns {Promise<Object>} Processed and sectioned alerts
    */
   async getHistoricalAlerts(options = {}) {
     const {
@@ -29,7 +36,7 @@ class HistoricalAlertsService {
 
     return await performanceMonitor.measureAsync('historicalAlerts.fetch', async () => {
       try {
-        // Check cache first
+        // Return cached data if valid and requested
         if (useCache && this.cache.alerts && this.cache.timestamp) {
           const cacheAge = Date.now() - this.cache.timestamp;
           if (cacheAge < this.CACHE_DURATION) {
@@ -74,36 +81,37 @@ class HistoricalAlertsService {
   }
 
   /**
-   * Process alerts and organize them into sections by recency
-   * @param {Array} alerts - Raw alerts from Firebase
-   * @param {string} filterType - Filter by alert type
-   * @param {string} filterSeverity - Filter by severity
-   * @param {string} filterParameter - Filter by water parameter
-   * @returns {Object} Sectioned alerts data
+   * Processes raw alerts by applying filters and organizing them into time-based sections
+   * @param {Array} alerts - Raw alert objects from Firebase
+   * @param {string} [filterType=null] - Filter by alert type (e.g., 'high', 'medium', 'low')
+   * @param {string} [filterSeverity=null] - Filter by severity level
+   * @param {string} [filterParameter=null] - Filter by water parameter (e.g., 'pH', 'temperature')
+   * @returns {Object} Processed alerts with sections and metadata
    */
   processAndSectionAlerts(alerts, filterType = null, filterSeverity = null, filterParameter = null) {
-    // Filter alerts if needed
+    // Apply type filter if specified
     let filteredAlerts = alerts;
-    
     if (filterType && filterType !== 'all') {
       filteredAlerts = filteredAlerts.filter(alert => 
         alert.type && alert.type.toLowerCase() === filterType.toLowerCase()
       );
     }
     
+    // Apply severity filter if specified
     if (filterSeverity && filterSeverity !== 'all') {
       filteredAlerts = filteredAlerts.filter(alert => 
         alert.severity && alert.severity.toLowerCase() === filterSeverity.toLowerCase()
       );
     }
     
+    // Apply parameter filter if specified
     if (filterParameter && filterParameter !== 'all') {
       filteredAlerts = filteredAlerts.filter(alert => 
         alert.parameter && alert.parameter.toLowerCase() === filterParameter.toLowerCase()
       );
     }
     
-    // Remove duplicates by alert signature (parameter + type + title + value)
+    // Remove duplicate alerts using a signature based on key properties
     const uniqueAlerts = [];
     const seenSignatures = new Set();
     
@@ -118,39 +126,37 @@ class HistoricalAlertsService {
     filteredAlerts = uniqueAlerts;
     console.log(`🔍 Filtered ${alerts.length} alerts to ${filteredAlerts.length} unique alerts`);
 
-    // Process each alert for display
+    // Process alerts for display and group by time periods
     const processedAlerts = filteredAlerts.map(alert => this.processAlertForDisplay(alert));
-
-    // Group alerts by time periods
     const sections = this.groupAlertsByRecency(processedAlerts);
 
     return {
-      sections,
-      totalCount: filteredAlerts.length,
-      filteredCount: processedAlerts.length,
-      lastUpdated: Date.now(),
+      sections,  // Alerts grouped by time period
+      totalCount: filteredAlerts.length,  // Total alerts after filtering
+      filteredCount: processedAlerts.length,  // Total unique alerts
+      lastUpdated: Date.now(),  // Timestamp of last update
     };
   }
 
   /**
-   * Process individual alert for display in notifications tab
-   * @param {Object} alert - Raw alert from Firebase
-   * @returns {Object} Processed alert
+   * Formats a raw alert for consistent display in the UI
+   * @param {Object} alert - Raw alert data from Firebase
+   * @returns {Object} Formatted alert with all required display properties
    */
   processAlertForDisplay(alert) {
     return {
-      id: alert.id,
-      type: alert.type || 'info',
-      title: alert.title || 'Unknown Alert',
-      message: alert.message || alert.title || 'No message available',
-      parameter: alert.parameter || 'Unknown',
-      severity: alert.severity || 'low',
-      value: alert.value,
-      threshold: alert.threshold,
-      timestamp: this.normalizeTimestamp(alert),
-      createdAt: alert.createdAt,
-      occurrenceCount: alert.occurrenceCount || 1,
-      dataAge: this.calculateAlertAge(alert),
+      id: alert.id,  // Unique identifier
+      type: alert.type || 'info',  // Alert category
+      title: alert.title || 'Unknown Alert',  // Short description
+      message: alert.message || alert.title || 'No message available',  // Detailed message
+      parameter: alert.parameter || 'Unknown',  // Water parameter (pH, temperature, etc.)
+      severity: alert.severity || 'low',  // Severity level
+      value: alert.value,  // Measured value
+      threshold: alert.threshold,  // Threshold that was exceeded
+      timestamp: this.normalizeTimestamp(alert),  // Normalized timestamp
+      createdAt: alert.createdAt,  // Original creation time
+      occurrenceCount: alert.occurrenceCount || 1,  // Number of occurrences
+      dataAge: this.calculateAlertAge(alert),  // Human-readable age
     };
   }
 
@@ -184,23 +190,26 @@ class HistoricalAlertsService {
   }
 
   /**
-   * Group alerts by recency (Today, Yesterday, This Week, Older)
-   * @param {Array} alerts - Processed alerts
-   * @returns {Array} Sections array for SectionList
+   * Organizes alerts into time-based groups for display
+   * @param {Array} alerts - Processed alert objects
+   * @returns {Array} Array of section objects for SectionList
    */
   groupAlertsByRecency(alerts) {
+    // Define time boundaries for grouping
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
     const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+    // Initialize groups for each time period
     const groups = {
-      Today: [],
-      Yesterday: [],
-      'This Week': [],
-      'Older': [],
+      Today: [],       // Alerts from today
+      Yesterday: [],   // Alerts from yesterday
+      'This Week': [], // Alerts from this week (excluding today/yesterday)
+      'Older': [],     // Alerts older than a week
     };
 
+    // Categorize each alert into the appropriate time period
     alerts.forEach(alert => {
       const alertDate = alert.timestamp.date;
       const alertDay = new Date(alertDate.getFullYear(), alertDate.getMonth(), alertDate.getDate());
@@ -216,25 +225,26 @@ class HistoricalAlertsService {
       }
     });
 
-    // Convert to sections array, filtering out empty sections
+    // Convert groups to section format, removing empty sections
     return Object.keys(groups)
       .map(key => ({
-        title: key,
-        data: groups[key],
+        title: key,          // Section title (e.g., 'Today')
+        data: groups[key],   // Array of alerts in this section
       }))
-      .filter(section => section.data.length > 0);
+      .filter(section => section.data.length > 0);  // Only include non-empty sections
   }
 
   /**
-   * Calculate how old an alert is
-   * @param {Object} alert - Alert object
-   * @returns {string} Human-readable alert age
+   * Converts a timestamp into a human-readable relative time string
+   * @param {Object} alert - Alert object with timestamp
+   * @returns {string} Formatted time string (e.g., '2 min ago', '3 days ago')
    */
   calculateAlertAge(alert) {
     const alertTime = this.normalizeTimestamp(alert).date;
     const now = new Date();
     const ageMs = now - alertTime;
 
+    // Return appropriate time string based on age
     if (ageMs < 60000) { // Less than 1 minute
       return 'Just now';
     } else if (ageMs < 3600000) { // Less than 1 hour
@@ -243,22 +253,22 @@ class HistoricalAlertsService {
     } else if (ageMs < 86400000) { // Less than 1 day
       const hours = Math.floor(ageMs / 3600000);
       return `${hours} hr ago`;
-    } else {
+    } else { // One or more days
       const days = Math.floor(ageMs / 86400000);
       return `${days} day${days > 1 ? 's' : ''} ago`;
     }
   }
 
   /**
-   * Get empty sections structure
-   * @returns {Object} Empty sections data
+   * Returns an empty state for the alerts data structure
+   * @returns {Object} Empty sections with default values
    */
   getEmptySections() {
     return {
-      sections: [],
-      totalCount: 0,
-      filteredCount: 0,
-      lastUpdated: Date.now(),
+      sections: [],         // Empty array for sections
+      totalCount: 0,        // Total alerts (0 when empty)
+      filteredCount: 0,     // Filtered count (0 when empty)
+      lastUpdated: Date.now(), // Current timestamp
     };
   }
 
@@ -274,35 +284,44 @@ class HistoricalAlertsService {
   }
 
   /**
-   * Get alert statistics
-   * @returns {Promise<Object>} Alert statistics
+   * Generates statistics about the current set of alerts
+   * @returns {Promise<Object>} Statistics including counts by type, severity, and parameter
    */
   async getAlertStatistics() {
     try {
+      // Fetch alerts with caching enabled
       const alertsData = await this.getHistoricalAlerts({ useCache: true });
       const alerts = alertsData.sections.flatMap(section => section.data);
 
+      // Initialize statistics object
       const stats = {
-        total: alerts.length,
-        byType: {},
-        bySeverity: {},
-        byParameter: {},
+        total: alerts.length,  // Total number of alerts
+        byType: {},           // Counts by alert type
+        bySeverity: {},       // Counts by severity level
+        byParameter: {},      // Counts by water parameter
         recent: alerts.filter(alert => {
+          // Count alerts from the last 24 hours
           const ageMs = Date.now() - alert.timestamp.date.getTime();
-          return ageMs < 24 * 60 * 60 * 1000; // Last 24 hours
+          return ageMs < 24 * 60 * 60 * 1000;
         }).length,
       };
 
-      // Count by type
+      // Calculate statistics by iterating through all alerts once
       alerts.forEach(alert => {
+        // Count by alert type (e.g., 'high_pH', 'low_temperature')
         stats.byType[alert.type] = (stats.byType[alert.type] || 0) + 1;
+        
+        // Count by severity (e.g., 'high', 'medium', 'low')
         stats.bySeverity[alert.severity] = (stats.bySeverity[alert.severity] || 0) + 1;
+        
+        // Count by parameter (e.g., 'pH', 'temperature')
         stats.byParameter[alert.parameter] = (stats.byParameter[alert.parameter] || 0) + 1;
       });
 
       return stats;
     } catch (error) {
       console.error('Error getting alert statistics:', error);
+      // Return empty statistics on error
       return {
         total: 0,
         byType: {},
@@ -314,6 +333,6 @@ class HistoricalAlertsService {
   }
 }
 
-// Export singleton instance
+// Create and export a singleton instance of the service
 export const historicalAlertsService = new HistoricalAlertsService();
 export default historicalAlertsService;

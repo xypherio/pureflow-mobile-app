@@ -3,6 +3,27 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 
 const InsightsContext = createContext();
 
+// Environment check for production
+const isProduction = __DEV__ === false;
+
+/**
+ * Silent logging that only shows in development
+ */
+const silentLog = (message, ...args) => {
+  if (!isProduction) {
+    console.log(message, ...args);
+  }
+};
+
+/**
+ * Silent error logging that only shows in development
+ */
+const silentError = (message, error) => {
+  if (!isProduction) {
+    console.error(message, error);
+  }
+};
+
 export const InsightsProvider = ({ children }) => {
   const [insights, setInsights] = useState(new Map());
   const [loadingStates, setLoadingStates] = useState(new Map());
@@ -11,7 +32,9 @@ export const InsightsProvider = ({ children }) => {
   // Generate insight for a specific component
   const generateComponentInsight = useCallback(async (componentId, sensorData, forceRefresh = false) => {
     if (!sensorData) {
-      setErrorStates(prev => new Map(prev).set(componentId, 'No sensor data available'));
+      const errorMsg = 'No sensor data available';
+      setErrorStates(prev => new Map(prev).set(componentId, errorMsg));
+      silentError(`Component ${componentId}: ${errorMsg}`);
       return null;
     }
 
@@ -23,7 +46,7 @@ export const InsightsProvider = ({ children }) => {
     });
 
     try {
-      const insight = forceRefresh 
+      const insight = forceRefresh
         ? await forceRefreshInsight(sensorData, componentId)
         : await generateInsight(sensorData, componentId);
 
@@ -34,10 +57,12 @@ export const InsightsProvider = ({ children }) => {
         status: getInsightStatus(componentId)
       }));
 
+      silentLog(`✅ Generated insight for component ${componentId}`);
       return insight;
     } catch (error) {
-      console.error(`Error generating insight for component ${componentId}:`, error);
-      setErrorStates(prev => new Map(prev).set(componentId, error.message));
+      const errorMsg = 'Failed to generate AI insight';
+      silentError(`Component ${componentId}: ${errorMsg}`, error);
+      setErrorStates(prev => new Map(prev).set(componentId, errorMsg));
       return null;
     } finally {
       setLoadingStates(prev => new Map(prev).set(componentId, false));
@@ -61,12 +86,29 @@ export const InsightsProvider = ({ children }) => {
 
   // Refresh all insights
   const refreshAllInsights = useCallback(async (sensorData) => {
+    if (!sensorData) {
+      silentError('No sensor data provided for refresh');
+      return;
+    }
+
     const componentIds = Array.from(insights.keys());
-    const refreshPromises = componentIds.map(componentId => 
+    if (componentIds.length === 0) {
+      silentLog('No components to refresh');
+      return;
+    }
+
+    silentLog(`🔄 Refreshing insights for ${componentIds.length} components`);
+
+    const refreshPromises = componentIds.map(componentId =>
       generateComponentInsight(componentId, sensorData, true)
     );
-    
-    await Promise.allSettled(refreshPromises);
+
+    try {
+      await Promise.allSettled(refreshPromises);
+      silentLog('✅ All insights refreshed successfully');
+    } catch (error) {
+      silentError('Error during bulk refresh:', error);
+    }
   }, [insights, generateComponentInsight]);
 
   // Auto-refresh insights based on 10-minute intervals
@@ -74,23 +116,26 @@ export const InsightsProvider = ({ children }) => {
     const interval = setInterval(() => {
       const now = Date.now();
       const componentsToRefresh = [];
-      
+
       insights.forEach((insight, componentId) => {
         const lastFetch = insight.lastUpdated ? new Date(insight.lastUpdated).getTime() : 0;
         const timeSinceLastFetch = now - lastFetch;
-        
+
         if (timeSinceLastFetch >= 10 * 60 * 1000) { // 10 minutes
           componentsToRefresh.push(componentId);
         }
       });
-      
+
       if (componentsToRefresh.length > 0) {
-        console.log(`🔄 Auto-refreshing insights for components: ${componentsToRefresh.join(', ')}`);
+        silentLog(`⏰ Auto-refreshing insights for components: ${componentsToRefresh.join(', ')}`);
         // Note: This would need sensor data to be passed, which should be handled by individual components
       }
     }, 60 * 1000); // Check every minute
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      silentLog('🧹 Auto-refresh interval cleared');
+    };
   }, [insights]);
 
   const value = {

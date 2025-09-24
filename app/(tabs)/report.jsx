@@ -86,13 +86,16 @@ const ReportScreen = () => {
   // Debug: Log the raw chart data
   useEffect(() => {
     if (chartData && chartData.length > 0) {
-      console.log('Raw chart data sample:', chartData[0]);
-      console.log('All pH values:', chartData.map(item => ({
-        pH: item.pH,
-        datetime: item.datetime,
-        hasPH: 'pH' in item,
-        keys: Object.keys(item)
-      })));
+      // Silent debug logging - only in development
+      if (__DEV__) {
+        console.log('Raw chart data sample:', chartData[0]);
+        console.log('All pH values:', chartData.map(item => ({
+          pH: item.pH,
+          datetime: item.datetime,
+          hasPH: 'pH' in item,
+          keys: Object.keys(item)
+        })));
+      }
     }
   }, [chartData]);
 
@@ -101,7 +104,7 @@ const ReportScreen = () => {
     if (chartData && !loading) {
       try {
         if (chartData.length === 0) {
-          console.log('No data available for the selected time period');
+          // Silent handling - no console logs in production
           setReportData({
             wqi: { value: 0, status: "unknown" },
             parameters: {},
@@ -114,16 +117,8 @@ const ReportScreen = () => {
           return;
         }
 
-        console.log("Processing chart data for report:", {
-          dataLength: chartData.length,
-          sampleData: chartData[0],
-        });
-
         // Generate report using the data from useChartData
         const report = generateWaterQualityReport(chartData, activeFilter);
-        
-        console.log("Generated report data:", report);
-        console.log("pH value in report:", report.parameters?.pH || report.parameters?.['pH Value']);
 
         setReportData({
           ...report,
@@ -131,16 +126,16 @@ const ReportScreen = () => {
         });
         setError(null);
       } catch (err) {
-        console.error("Error generating report:", err);
+        // Silent error handling - don't show console logs in UI
         setError({
           message: "Failed to generate report from chart data",
-          details: err.toString(),
+          details: "Data processing error",
         });
       }
     } else if (chartError) {
       setError({
-        message: chartError,
-        details: "Failed to fetch chart data",
+        message: "Failed to fetch chart data",
+        details: "Data retrieval error",
       });
     }
   }, [chartData, chartError, activeFilter]);
@@ -151,12 +146,11 @@ const ReportScreen = () => {
         setIsGeminiLoading(true);
         setGeminiResponse(null);
         try {
-          const insight = await generateInsight(reportData, "report-overall-insight"); // Pass reportData and unique componentId
+          const insight = await generateInsight(reportData, "report-overall-insight");
           setGeminiResponse(insight);
-          console.log("Gemini API Response:", insight);
         } catch (error) {
-          console.error("Error fetching Gemini insight:", error);
-          setGeminiResponse(null); // Or some error object
+          // Silent error handling - don't show console logs in UI
+          setGeminiResponse(null);
         } finally {
           setIsGeminiLoading(false);
         }
@@ -189,25 +183,26 @@ const ReportScreen = () => {
       try {
         chartData = prepareChartData(reportData, key);
       } catch (err) {
-        console.error("Error preparing chart data:", err);
+        // Silent error handling - don't show console logs in UI
+        chartData = { labels: [], datasets: [{ data: [] }] };
       }
 
       return {
         parameter: config.displayName || key,
-        value: (value.average || 0).toFixed(2),
+        value: (value?.average || 0).toFixed(2),
         unit: config.unit || "",
         safeRange: config.safeRange || "",
-        status: value.status || "normal",
-        analysis: value.trend?.message || "No trend data available",
-        minValue: value.min,
-        maxValue: value.max,
+        status: value?.status || "normal",
+        analysis: value?.trend?.message || "No trend data available",
+        minValue: value?.min,
+        maxValue: value?.max,
         chartData: {
           labels: chartData?.labels || [],
           datasets: [
             {
               data: chartData?.datasets?.[0]?.data || [],
               colors: Array(chartData?.datasets?.[0]?.data?.length || 0).fill(
-                (opacity = 1) => getStatusColor(value.status)
+                (opacity = 1) => getStatusColor(value?.status || "normal")
               ),
             },
           ],
@@ -254,7 +249,7 @@ const ReportScreen = () => {
           details: reportData.parameters?.tds?.trend?.message || "No TDS details available.",
         },
         aiInsights: geminiResponse?.insights?.overallInsight || "No AI insights available.",
-        forecast: geminiResponse?.forecast?.overallForecast || "No forecast available.", // Assuming forecast is part of geminiResponse
+        forecast: geminiResponse?.forecast?.overallForecast || "No forecast available.",
       };
 
       await PdfGenerator(pdfReportData);
@@ -269,8 +264,8 @@ const ReportScreen = () => {
         ]
       );
     } catch (error) {
-      console.error("PDF generation failed:", error);
-      Alert.alert("Export Failed", error.message);
+      // Silent error handling - don't show console logs in UI
+      Alert.alert("Export Failed", "Unable to generate PDF report. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -293,13 +288,13 @@ const ReportScreen = () => {
         [
           {
             text: "OK",
-            onPress: () => shareFiles([filePath], "Share Water Quality Report"), // Offer to share
+            onPress: () => shareFiles([filePath], "Share Water Quality Report"),
           },
         ]
       );
     } catch (error) {
-      console.error("CSV Report generation failed:", error);
-      Alert.alert("Export Failed", error.message);
+      // Silent error handling - don't show console logs in UI
+      Alert.alert("Export Failed", "Unable to generate CSV report. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -408,7 +403,7 @@ const ReportScreen = () => {
             />
           ) : (
             <>
-              <View style={{ marginBottom: 16, marginTop: 50 }}>
+              <View style={{ marginBottom: 16, marginTop: 60 }}>
                 <Text style={sectionLabelStyle}>Water Quality Summary</Text>
                 <WaterQualitySummaryCard
                   qualityLevel={reportData.overallStatus || "normal"}
@@ -428,7 +423,7 @@ const ReportScreen = () => {
                 />
               </View>
 
-              <View styles={{ marginBottom: 16 }}>
+              <View styles={{ marginBottom: 14 }}>
                 <Text style={sectionLabelStyle}>Key Parameters Report</Text>
                 {processedParameters.map((param, index) => (
                   <ParameterCard

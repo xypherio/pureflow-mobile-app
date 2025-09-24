@@ -1,14 +1,19 @@
 import {
   BatteryFull,
   BatteryLow,
+  Sun,
   Timer,
   Wifi,
   WifiOff,
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-export default function StatusCard({ status = "Active", battery = "Normal" }) {
+export default function StatusCard({
+  status = "Active",
+  battery = "Normal",
+  solarPowered = true // true = solar power, false = backup battery
+}) {
   const isActive = status === "Active";
   const isBatteryLow = battery === "Low";
 
@@ -23,97 +28,77 @@ export default function StatusCard({ status = "Active", battery = "Normal" }) {
   }, []);
 
   return (
-    <View
-      style={{
-        height: 64,
-        backgroundColor: "#f6fafd",
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: "Poppins",
-          fontSize: 16,
-          fontWeight: "600",
-          color: "#1c5c88",
-        }}
-      >
-        DATM Status
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.titleText}>DATM Status</Text>
 
-      <View style={{ flexDirection: "row", gap: 8 }}>
+      <View style={styles.pillsContainer}>
         {/* Timer Pill */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "#e0ecff",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-          }}
-        >
-          <Timer size={18} color="#1c5c88" style={{ marginRight: 6 }} />
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "500",
-              color: "#1c5c88",
-              fontFamily: "Poppins",
-            }}
-          >
-            {countdown}s
-          </Text>
+        <View style={styles.pill}>
+          <Timer size={18} color="#1c5c88" style={styles.icon} />
+          <Text style={styles.timerText}>{countdown}s</Text>
         </View>
 
         {/* DATM Status Pill */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: isActive ? "#d4f8e8" : "#fce3e3",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-          }}
-        >
+        <View style={[styles.pill, { backgroundColor: isActive ? "#d4f8e8" : "#fce3e3" }]}>
           {isActive ? (
-            <Wifi size={18} color="#28a745" style={{ marginRight: 6 }} />
+            <Wifi size={18} color="#28a745" style={styles.icon} />
           ) : (
-            <WifiOff size={18} color="#e53935" style={{ marginRight: 6 }} />
+            <WifiOff size={18} color="#e53935" style={styles.icon} />
           )}
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "500",
-              color: isActive ? "#28a745" : "#e53935",
-              fontFamily: "Poppins",
-            }}
-          ></Text>
         </View>
 
-        {/* Battery Status Pill */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: isBatteryLow ? "#f9d2d4" : "#d4f8e8",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 999,
-          }}
-        >
-          {isBatteryLow ? (
-            <BatteryLow size={18} color="#c42d46" style={{ marginRight: 6 }} />
+        {/* Unified Power Status Pill */}
+        <View style={[styles.pill, { backgroundColor: solarPowered ? "#fff3cd" : (isBatteryLow ? "#f9d2d4" : "#d4f8e8") }]}>
+          {solarPowered ? (
+            <Sun size={18} color="#ffc107" style={styles.icon} />
+          ) : isBatteryLow ? (
+            <BatteryLow size={18} color="#c42d46" style={styles.icon} />
           ) : (
-            <BatteryFull size={18} color="#28a745" style={{ marginRight: 6 }} />
+            <BatteryFull size={18} color="#28a745" style={styles.icon} />
           )}
         </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    height: 60, // Reduced height since pills only show icons (except timer)
+    backgroundColor: "#2455a9",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  titleText: {
+    fontFamily: "Poppins",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#f6fafd",
+  },
+  pillsContainer: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap", 
+    maxWidth: 280, 
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e0ecff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  icon: {
+    marginRight: 6,
+  },
+  timerText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1c5c88",
+    fontFamily: "Poppins",
+  },
+});

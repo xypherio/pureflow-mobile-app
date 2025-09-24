@@ -243,14 +243,14 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
 
 const stylesheet = StyleSheet.create({
   cardContainer: {
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    minHeight: 80,
-    height: 80,
+    minHeight: 70,
+    height: 70,
     ...globalStyles.boxShadow,
     position: "relative",
   },

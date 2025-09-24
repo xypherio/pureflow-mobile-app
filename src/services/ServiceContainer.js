@@ -30,8 +30,6 @@ import { ReportsDataFacade } from './facades/ReportsDataFacade';
 import { notificationManager } from './notifications/NotificationManager';
 import { performanceMonitor } from './PerformanceMonitor';
 import { historicalDataService } from './historicalDataService';
-import { alertManager } from './alertManager';
-import { dataPreloader } from './dataPreloader';
 import { realtimeDataService } from './realtimeDataService';
 import { waterQualityNotificationService } from './WaterQualityNotificationService';
 
@@ -388,8 +386,6 @@ class ServiceContainer {
     console.log('🔧 Initializing legacy service adapters...');
 
     this.register('historicalDataService', historicalDataService);
-    this.register('alertManager', alertManager);
-    this.register('dataPreloader', dataPreloader);
     this.register('realtimeDataService', realtimeDataService);
     this.register('waterQualityNotificationService', waterQualityNotificationService);
 
@@ -402,16 +398,6 @@ class ServiceContainer {
     const historicalDataService = this.get('historicalDataService');
     if (historicalDataService && historicalDataService.postInitialize) {
       historicalDataService.postInitialize(this.get('dataCacheService'));
-    }
-
-    const alertManager = this.get('alertManager');
-    if (alertManager && alertManager.postInitialize) {
-      alertManager.postInitialize(this.get('alertManagementFacade'), this.get('performanceMonitor'));
-    }
-
-    const dataPreloader = this.get('dataPreloader');
-    if (dataPreloader && dataPreloader.postInitialize) {
-      dataPreloader.postInitialize(this.get('dashboardDataFacade'), this.get('performanceMonitor'));
     }
 
     const realtimeDataService = this.get('realtimeDataService');
@@ -521,32 +507,12 @@ export class LegacyServiceAdapter {
       
       getActiveAlerts: async () => {
         const alertFacade = this.container.getAlertFacade();
-        return await alertFacade.getAlertsForDisplay({ limit: 50 });
+        return await alertFacade.getAlertsForDisplay({ limit: 20 });
       },
       
       syncAlertsToFirebase: async () => {
         // This is now handled automatically in the new system
         return { synced: 0, errors: 0, message: 'Auto-sync enabled' };
-      }
-    };
-  }
-
-  /**
-   * Adapter for legacy dataPreloader usage
-   */
-  get dataPreloader() {
-    return {
-      preloadData: async () => {
-        const dashboardFacade = this.container.getDashboardFacade();
-        const dashboardData = await dashboardFacade.getDashboardData();
-        
-        // Transform to legacy format
-        return {
-          sensorData: dashboardData.today.data,
-          alerts: dashboardData.alerts.active,
-          dailyReport: dashboardData.current,
-          fromCache: false
-        };
       }
     };
   }

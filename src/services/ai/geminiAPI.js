@@ -18,6 +18,27 @@ const maxGeminiQuota = 50; // Increased quota for more frequent calls
 const CACHE_PREFIX = 'gemini_insights_';
 const CACHE_EXPIRY_PREFIX = 'gemini_insights_expiry_';
 
+// Environment check for production
+const isProduction = __DEV__ === false;
+
+/**
+ * Silent logging that only shows in development
+ */
+const silentLog = (message, ...args) => {
+  if (!isProduction) {
+    console.log(message, ...args);
+  }
+};
+
+/**
+ * Silent error logging that only shows in development
+ */
+const silentError = (message, error) => {
+  if (!isProduction) {
+    console.error(message, error);
+  }
+};
+
 /**
  * Generate a cache key for a component
  */
@@ -53,18 +74,18 @@ const getCachedInsight = async (componentId, dataHash) => {
   try {
     const cacheKey = getCacheKey(componentId, dataHash);
     const expiryKey = getExpiryKey(componentId);
-    
+
     const [cachedData, expiryTime] = await Promise.all([
       AsyncStorage.getItem(cacheKey),
       AsyncStorage.getItem(expiryKey)
     ]);
-    
+
     if (cachedData && expiryTime) {
       const now = Date.now();
       const expiry = parseInt(expiryTime);
-      
+
       if (now < expiry) {
-        console.log(`📦 Using cached insight for component ${componentId}`);
+        silentLog(`📦 Using cached insight for component ${componentId}`);
         return JSON.parse(cachedData);
       } else {
         // Cache expired, clean up
@@ -75,9 +96,9 @@ const getCachedInsight = async (componentId, dataHash) => {
       }
     }
   } catch (error) {
-    console.error('Error reading cached insight:', error);
+    silentError('Error reading cached insight:', error);
   }
-  
+
   return null;
 };
 
@@ -89,15 +110,15 @@ const cacheInsight = async (componentId, dataHash, insight) => {
     const cacheKey = getCacheKey(componentId, dataHash);
     const expiryKey = getExpiryKey(componentId);
     const expiryTime = Date.now() + FETCH_INTERVAL;
-    
+
     await Promise.all([
       AsyncStorage.setItem(cacheKey, JSON.stringify(insight)),
       AsyncStorage.setItem(expiryKey, expiryTime.toString())
     ]);
-    
-    console.log(` Cached insight for component ${componentId}`);
+
+    silentLog(`💾 Cached insight for component ${componentId}`);
   } catch (error) {
-    console.error('Error caching insight:', error);
+    silentError('Error caching insight:', error);
   }
 };
 
@@ -107,7 +128,7 @@ const cacheInsight = async (componentId, dataHash, insight) => {
 const shouldFetchNewData = (componentId) => {
   const lastFetch = componentCache.get(componentId);
   if (!lastFetch) return true;
-  
+
   const now = Date.now();
   return (now - lastFetch) >= FETCH_INTERVAL;
 };
@@ -124,7 +145,7 @@ const updateComponentFetchTime = (componentId) => {
  */
 const generateInsightFromAPI = async (sensorData) => {
   if (geminiQuota >= maxGeminiQuota) {
-    console.warn("Gemini quota exceeded. Using fallback model.");
+    silentLog("Gemini quota exceeded. Using fallback model.");
     return {
       insights: {
         overallInsight: "AI quota exceeded. Using fallback analysis.",
@@ -198,14 +219,14 @@ const generateInsightFromAPI = async (sensorData) => {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    
+
     // Clean the response to ensure it's valid JSON
     const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    
+
     try {
       geminiQuota++;
       const parsedResponse = JSON.parse(cleanedText);
-      
+
       // Ensure the response has the expected structure
       return {
         insights: {
@@ -216,11 +237,11 @@ const generateInsightFromAPI = async (sensorData) => {
         suggestions: parsedResponse.suggestions || []
       };
     } catch (jsonError) {
-      console.error("Error parsing JSON from Gemini API:", jsonError);
+      silentError("Error parsing JSON from Gemini API:", jsonError);
       throw new Error("Failed to parse AI response");
     }
   } catch (error) {
-    console.error("Error generating insight from Gemini API:", error);
+    silentError("Error generating insight from Gemini API:", error);
     // If there's an API error, return a fallback response instead of re-throwing
     return {
       insights: {
@@ -270,11 +291,11 @@ export const generateInsight = async (sensorData, componentId = 'default') => {
   }
 
   const dataHash = createDataHash(sensorData);
-  
+
   // Check if we should fetch new data
   if (!shouldFetchNewData(componentId)) {
-    console.log(`⏰ Component ${componentId} is within fetch interval, using cached data`);
-    
+    silentLog(`⏰ Component ${componentId} is within fetch interval, using cached data`);
+
     // Try to get cached data
     const cachedInsight = await getCachedInsight(componentId, dataHash);
     if (cachedInsight) {
@@ -284,23 +305,23 @@ export const generateInsight = async (sensorData, componentId = 'default') => {
 
   // Try to get any cached data as fallback while fetching new data
   const fallbackInsight = await getCachedInsight(componentId, dataHash);
-  
+
   try {
-    console.log(`🔄 Fetching new insight for component ${componentId}`);
+    silentLog(`🔄 Fetching new insight for component ${componentId}`);
     updateComponentFetchTime(componentId);
-    
+
     const newInsight = await generateInsightFromAPI(sensorData);
-    
+
     // Cache the new insight
     await cacheInsight(componentId, dataHash, newInsight);
-    
+
     return newInsight;
   } catch (error) {
-    console.error(`❌ Error fetching new insight for component ${componentId}:`, error);
-    
+    silentError(`❌ Error fetching new insight for component ${componentId}:`, error);
+
     // Return cached data if available, otherwise return error response
     if (fallbackInsight) {
-      console.log(`📦 Returning cached insight as fallback for component ${componentId}`);
+      silentLog(`📦 Returning cached insight as fallback for component ${componentId}`);
       return {
         ...fallbackInsight,
         insights: {
@@ -309,7 +330,7 @@ export const generateInsight = async (sensorData, componentId = 'default') => {
         }
       };
     }
-    
+
     return {
       insights: {
         overallInsight: "Unable to generate insight at this time. Please try again later.",
@@ -347,7 +368,7 @@ export const getInsightStatus = (componentId) => {
  * Force refresh insight for a component (bypass cache)
  */
 export const forceRefreshInsight = async (sensorData, componentId = 'default') => {
-  console.log(`🔄 Force refreshing insight for component ${componentId}`);
+  silentLog(`🔄 Force refreshing insight for component ${componentId}`);
   
   // Clear cache for this component
   const dataHash = createDataHash(sensorData);
@@ -359,7 +380,7 @@ export const forceRefreshInsight = async (sensorData, componentId = 'default') =
       AsyncStorage.removeItem(expiryKey)
     ]);
   } catch (error) {
-    console.error('Error clearing cache:', error);
+    silentError('Error clearing cache:', error);
   }
   
   // Reset component fetch time
@@ -383,10 +404,10 @@ export const clearAllCachedInsights = async () => {
     componentCache.clear();
     componentTimers.clear();
     
-    console.log(' Cleared all cached insights');
+    silentLog('🧹 Cleared all cached insights');
   } catch (error) {
-    console.error('Error clearing cached insights:', error);
+    silentError('Error clearing cached insights:', error);
   }
 };
 
-console.log("Enhanced Gemini API initialized with 10-minute intervals and caching");
+silentLog("Enhanced Gemini API initialized with 10-minute intervals and caching");

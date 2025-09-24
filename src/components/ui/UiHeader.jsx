@@ -1,7 +1,7 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import { CloudRain, CloudSun, Sun } from "lucide-react-native";
 import { useState } from "react";
-import { Image, Modal, Pressable, Text, View } from "react-native";
+import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 const LOGO_PATH = require("../../../assets/logo/pureflow-logo.png");
 
@@ -47,8 +47,8 @@ export default function PureFlowLogo({
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable 
-          style={styles.modalOverlay} 
+        <Pressable
+          style={styles.modalOverlay}
           onPress={() => setModalVisible(false)}
         >
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
@@ -65,7 +65,7 @@ export default function PureFlowLogo({
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
     position: "absolute",
     flexDirection: "row",
@@ -138,4 +138,4 @@ const styles = {
     color: '#94a3b8',
     marginTop: 8,
   },
-};
+});

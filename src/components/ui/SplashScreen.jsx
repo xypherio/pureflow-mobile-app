@@ -1,7 +1,7 @@
-import dataPreloader from '@services/dataPreloader';
+import { getDashboardFacade } from '@services/ServiceContainer';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Animated, Dimensions, Image, Text, View } from 'react-native';
+import { Animated, Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,104 +31,86 @@ export default function SplashScreen({ onDataLoaded, servicesReady }) {
       // Start data preloading only when services are ready
       preloadAppData();
     }
-  }, [servicesReady]);
+  }, [servicesReady, onDataLoaded]);
 
   const preloadAppData = async () => {
     try {
-      // Step 1: Initialize Firebase
-      setLoadingText('Connecting to Firebase...');
-      setProgress(20);
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Step 2: Load sensor data
       setLoadingText('Loading sensor data...');
-      setProgress(50);
-      
-      const data = await dataPreloader.preloadData();
-      
-      // Step 3: Process alerts
+      setProgress(25);
+
+      // Preload dashboard data
+      const dashboardData = await getDashboardFacade().getDashboardData({
+        includeHistorical: true,
+        useCache: true
+      });
+
       setLoadingText('Processing alerts...');
-      setProgress(80);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      setProgress(50);
 
-      // Step 4: Finalizing
-      setLoadingText('Almost ready...');
+      // The data structure is different, so update accordingly
+      const data = {
+        sensorData: dashboardData.today.data,
+        alerts: dashboardData.alerts.active,
+        dailyReport: dashboardData.current,
+        historicalAlerts: { sections: [], totalCount: 0 }, // If needed, fetch separately
+        fromCache: dashboardData.metadata.fromCache
+      };
+
+      setLoadingText('Finalizing...');
+      setProgress(75);
+
+      // Call the callback to indicate data is loaded
+      if (onDataLoaded) {
+        onDataLoaded(data);
+      }
+
       setProgress(100);
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Notify parent component that data is loaded
-      onDataLoaded(data);
 
     } catch (error) {
-      console.error('Error during data preloading:', error);
-      setLoadingText('Error loading data. Retrying...');
-      
-      // Retry after a delay
-      setTimeout(() => {
-        preloadAppData();
-      }, 2000);
+      console.error('Error preloading app data:', error);
+      // Even if there's an error, try to continue
+      if (onDataLoaded) {
+        onDataLoaded(null);
+      }
     }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#002d66' }}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
+      <View style={styles.centerContainer}>
         <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-            alignItems: 'center',
-          }}
+          style={[
+            styles.animatedContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            }
+          ]}
         >
           {/* Logo/App Name */}
-          <View style={{
-            alignItems: 'center',
-          }}>
+          <View style={styles.logoContainer}>
             <Image
               source={require('../../../assets/logo/SPLASH-01.png')}
-              style={{
-                width: 300,
-                height: 300,
-                resizeMode: 'contain',
-              }}
+              style={styles.logoImage}
             />
           </View>
 
           {/* Loading Indicator */}
-          <View style={{
-            alignItems: 'center',
-            marginBottom: 40,
-          }}>
+          <View style={styles.loadingContainer}>
             {/* Progress Bar */}
-            <View style={{
-              width: 200,
-              height: 4,
-              backgroundColor: 'rgba(255, 255, 255, 0.3)',
-              borderRadius: 2,
-              marginBottom: 16,
-            }}>
+            <View style={styles.progressBarContainer}>
               <Animated.View
-                style={{
-                  width: `${progress}%`,
-                  height: '100%',
-                  backgroundColor: '#ffffff',
-                  borderRadius: 2,
-                }}
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${progress}%`,
+                  }
+                ]}
               />
             </View>
 
-            <Text style={{
-              fontSize: 14,
-              color: '#e8f2ff',
-              textAlign: 'center',
-            }}>
+            <Text style={styles.loadingText}>
               {loadingText}
             </Text>
           </View>
@@ -138,3 +120,47 @@ export default function SplashScreen({ onDataLoaded, servicesReady }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#002d66',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animatedContainer: {
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 300,
+    height: 300,
+    resizeMode: 'contain',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  progressBarContainer: {
+    width: 200,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    marginBottom: 16,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#e8f2ff',
+    textAlign: 'center',
+  },
+});

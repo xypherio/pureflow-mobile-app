@@ -10,27 +10,51 @@
 - [Usage](#usage)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
+- [Recent Updates](#recent-updates)
+- [Technical Implementation](#technical-implementation)
+- [Performance Features](#performance-features)
+- [Error Handling](#error-handling)
+- [AI Integration](#ai-integration)
+- [Development](#development)
 
 ## Project Overview
 
-PureFlow Mobile is an Expo-based mobile application designed for comprehensive water quality monitoring and management. It addresses the critical need for accessible and actionable water quality data, empowering fishpond owners to maintain optimal water conditions. By providing real-time data visualization, intelligent alerts, predictive forecasting, and AI-powered insights, PureFlow Mobile helps prevent water-related issues and promotes a healthier environment.
+PureFlow Mobile is an advanced Expo-based mobile application designed for comprehensive water quality monitoring and management. It addresses the critical need for accessible and actionable water quality data, empowering fishpond owners to maintain optimal water conditions. By providing real-time data visualization, intelligent alerts, predictive forecasting, and AI-powered insights, PureFlow Mobile helps prevent water-related issues and promotes a healthier environment.
+
+Built with modern React Native and Expo technologies, PureFlow Mobile delivers a production-ready solution with enterprise-level error handling, performance optimization, and user experience design.
 
 ## Features
 
--   **Real-time Data Monitoring:** Visualize essential water quality parameters through intuitive real-time data cards.
--   **Interactive Charts & Reports:** Generate detailed reports and explore historical water quality data with interactive line charts.
--   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events.
--   **AI-Powered Insights & Forecasting:** Leverage Google's Gemini AI to gain insightful suggestions and predictive forecasts regarding water quality trends.
--   **Firebase Integration:** Seamlessly integrates with Firebase for robust cloud-based data storage (Firestore) and efficient push notifications (FCM).
--   **Data Export & Sharing:** Easily export comprehensive reports as PDFs and share critical water quality information with stakeholders.
--   **Cross-Platform Compatibility:** Built with Expo, ensuring a consistent and high-quality user experience across Android, iOS, and web platforms.
--   **Modern UI/UX:** Features a clean, responsive, and visually appealing user interface powered by NativeWind and Tailwind CSS.
+### Core Monitoring Features
+-   **Real-time Data Monitoring:** Visualize essential water quality parameters (pH, Temperature, Salinity, Turbidity) through intuitive real-time data cards with live updates
+-   **Interactive Charts & Reports:** Generate detailed reports and explore historical water quality data with interactive line charts and comprehensive analytics
+-   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events
+-   **Data Export & Sharing:** Easily export comprehensive reports as PDFs and CSVs, share critical water quality information with stakeholders
+
+### Advanced AI Features
+-   **AI-Powered Insights & Forecasting:** Leverage Google's Gemini AI to gain insightful suggestions and predictive forecasts regarding water quality trends
+-   **Interval-Based AI Processing:** Smart 10-minute intervals for AI requests to prevent quota exhaustion while maintaining data freshness
+-   **Intelligent Caching:** Advanced caching system with automatic expiry and fallback mechanisms
+
+### Technical Excellence
+-   **Production-Ready Error Handling:** Silent error handling with user-friendly messages and comprehensive logging (development-only)
+-   **Cross-Platform Compatibility:** Built with Expo, ensuring a consistent and high-quality user experience across Android, iOS, and web platforms
+-   **Modern UI/UX:** Features a clean, responsive, and visually appealing user interface powered by NativeWind and Tailwind CSS
+-   **Performance Optimized:** Advanced data processing, caching, and memory management for optimal app performance
+
+### Data Management
+-   **Firebase Integration:** Seamlessly integrates with Firebase for robust cloud-based data storage (Firestore) and efficient push notifications (FCM)
+-   **Real-time Synchronization:** Advanced real-time data fetching with intelligent retry logic and fallback mechanisms
+-   **Data Validation:** Comprehensive data validation and sanitization throughout the application stack
 
 ## Prerequisites
 
-To utilize the full functionality of the PureFlow Mobile App, the following component is necessary:
+To utilize the full functionality of the PureFlow Mobile App, the following components are necessary:
 
 -   **DATM Module:** A separate, deployable hardware module/device responsible for data acquisition using various sensors. This module is integrated with Firebase to securely transmit collected water quality data to a Firebase Collection.
+-   **Firebase Project:** Active Firebase project with Firestore and FCM enabled
+-   **Google Gemini API Key:** Valid API key for AI-powered insights and forecasting
+-   **Custom AI Model:** Custom AI model for AI-powered insights and forecasting
 
 ## Installation
 
@@ -56,8 +80,8 @@ To get the PureFlow Mobile App up and running on your local development environm
     PureFlow Mobile relies on Firebase for data storage and notifications.
 
     -   **Create a Firebase Project:** Navigate to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
-    -   **Configure for Android:** Within your Firebase project, add an Android app. Follow the on-screen instructions to register your app.
-    -   **Download `google-services.json`:** Download the `google-services.json` file provided by Firebase and place it in the `android/app/` directory of your project.
+    -   **Configure for Android/iOS:** Within your Firebase project, add Android and/or iOS apps. Follow the on-screen instructions to register your apps.
+    -   **Download Configuration Files:** Download the appropriate configuration files (`google-services.json` for Android, `GoogleService-Info.plist` for iOS) and place them in the respective platform directories.
     -   **Update `app.json`:** Open `app.json` and update the `expo.extra.firebase` section with your Firebase configuration details.
 
 4.  **Configure Gemini API Key:**
@@ -65,27 +89,14 @@ To get the PureFlow Mobile App up and running on your local development environm
     PureFlow Mobile utilizes Google's Gemini AI for advanced insights and forecasting.
 
     -   **Obtain Gemini API Key:** Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/).
-    -   **Update `app.json`:** Insert your Gemini API key into the `expo.extra.GEMINI_API_KEY` field within your `app.json` file.
+    -   **Update Configuration:** Insert your Gemini API key into the `src/services/ai/geminiAPI.js` file (API_KEY constant).
 
-5.  **Environment Variables (Optional but Recommended):**
+5.  **Environment Variables (Recommended):**
 
-    For secure handling of credentials, it's recommended to set up a `.env` file at the root of your project.
+    For secure handling of credentials, it's recommended to set up environment variables.
 
     -   **Create `.env` file:** Create a new file named `.env` in the root directory of your project.
-    -   **Add Credentials:** Populate the `.env` file with your Firebase and Gemini credentials as shown in the example below. Replace `YOUR_FIREBASE_API_KEY`, `YOUR_FIREBASE_AUTH_DOMAIN`, etc., with your actual values.
-
-    ```
-    FIREBASE_API_KEY=YOUR_FIREBASE_API_KEY
-    FIREBASE_AUTH_DOMAIN=YOUR_FIREBASE_AUTH_DOMAIN
-    FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
-    FIREBASE_STORAGE_BUCKET=YOUR_FIREBASE_STORAGE_BUCKET
-    FIREBASE_MESSAGING_SENDER_ID=YOUR_FIREBASE_MESSAGING_ID
-    FIREBASE_APP_ID=YOUR_FIREBASE_APP_ID
-    FIREBASE_MEASUREMENT_ID=YOUR_FIREBASE_MEASUREMENT_ID
-
-    GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-    GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
-    ```
+    -   **Add Credentials:** Populate the `.env` file with your Firebase and Gemini credentials.
 
 ## Usage
 
@@ -96,7 +107,7 @@ Once the application is installed and configured, you can run it in development 
     Open your terminal in the project root and execute the following command:
 
     ```bash
-    npx expo start --dev-client
+    npx expo start
     ```
 
 2.  **Choose your platform:**
@@ -105,45 +116,214 @@ Once the application is installed and configured, you can run it in development 
 
     -   **Android:** Press `a` in the terminal to open in an Android emulator or connected device, or run `expo run:android`.
     -   **iOS:** Press `i` in the terminal to open in an iOS simulator or connected device, or run `expo run:ios`.
-    -   **Web:** Press `w` in the terminal to open in your web browser, or run `expo start --web --entry-point ./index.web.js`.
+    -   **Web:** Press `w` in the terminal to open in your web browser.
 
-    You can open the app in a development build (using Expo Go), an Android emulator, an iOS simulator, or directly in your web browser.
+### Key App Sections
 
-    **Missing Information:** To significantly enhance this section, consider adding screenshots or GIFs demonstrating key features and the user interface. This will provide developers and users with a clearer understanding of the application's look and feel, and how to navigate it.
+-   **Home Tab:** Real-time water quality monitoring with live data cards and status indicators
+-   **Reports Tab:** Comprehensive reporting with historical data analysis and AI insights
+-   **Notifications Tab:** Alert management and notification history
+-   **Settings:** Configuration options and system preferences
 
-## Architecture / How it Works
+## Architecture
 
 PureFlow Mobile is built on a robust and scalable architecture, leveraging Expo and React Native for cross-platform development, and Firebase for backend services.
 
--   **Frontend (Expo & React Native):** The user interface and client-side logic are developed using React Native within the Expo framework, enabling a single codebase for Android, iOS, and web. Components are organized for reusability and maintainability.
--   **Data Acquisition (DATM Module):** A dedicated DATM module (external hardware) collects water quality data from sensors.
--   **Backend (Firebase):**
-    -   **Firestore:** Serves as the primary NoSQL cloud database for storing real-time and historical water quality data transmitted by the DATM module, as well as user-specific configurations and alert thresholds.
-    -   **Firebase Cloud Messaging (FCM):** Used for sending push notifications to users based on alert triggers or important updates.
--   **AI Integration (Google Gemini):** The application integrates with Google's Gemini AI for advanced data analysis, generating insightful suggestions, and providing predictive forecasts on water quality trends.
--   **Alert Management:** A comprehensive alert management system monitors incoming data against predefined thresholds, triggering notifications when anomalies are detected.
+### System Architecture
 
-The data flow generally follows this path: DATM Module -> Firebase Firestore -> PureFlow Mobile App (for display, analysis, and AI processing). User interactions within the app (e.g., requesting reports) also interact with Firebase.
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   DATM Module   │───▶│  Firebase       │───▶│  PureFlow       │
+│   (Hardware)    │    │  (Firestore)    │    │  Mobile App     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │  Gemini AI      │
+                       │  (Insights)     │
+                       └─────────────────┘
+```
+
+### Technical Stack
+
+-   **Frontend:** React Native + Expo (Cross-platform mobile/web)
+-   **Styling:** NativeWind + Tailwind CSS
+-   **Backend:** Firebase (Firestore + FCM)
+-   **AI Integration:** Google Gemini AI
+-   **Charts:** react-native-chart-kit + Victory Native
+-   **Navigation:** React Navigation v6
+-   **State Management:** React Context API
+-   **Data Processing:** Advanced caching and validation layers
 
 ## Project Structure
 
-The project follows a standard Expo and React Native structure, promoting modularity and ease of development:
+The project follows a modular architecture promoting maintainability and scalability:
 
 ```
 .
-├── app/                  # Main application code with file-based routing and screens
-├── assets/               # Static assets like images, fonts, and icons
-├── src/                  # Core source code for components, contexts, hooks, services, and utilities
-│   ├── components/       # Reusable UI components, categorized by function (data-display, forms, navigation, ui)
-│   ├── constants/        # Application-wide constants, such as color palettes and system thresholds
-│   ├── contexts/         # React Context API implementations for efficient global state management
-│   ├── hooks/            # Custom React hooks for encapsulating reusable logic
-│   ├── services/         # Business logic, API integrations (Firebase, Gemini), and data handling services
-│   ├── styles/           # Global stylesheets and theming configurations
-│   └── utils/            # Essential utility functions for data processing, formatting, and more
-├── android/              # Android-specific native code and build configurations
-├── ios/                  # iOS-specific native code and build configurations (generated and managed by Expo)
-├── package.json          # Manages project dependencies, scripts, and metadata
-├── app.json              # Primary Expo application configuration file
-└── README.md             # Project documentation and guide (this file)
+├── app/                      # Main application with file-based routing
+│   ├── (tabs)/              # Tab navigation screens
+│   ├── _layout.jsx          # Root layout configuration
+│   └── _splash.jsx          # Custom splash screen
+├── src/                     # Core source code
+│   ├── components/          # Reusable UI components
+│   │   ├── data-display/    # Data visualization components
+│   │   ├── forms/           # Form components
+│   │   ├── navigation/      # Navigation components
+│   │   └── ui/              # Base UI components
+│   ├── constants/           # Application constants
+│   │   ├── colors.js        # Color palette
+│   │   └── thresholds.js    # Water quality thresholds
+│   ├── contexts/            # React Context implementations
+│   │   ├── DataContext.js   # Main data management
+│   │   ├── InsightsContext.js # AI insights management
+│   │   └── NotificationContext.js # Alert management
+│   ├── hooks/               # Custom React hooks
+│   │   ├── useChartData.js  # Data fetching logic
+│   │   └── useNotifications.js # Notification handling
+│   ├── services/            # Business logic and API services
+│   │   ├── ai/              # AI integration services
+│   │   ├── firebase/        # Firebase services
+│   │   ├── data/            # Data processing services
+│   │   └── caching/         # Caching services
+│   └── utils/               # Utility functions
+│       ├── exportUtils.js   # Data export utilities
+│       └── reportUtils.js   # Report generation utilities
+├── android/                 # Android platform files
+├── ios/                     # iOS platform files
+└── assets/                  # Static assets and resources
 ```
+
+## Recent Updates
+
+### Version 2.0 - Production-Ready Enhancements
+
+#### 🚀 **Performance Optimizations**
+- **Smart Caching System:** 5-minute TTL for Firebase data with intelligent cache invalidation
+- **Interval-Based AI Processing:** 10-minute intervals for AI requests to prevent quota exhaustion
+- **Optimized Data Fetching:** Advanced retry logic with exponential backoff
+- **Memory Management:** Automatic cleanup and resource optimization
+
+#### 🛡️ **Enhanced Error Handling**
+- **Silent Error Handling:** Production-ready error handling without console logs in UI
+- **User-Friendly Messages:** Technical errors converted to actionable user messages
+- **Comprehensive Fallbacks:** Multiple fallback mechanisms for all critical operations
+- **Development Logging:** Full debugging information available in development mode
+
+#### 🤖 **Advanced AI Integration**
+- **Intelligent Caching:** AI responses cached with 10-minute expiry
+- **Quota Management:** Smart quota tracking with fallback mechanisms
+- **Error Recovery:** Automatic fallback to cached responses when API unavailable
+- **Production Logging:** Silent operation in production with full logging in development
+
+#### 📊 **Data Processing Improvements**
+- **Real-time Validation:** Comprehensive data validation throughout the application
+- **Null-Safe Operations:** Safe property access with optional chaining
+- **Type Safety:** Enhanced type checking and data sanitization
+- **Performance Monitoring:** Built-in performance tracking and optimization
+
+## Technical Implementation
+
+### Data Flow Architecture
+
+```
+1. DATM Hardware → Firebase Firestore (Real-time updates)
+2. Firestore → DataContext (State management)
+3. DataContext → Components (UI rendering)
+4. User Actions → AI Processing (Gemini API)
+5. AI Results → InsightsContext (Caching & display)
+6. Alerts → Notification System (FCM integration)
+```
+
+### Key Technical Features
+
+#### Real-Time Data System
+- **Dual Polling:** 15-second intervals for real-time data, 30-second for general data
+- **Intelligent Caching:** 30-second TTL for real-time data with smart invalidation
+- **Data Age Tracking:** Real-time indicators showing data freshness
+- **Fallback Mechanisms:** Graceful degradation when real-time data unavailable
+
+#### AI Integration System
+- **Interval Management:** 10-minute intervals prevent API quota exhaustion
+- **Smart Caching:** AI responses cached with automatic expiry
+- **Error Recovery:** Multiple fallback strategies for AI service failures
+- **Quota Management:** Built-in quota tracking and management
+
+#### Alert Management System
+- **Real-time Processing:** Instant alert generation based on sensor data
+- **Deduplication:** Prevents duplicate alerts for same conditions
+- **Firebase Sync:** Automatic synchronization with Firebase backend
+- **User Preferences:** Customizable alert thresholds and notification settings
+
+## Performance Features
+
+### Caching Strategy
+- **Multi-Level Caching:** Memory cache + AsyncStorage persistence
+- **Smart Expiry:** Component-specific cache expiry management
+- **Cache Invalidation:** Automatic cleanup of expired data
+- **Fallback Chain:** Cached → Fresh → Fallback data hierarchy
+
+### Memory Management
+- **Automatic Cleanup:** Interval-based memory cleanup
+- **Resource Optimization:** Efficient data structures and algorithms
+- **Background Processing:** Non-blocking data operations
+- **Memory Leak Prevention:** Proper component lifecycle management
+
+### Network Optimization
+- **Retry Logic:** Exponential backoff for failed requests
+- **Timeout Protection:** 30-second timeouts prevent hanging requests
+- **Connection Management:** Intelligent connection pooling
+- **Offline Support:** Graceful degradation when offline
+
+## Error Handling
+
+### Production-Ready Error Management
+- **Silent Operation:** No technical errors visible to end users
+- **User-Friendly Messages:** Clear, actionable error messages
+- **Error Categorization:** Different handling for network, API, and data errors
+- **Fallback Systems:** Multiple fallback mechanisms for all critical operations
+
+### Development Support
+- **Comprehensive Logging:** Full error logging in development mode
+- **Debug Information:** Detailed error context and stack traces
+- **Performance Monitoring:** Built-in performance tracking
+- **Error Boundaries:** React error boundaries for component-level error handling
+
+## AI Integration
+
+### Gemini AI Features
+- **Smart Analysis:** Advanced water quality trend analysis
+- **Predictive Insights:** Future water quality forecasting
+- **Recommendation Engine:** Actionable suggestions for water management
+- **Natural Language Processing:** Human-readable insights and suggestions
+
+### AI System Architecture
+- **Interval-Based Processing:** Prevents API quota exhaustion
+- **Intelligent Caching:** Reduces API calls while maintaining data freshness
+- **Error Recovery:** Automatic fallback when AI service unavailable
+- **Quota Management:** Built-in quota tracking and management
+
+## Development
+
+### Development Guidelines
+- **Code Organization:** Modular architecture with clear separation of concerns
+- **Error Handling:** Comprehensive error handling throughout the application
+- **Performance Optimization:** Built-in performance monitoring and optimization
+- **Testing:** Unit tests and integration tests recommended
+
+### Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with proper error handling and documentation
+4. Test thoroughly in both development and production modes
+5. Submit a pull request with detailed description
+
+### Build & Deployment
+- **Android:** `expo run:android` or `npx expo start --dev-client`
+- **iOS:** `expo run:ios` or `npx expo start --dev-client`
+- **Web:** `npx expo start --web`
+- **Production Build:** `expo build:android` / `expo build:ios`
+
+---
+
+**PureFlow Mobile** - Advanced water quality monitoring with AI-powered insights and production-ready architecture.
