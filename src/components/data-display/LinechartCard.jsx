@@ -165,13 +165,6 @@ const LineChartCard = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-          <Text style={styles.refreshText}>Refresh</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Parameter Filter */}
       <View style={styles.filterContainer}>
         <SegmentedFilter
@@ -290,7 +283,7 @@ const LineChartCard = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#f6fafd",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 12,
     marginTop: 20,
     marginBottom: 10,

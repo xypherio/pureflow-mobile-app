@@ -1,4 +1,3 @@
-
 import ExportToggleButton from "@components/forms/ExportToggleButton";
 import PureFlowLogo from "@components/ui/UiHeader";
 import InsightsCard from "@dataDisplay/InsightsCard";
@@ -338,28 +337,82 @@ const ReportScreen = () => {
   // Render error state
   if (reportData.status === "error" || error) {
     return (
-      <View className="flex-1 items-center justify-center p-6 bg-white">
-        <Ionicons name="warning-outline" size={48} color="#ef4444" />
-        <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">
-          Report Unavailable
-        </Text>
-        <Text className="text-center text-gray-600 mb-6">
-          {error?.message || reportData.message || "Failed to load report data"}
-        </Text>
-        <TouchableOpacity
-          className="bg-blue-500 px-6 py-3 rounded-lg"
-          onPress={onRefresh}
-        >
-          <Text className="text-white font-medium">Try Again</Text>
-        </TouchableOpacity>
-
-        {__DEV__ && error?.details && (
-          <View className="mt-6 p-4 bg-gray-100 rounded-lg w-full">
-            <Text className="text-xs text-gray-500 font-mono">
-              {error.details}
+      <View style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+        backgroundColor: "#fff",
+      }}>
+        <View style={{
+          backgroundColor: "#ffeaea",
+          borderRadius: 16,
+          padding: 28,
+          alignItems: "center",
+          width: "100%",
+          maxWidth: 380,
+          shadowColor: "#ef4444",
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 2,
+        }}>
+          <Ionicons name="warning-outline" size={54} color="#ef4444" style={{ marginBottom: 18 }} />
+          <Text style={{
+            fontSize: 22,
+            fontWeight: "bold",
+            color: "#b91c1c",
+            marginBottom: 8,
+            textAlign: "center",
+          }}>
+            Report Unavailable
+          </Text>
+          <Text style={{
+            color: "#b91c1c",
+            fontSize: 16,
+            textAlign: "center",
+            marginBottom: 18,
+          }}>
+            {error?.message || reportData.message || "Failed to load report data"}
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#3b82f6",
+              paddingHorizontal: 28,
+              paddingVertical: 12,
+              borderRadius: 8,
+              marginTop: 6,
+              marginBottom: 2,
+            }}
+            onPress={onRefresh}
+          >
+            <Text style={{
+              color: "#fff",
+              fontWeight: "600",
+              fontSize: 16,
+              textAlign: "center",
+            }}>
+              Try Again
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+          {__DEV__ && error?.details && (
+            <View style={{
+              marginTop: 18,
+              padding: 10,
+              backgroundColor: "#fff",
+              borderRadius: 8,
+              width: "100%",
+            }}>
+              <Text style={{
+                fontSize: 12,
+                color: "#b91c1c",
+                fontFamily: "monospace",
+              }}>
+                {error.details}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     );
   }

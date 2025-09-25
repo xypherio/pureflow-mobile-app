@@ -7,9 +7,11 @@ import { StyleSheet } from 'react-native';
 const PdfGenerator = async (reportData) => {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   // Helper function to wrap text
   const wrapText = (text, font, fontSize, maxWidth) => {
+    if (!text) return [];
     const words = text.split(' ');
     const lines = [];
     let currentLine = '';
@@ -29,81 +31,67 @@ const PdfGenerator = async (reportData) => {
     return lines.filter(line => line !== '');
   };
 
-  // Cover Page
-  const coverPage = pdfDoc.addPage();
-  coverPage.drawText('PureFlow Water Quality Report', {
-    x: 50,
-    y: 700,
-    font,
-    size: 30,
-    color: rgb(0, 0.53, 0.71),
-  });
-  // Customizable: Modify the date format or text style
-  coverPage.drawText(`Date: ${new Date().toLocaleDateString()}`, {
-    x: 50,
-    y: 650,
-    font,
-    size: 18,
-    color: rgb(0, 0, 0),
-  });
-
-  // Overall Water Quality Status
-  const statusPage = pdfDoc.addPage();
-  statusPage.drawText('Overall Water Quality Status', {
-    x: 50,
-    y: 750,
-    font,
-    size: 24,
-    color: rgb(0, 0.53, 0.71),
-  });
-  // Customizable: Modify overall status text and style
-  statusPage.drawText(reportData.overallStatus, {
-    x: 50,
-    y: 700,
-    font,
-    size: 12,
-    color: rgb(0, 0, 0),
-  });
-
-  // Detailed Parameter Reports
-  const detailedPage = pdfDoc.addPage();
-  detailedPage.drawText('Detailed Parameter Reports', {
-    x: 50,
-    y: 750,
-    font,
-    size: 24,
-    color: rgb(0, 0.53, 0.71),
-  });
-  // Customizable: Add charts or tables for detailed parameter reports here
-
-  // Table settings
+  // Table and layout settings
   const startX = 50;
-  let startY = 700;
-  const rowHeight = 30;
-  const columnWidths = [120, 80, 100, 250]; // Parameter, Value, Status, Details
-  const fontSize = 10;
-  const headingFontSize = 12;
+  let startY = 780;
+  const rowHeight = 24;
+  const fontSize = 12;
+  const headingFontSize = 14;
+  const sectionTitleFontSize = 16;
   const textColor = rgb(0, 0, 0);
   const headerColor = rgb(0, 0.53, 0.71);
 
-  // Draw table headers
-  detailedPage.drawText('Parameter', { x: startX, y: startY, font, size: headingFontSize, color: headerColor });
-  detailedPage.drawText('Value', { x: startX + columnWidths[0], y: startY, font, size: headingFontSize, color: headerColor });
-  detailedPage.drawText('Status', { x: startX + columnWidths[0] + columnWidths[1], y: startY, font, size: headingFontSize, color: headerColor });
-  detailedPage.drawText('Details', { x: startX + columnWidths[0] + columnWidths[1] + columnWidths[2], y: startY, font, size: headingFontSize, color: headerColor });
-  startY -= rowHeight; // Move down for the first data row
+  let page = pdfDoc.addPage();
+
+  // Helper for pagination
+  const checkPageSpace = (neededSpace = rowHeight) => {
+    if (startY < 60 + neededSpace) {
+      page = pdfDoc.addPage();
+      startY = 780;
+    }
+  };
+
+  // Draw section divider
+  const drawSectionDivider = () => {
+    page.drawLine({
+      start: { x: startX, y: startY + 10 },
+      end: { x: startX + 530, y: startY + 10 },
+      color: rgb(0.8, 0.8, 0.8),
+      thickness: 1,
+    });
+    startY -= 8;
+  };
+
+  // --- Section 1: Overall Water Quality Report ---
+  page.drawText('Overall Water Quality Report', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.5; // Increased spacing after section title
+
+  // Table headers
+  const columnWidths = [120, 80, 100, 230]; // Parameter, Average, Status, Details
+  page.drawText('Parameter', { x: startX, y: startY, font: fontBold, size: headingFontSize, color: headerColor });
+  page.drawText('Average', { x: startX + columnWidths[0], y: startY, font: fontBold, size: headingFontSize, color: headerColor });
+  page.drawText('Status', { x: startX + columnWidths[0] + columnWidths[1], y: startY, font: fontBold, size: headingFontSize, color: headerColor });
+  page.drawText('Details', { x: startX + columnWidths[0] + columnWidths[1] + columnWidths[2], y: startY, font: fontBold, size: headingFontSize, color: headerColor });
+  startY -= rowHeight * 0.7; // More space between header and line
 
   // Draw a horizontal line after headers
-  detailedPage.drawLine({
-    start: { x: startX, y: startY + 5 },
-    end: { x: startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], y: startY + 5 },
+  page.drawLine({
+    start: { x: startX, y: startY + 8 }, // Move line further down
+    end: { x: startX + columnWidths.reduce((a, b) => a + b, 0), y: startY + 8 },
     color: rgb(0.7, 0.7, 0.7),
     thickness: 1,
   });
+  startY -= rowHeight * 0.5; // More space between line and first row
 
-  // Iterate and draw parameter data
+  // Parameters for table
   const parameters = [
-    { name: 'pH', data: reportData.ph },
+    { name: 'pH', data: reportData.ph, unit: '' },
     { name: 'Temperature', data: reportData.temperature, unit: '°C' },
     { name: 'Turbidity', data: reportData.turbidity, unit: ' NTU' },
     { name: 'Salinity', data: reportData.salinity, unit: ' PSU' },
@@ -111,78 +99,160 @@ const PdfGenerator = async (reportData) => {
   ];
 
   for (const param of parameters) {
-    if (startY < 100) { // Simple pagination: add a new page if content goes too low
-      detailedPage = pdfDoc.addPage();
-      startY = 750; // Reset Y for new page
-      // Redraw headers on new page
-      detailedPage.drawText('Parameter', { x: startX, y: startY, font, size: headingFontSize, color: headerColor });
-      detailedPage.drawText('Value', { x: startX + columnWidths[0], y: startY, font, size: headingFontSize, color: headerColor });
-      detailedPage.drawText('Status', { x: startX + columnWidths[0] + columnWidths[1], y: startY, font, size: headingFontSize, color: headerColor });
-      detailedPage.drawText('Details', { x: startX + columnWidths[0] + columnWidths[1] + columnWidths[2], y: startY, font, size: headingFontSize, color: headerColor });
-      startY -= rowHeight; // Move down for the first data row
-      detailedPage.drawLine({
-        start: { x: startX, y: startY + 5 },
-        end: { x: startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], y: startY + 5 },
-        color: rgb(0.7, 0.7, 0.7),
-        thickness: 1,
-      });
-    }
+    checkPageSpace();
+    const average = param.data && param.data.average !== undefined ? param.data.average : 0;
+    const status = param.data && param.data.status ? param.data.status : '0';
+    const detailsText = param.data && param.data.details ? param.data.details : '0';
 
-    detailedPage.drawText(param.name, { x: startX, y: startY, font, size: fontSize, color: textColor });
-    detailedPage.drawText(`${param.data.value}${param.unit || ''}`, { x: startX + columnWidths[0], y: startY, font, size: fontSize, color: textColor });
-    detailedPage.drawText(param.data.status, { x: startX + columnWidths[0] + columnWidths[1], y: startY, font, size: fontSize, color: textColor });
-    
-    // Handle long detail text by wrapping
-    const detailsText = param.data.details;
+    page.drawText(param.name, { x: startX, y: startY, font, size: fontSize, color: textColor });
+    page.drawText(`${average}${param.unit}`, { x: startX + columnWidths[0], y: startY, font, size: fontSize, color: textColor });
+    page.drawText(status, { x: startX + columnWidths[0] + columnWidths[1], y: startY, font, size: fontSize, color: textColor });
+
+    // Wrap details
     const detailsX = startX + columnWidths[0] + columnWidths[1] + columnWidths[2];
     const detailsMaxWidth = columnWidths[3];
     const wrappedLines = wrapText(detailsText, font, fontSize, detailsMaxWidth);
-    
+
     let currentTextY = startY;
     for (const line of wrappedLines) {
-      detailedPage.drawText(line, { x: detailsX, y: currentTextY, font, size: fontSize, color: textColor, maxWidth: detailsMaxWidth });
-      currentTextY -= font.heightAtSize(fontSize) + 2; // Move down for next line
+      page.drawText(line, { x: detailsX, y: currentTextY, font, size: fontSize, color: textColor });
+      currentTextY -= font.heightAtSize(fontSize) + 2;
     }
-
-    startY -= Math.max(rowHeight, (font.heightAtSize(fontSize) + 2) * wrappedLines.length + 5); // Adjust row height based on content
+    startY -= Math.max(rowHeight, (font.heightAtSize(fontSize) + 2) * wrappedLines.length + 5);
   }
 
-  // Insights & Suggestions from AI
-  const insightsPage = pdfDoc.addPage();
-  insightsPage.drawText('Insights & Suggestions from AI', {
-    x: 50,
-    y: 750,
-    font,
-    size: 24,
-    color: rgb(0, 0.53, 0.71),
-  });
-  // Customizable: Modify AI insights text and style
-  insightsPage.drawText(reportData.aiInsights, {
-    x: 50,
-    y: 700,
-    font,
-    size: 12,
-    color: rgb(0, 0, 0),
-  });
+  startY -= rowHeight * 0.7; // More space after table
+  drawSectionDivider();
+  startY -= rowHeight * 0.7; // More space after divider
+  checkPageSpace(rowHeight * 2);
 
-  // Forecast Section
-  const forecastPage = pdfDoc.addPage();
-  forecastPage.drawText('Forecast Section', {
-    x: 50,
-    y: 750,
-    font,
-    size: 24,
-    color: rgb(0, 0.53, 0.71),
+  // --- Section 2: Detailed Report for Each Parameter (as tables) ---
+  page.drawText('Detailed Report for Each Parameter', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
   });
-  // Customizable: Modify forecast text and style
-  forecastPage.drawText(reportData.forecast, {
-    x: 50,
-    y: 700,
-    font,
-    size: 12,
-    color: rgb(0, 0, 0),
-  });
+  startY -= rowHeight * 1.5; // Increased spacing after section title
 
+  // Table columns for details: Label, Value, Unit
+  const detailColWidths = [120, 100, 60, 260]; // Label, Value, Unit, Details/AI Insights
+
+  for (const param of parameters) {
+    checkPageSpace(rowHeight * 4);
+
+    // Parameter Title
+    page.drawText(param.name, {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: headingFontSize,
+      color: headerColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    // Table header for parameter details
+    page.drawText('Label', { x: startX, y: startY, font: fontBold, size: fontSize, color: headerColor });
+    page.drawText('Value', { x: startX + detailColWidths[0], y: startY, font: fontBold, size: fontSize, color: headerColor });
+    page.drawText('Unit', { x: startX + detailColWidths[0] + detailColWidths[1], y: startY, font: fontBold, size: fontSize, color: headerColor });
+    page.drawText('Details / AI Insights', { x: startX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2], y: startY, font: fontBold, size: fontSize, color: headerColor });
+    startY -= rowHeight * 0.7; // More space between header and line
+
+    // Draw a horizontal line after headers
+    page.drawLine({
+      start: { x: startX, y: startY + 8 }, // Move line further down
+      end: { x: startX + detailColWidths.reduce((a, b) => a + b, 0), y: startY + 8 },
+      color: rgb(0.7, 0.7, 0.7),
+      thickness: 1,
+    });
+    startY -= rowHeight * 0.5; // More space between line and first row
+
+    // Values for the parameter
+    const values = [
+      { label: 'Average', value: param.data?.average ?? 0, unit: param.unit, details: '' },
+      { label: 'Current', value: param.data?.value ?? 0, unit: param.unit, details: '' },
+      { label: 'Min', value: param.data?.min ?? 0, unit: param.unit, details: '' },
+      { label: 'Max', value: param.data?.max ?? 0, unit: param.unit, details: '' },
+      { label: 'Status', value: param.data?.status ?? '0', unit: '', details: '' },
+      { label: 'Details', value: '', unit: '', details: param.data?.details ?? '0' },
+      { label: 'AI Insights', value: '', unit: '', details: param.data?.aiInsights ?? '0' },
+    ];
+
+    for (const v of values) {
+      checkPageSpace(rowHeight);
+      page.drawText(v.label, { x: startX, y: startY, font, size: fontSize, color: textColor });
+      page.drawText(`${v.value}`, { x: startX + detailColWidths[0], y: startY, font, size: fontSize, color: textColor });
+      page.drawText(v.unit, { x: startX + detailColWidths[0] + detailColWidths[1], y: startY, font, size: fontSize, color: textColor });
+
+      // Wrap details/insights if present
+      const detailsText = v.details || '';
+      const detailsX = startX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2];
+      const detailsMaxWidth = detailColWidths[3];
+      const wrappedLines = wrapText(detailsText, font, fontSize, detailsMaxWidth);
+
+      let currentTextY = startY;
+      for (const line of wrappedLines) {
+        page.drawText(line, { x: detailsX, y: currentTextY, font, size: fontSize, color: textColor });
+        currentTextY -= font.heightAtSize(fontSize) + 2;
+      }
+      startY -= Math.max(rowHeight, (font.heightAtSize(fontSize) + 2) * wrappedLines.length + 5);
+    }
+
+    // Draw a subtle line between parameters
+    page.drawLine({
+      start: { x: startX + 10, y: startY + 8 },
+      end: { x: startX + 500, y: startY + 8 },
+      color: rgb(0.9, 0.9, 0.9),
+      thickness: 0.7,
+    });
+    startY -= rowHeight * 0.7; // More space after each parameter
+    checkPageSpace();
+  }
+
+  drawSectionDivider();
+  startY -= rowHeight * 0.7; // More space after divider
+  checkPageSpace(rowHeight * 4);
+
+  // --- Section 3: Overall Insights & Recommendations + Forecast ---
+  page.drawText('Overall Insights & Recommendations', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.5; // Increased spacing after section title
+
+  const overallInsights = reportData.aiInsights ?? '0';
+  const wrappedInsights = wrapText(overallInsights, font, fontSize, 500);
+  for (const line of wrappedInsights) {
+    page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
+    startY -= font.heightAtSize(fontSize) + 2;
+    checkPageSpace();
+  }
+
+  startY -= rowHeight * 0.5;
+  checkPageSpace(rowHeight * 2);
+
+  page.drawText('Forecast', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: headingFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.2; // More space after forecast title
+
+  const forecast = reportData.forecast ?? '0';
+  const wrappedForecast = wrapText(forecast, font, fontSize, 500);
+  for (const line of wrappedForecast) {
+    page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
+    startY -= font.heightAtSize(fontSize) + 2;
+    checkPageSpace();
+  }
+
+  // Save and share/print
   const pdfBytes = await pdfDoc.saveAsBase64();
   const pdfUri = FileSystem.cacheDirectory + 'pureflow_report.pdf';
 
@@ -203,6 +273,5 @@ const PdfGenerator = async (reportData) => {
 
 export default PdfGenerator;
 
-// Inline styles (as per user preference: [[memory:3447950]])
-// Customizable: Add or modify styles as needed for layout, colors, and fonts
+// Inline styles (as per user preference)
 const styles = StyleSheet.create({});

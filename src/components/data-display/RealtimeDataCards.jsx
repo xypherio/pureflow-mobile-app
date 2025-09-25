@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#2455a9",
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     marginBottom: 10,
   },
   header: {

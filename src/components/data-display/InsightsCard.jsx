@@ -69,108 +69,6 @@ const INSIGHT_TYPES = {
   }
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 5,
-    borderWidth: 1,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    opacity: 0.3,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  contentContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'flex-start' 
-  },
-  title: { 
-    fontSize: 18, 
-    fontWeight: '800', 
-    color: '#111827',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  description: { 
-    fontSize: 15, 
-    color: '#4B5563',
-    lineHeight: 22,
-    marginBottom: 8,
-    fontWeight: '400',
-  },
-  lastUpdated: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-  suggestionContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-  },
-  suggestionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  suggestionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-  refreshButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontStyle: 'italic',
-  }
-});
-
 export default function InsightsCard({ 
   type = 'info', 
   title, 
@@ -342,3 +240,105 @@ export default function InsightsCard({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 20,
+    marginVertical: 5,
+    borderWidth: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    opacity: 0.3,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  contentContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start' 
+  },
+  title: { 
+    fontSize: 18, 
+    fontWeight: '800', 
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  description: { 
+    fontSize: 15, 
+    color: '#4B5563',
+    lineHeight: 22,
+    marginBottom: 8,
+    fontWeight: '400',
+  },
+  lastUpdated: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  suggestionContainer: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+  },
+  suggestionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  suggestionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  refreshButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontStyle: 'italic',
+  }
+});

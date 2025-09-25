@@ -34,10 +34,10 @@ export default function SegmentedFilter({
           } else {
             // For text labels, wrap in Text component
             return (
-              <Text 
+              <Text
                 style={[
                   styles.optionText,
-                  isSelected && styles.selectedOptionText
+                  isSelected && styles.selectedOptionText,
                 ]}
               >
                 {option.label}
@@ -83,10 +83,10 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   selectedOptionText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   firstOption: {
     marginRight: 2,

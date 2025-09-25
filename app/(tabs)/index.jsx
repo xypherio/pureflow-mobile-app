@@ -177,7 +177,6 @@ export default function HomeScreen() {
         >
           {/* System Status Section */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={sectionLabelStyle}>System Status</Text>
             <StatusCard status="Active" battery="Low" solarPowered={true} />
           </View>
 
