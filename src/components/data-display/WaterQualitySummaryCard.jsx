@@ -51,7 +51,7 @@ const getStatusColor = (status) =>
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 20,
     marginBottom: 10,
     ...globalStyles.boxShadow,

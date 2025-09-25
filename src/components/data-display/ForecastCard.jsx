@@ -51,7 +51,7 @@ const stylesheet = StyleSheet.create({
     marginRight: 12,
     width: 190,
     height: 130,
-    borderRadius: 16,
+    borderRadius: 18,
     ...globalStyles.boxShadow,
   },
   breach: {

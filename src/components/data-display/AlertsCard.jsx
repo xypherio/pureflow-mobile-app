@@ -1,6 +1,6 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import * as Lucide from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 const parameterIconMap = {
@@ -13,21 +13,21 @@ const parameterIconMap = {
 
 const typeStyles = {
   success: {
-    bg: "#e6f9ec", // soft green
+    bg: "#e6f9ec",
     icon: Lucide.CheckCircle2,
     iconColor: "#22c55e",
     title: "#15803d",
     message: "#15803d",
   },
   warning: {
-    bg: "#fff7e6", // soft yellow
+    bg: "#fff7e6",
     icon: Lucide.AlertCircle,
     iconColor: "#f59e42",
     title: "#b45309",
     message: "#b45309",
   },
   error: {
-    bg: "#ffeaea", // soft red
+    bg: "#ffeaea",
     icon: Lucide.XCircle,
     iconColor: "#ef4444",
     title: "#b91c1c",
@@ -91,13 +91,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+    width: "100%",
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 3,
+    backgroundColor: "#e5e7eb",
+  },
+  dotActive: {
+    backgroundColor: "#3b82f6",
+  },
 });
 
 export default function AlertsCard({ alerts = [], interval = 4000 }) {
-  console.log("Number of alerts:", alerts.length);
   const [current, setCurrent] = useState(0);
-  const [scaleAnim] = useState(new Animated.Value(1));
-  const [opacityAnim] = useState(new Animated.Value(2));
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
 
   const hasAlertsWithParameter =
     Array.isArray(alerts) && alerts.some((a) => a && a.parameter);
@@ -117,49 +133,56 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
         },
       ];
 
+  // Animation and index logic
   useEffect(() => {
     if (displayAlerts.length <= 1) return;
-    const timer = setInterval(() => {
-      // Fade/scale out
+    let isMounted = true;
+    const animateToNext = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 0.95,
           duration: 220,
-          useNativeDriver: false,
+          useNativeDriver: true,
           easing: Easing.in(Easing.ease),
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
           duration: 220,
-          useNativeDriver: false,
+          useNativeDriver: true,
           easing: Easing.in(Easing.ease),
         }),
       ]).start(() => {
-        setCurrent((prev) => {
-          const next = (prev + 1) % displayAlerts.length;
-          return isNaN(next) ? 0 : next;
-        });
-        // Prep for fade/scale in
+        if (!isMounted) return;
+        setCurrent((prev) => (prev + 1) % displayAlerts.length);
         scaleAnim.setValue(1.05);
         opacityAnim.setValue(0);
         Animated.parallel([
           Animated.timing(scaleAnim, {
             toValue: 1,
             duration: 260,
-            useNativeDriver: false,
+            useNativeDriver: true,
             easing: Easing.out(Easing.ease),
           }),
           Animated.timing(opacityAnim, {
             toValue: 1,
             duration: 260,
-            useNativeDriver: false,
+            useNativeDriver: true,
             easing: Easing.out(Easing.ease),
           }),
         ]).start();
       });
-    }, interval);
-    return () => clearInterval(timer);
-  }, [displayAlerts, interval, scaleAnim, opacityAnim]);
+    };
+    const timer = setInterval(animateToNext, interval);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [displayAlerts.length, interval, scaleAnim, opacityAnim]);
+
+  // Reset current index if alerts change
+  useEffect(() => {
+    setCurrent(0);
+  }, [alerts]);
 
   if (!displayAlerts.length) {
     return null;
@@ -167,15 +190,14 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
 
   const alert = displayAlerts[current];
 
-  // Guard: If alert is undefined, render nothing (or a fallback)
   if (!alert) return null;
 
   const style = typeStyles[alert.type] || typeStyles.error;
+  // Use parameter icon if available, fallback to type icon, then HelpCircle
   const ParameterIcon =
-    alert.parameter && parameterIconMap[alert.parameter]
-      ? parameterIconMap[alert.parameter]
-      : Lucide.HelpCircle;
-  const LevelIcon = style.icon;
+    alert.parameter && parameterIconMap[alert.parameter.toLowerCase()]
+      ? parameterIconMap[alert.parameter.toLowerCase()]
+      : style.icon || Lucide.HelpCircle;
 
   // Helper to capitalize each word in a string
   function capitalizeWords(str) {
@@ -202,48 +224,64 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
   };
 
   return (
-    <Animated.View
-      style={[
-        stylesheet.cardContainer,
-        {
-          opacity: opacityAnim,
-          transform: [{ scale: scaleAnim }],
-          backgroundColor: style.bg,
-        },
-      ]}
-    >
-      {/* Color indicator bar */}
-      <View
-        style={[stylesheet.indicatorBar, { backgroundColor: getIndicatorColor() }]}
-      />
-      {/* Parameter icon */}
-      <View style={stylesheet.iconContainer}>
-        <ParameterIcon size={22} color={style.iconColor} />
-      </View>
-      {/* Texts */}
-      <View style={stylesheet.textContainer}>
-        <Text
-          style={[stylesheet.titleText, { color: style.title }]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {capitalizeWords(alert.title)}
-        </Text>
-        <Text
-          style={[stylesheet.messageText, { color: style.message }]}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {capitalizeFirst(alert.message)}
-        </Text>
-      </View>
-    </Animated.View>
+    <View style={{ alignItems: "center", width: "100%" }}>
+      <Animated.View
+        style={[
+          stylesheet.cardContainer,
+          {
+            opacity: opacityAnim,
+            transform: [{ scale: scaleAnim }],
+            backgroundColor: style.bg,
+          },
+        ]}
+      >
+        {/* Color indicator bar */}
+        <View
+          style={[stylesheet.indicatorBar, { backgroundColor: getIndicatorColor() }]}
+        />
+        {/* Parameter icon */}
+        <View style={stylesheet.iconContainer}>
+          <ParameterIcon size={22} color={style.iconColor} />
+        </View>
+        {/* Texts */}
+        <View style={stylesheet.textContainer}>
+          <Text
+            style={[stylesheet.titleText, { color: style.title }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {capitalizeWords(alert.title)}
+          </Text>
+          <Text
+            style={[stylesheet.messageText, { color: style.message }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {capitalizeFirst(alert.message)}
+          </Text>
+        </View>
+      </Animated.View>
+      {/* Indicator dots */}
+      {displayAlerts.length > 1 && (
+        <View style={styles.dotsContainer}>
+          {displayAlerts.map((_, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.dot,
+                idx === current && styles.dotActive,
+              ]}
+            />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
 const stylesheet = StyleSheet.create({
   cardContainer: {
-    borderRadius: 16,
+    borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 16,
     flexDirection: "row",

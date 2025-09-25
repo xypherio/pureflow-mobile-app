@@ -64,18 +64,17 @@ export default function StatusCard({
 
 const styles = StyleSheet.create({
   container: {
-    height: 60, // Reduced height since pills only show icons (except timer)
+    height: 55,
     backgroundColor: "#2455a9",
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   titleText: {
-    fontFamily: "Poppins",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
     color: "#f6fafd",
   },
   pillsContainer: {
@@ -90,7 +89,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#e0ecff",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: 999,
   },
   icon: {
     marginRight: 6,
