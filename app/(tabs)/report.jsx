@@ -10,7 +10,10 @@ import { generateInsight } from "@services/ai/geminiAPI";
 import EmptyState from "@ui/EmptyState";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import { generateCsv, shareFiles } from "@utils/exportUtils"; // Import new functions
-import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
+import {
+  generateWaterQualityReport,
+  prepareChartData,
+} from "@utils/reportUtils";
 import { useCallback, useEffect, useState } from "react"; // Removed useRef
 import {
   ActivityIndicator,
@@ -22,13 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import PdfGenerator from '../../src/PdfGenerator';
-
-const sectionLabelStyle = {
-  fontSize: 12,
-  color: "#1a2d51",
-  marginBottom: 8,
-};
+import PdfGenerator from "../../src/PdfGenerator";
 
 const PARAMETER_CONFIG = {
   pH: { unit: "", safeRange: "6.5 - 8.5", displayName: "pH" },
@@ -87,13 +84,16 @@ const ReportScreen = () => {
     if (chartData && chartData.length > 0) {
       // Silent debug logging - only in development
       if (__DEV__) {
-        console.log('Raw chart data sample:', chartData[0]);
-        console.log('All pH values:', chartData.map(item => ({
-          pH: item.pH,
-          datetime: item.datetime,
-          hasPH: 'pH' in item,
-          keys: Object.keys(item)
-        })));
+        console.log("Raw chart data sample:", chartData[0]);
+        console.log(
+          "All pH values:",
+          chartData.map((item) => ({
+            pH: item.pH,
+            datetime: item.datetime,
+            hasPH: "pH" in item,
+            keys: Object.keys(item),
+          }))
+        );
       }
     }
   }, [chartData]);
@@ -110,7 +110,7 @@ const ReportScreen = () => {
             status: "empty",
             message: "No data available for the selected time period",
             generatedAt: new Date().toISOString(),
-            overallStatus: "unknown"
+            overallStatus: "unknown",
           });
           setError(null);
           return;
@@ -140,12 +140,19 @@ const ReportScreen = () => {
   }, [chartData, chartError, activeFilter]);
 
   useEffect(() => {
-    if (reportData && reportData.parameters && Object.keys(reportData.parameters).length > 0) {
+    if (
+      reportData &&
+      reportData.parameters &&
+      Object.keys(reportData.parameters).length > 0
+    ) {
       const getInsight = async () => {
         setIsGeminiLoading(true);
         setGeminiResponse(null);
         try {
-          const insight = await generateInsight(reportData, "report-overall-insight");
+          const insight = await generateInsight(
+            reportData,
+            "report-overall-insight"
+          );
           setGeminiResponse(insight);
         } catch (error) {
           // Silent error handling - don't show console logs in UI
@@ -214,90 +221,60 @@ const ReportScreen = () => {
     refreshData();
   }, [refreshData]);
 
-  // Removed the generateAndHandleReport function as it's no longer needed.
-
   const handleExportPdf = useCallback(async () => {
     setIsExporting(true);
     try {
-      // Construct the report data for PdfGenerator
-      const pdfReportData = {
-        overallStatus: reportData.overallStatus || "No overall status available.",
-        ph: {
-          value: reportData.parameters?.pH?.average?.toFixed(2) || "N/A",
-          status: reportData.parameters?.pH?.status || "unknown",
-          details: reportData.parameters?.pH?.trend?.message || "No pH details available.",
-        },
-        temperature: {
-          value: reportData.parameters?.temperature?.average?.toFixed(2) || "N/A",
-          status: reportData.parameters?.temperature?.status || "unknown",
-          details: reportData.parameters?.temperature?.trend?.message || "No temperature details available.",
-        },
-        turbidity: {
-          value: reportData.parameters?.turbidity?.average?.toFixed(2) || "N/A",
-          status: reportData.parameters?.turbidity?.status || "unknown",
-          details: reportData.parameters?.turbidity?.trend?.message || "No turbidity details available.",
-        },
-        salinity: {
-          value: reportData.parameters?.salinity?.average?.toFixed(2) || "N/A",
-          status: reportData.parameters?.salinity?.status || "unknown",
-          details: reportData.parameters?.salinity?.trend?.message || "No salinity details available.",
-        },
-        tds: {
-          value: reportData.parameters?.tds?.average?.toFixed(2) || "N/A",
-          status: reportData.parameters?.tds?.status || "unknown",
-          details: reportData.parameters?.tds?.trend?.message || "No TDS details available.",
-        },
-        aiInsights: geminiResponse?.insights?.overallInsight || "No AI insights available.",
-        forecast: geminiResponse?.forecast?.overallForecast || "No forecast available.",
-      };
+      // Prepare unified export data
+      const exportData = prepareExportData(
+        reportData,
+        processedParameters,
+        geminiResponse
+      );
+      await PdfGenerator(exportData);
 
-      await PdfGenerator(pdfReportData);
       Alert.alert(
         `PDF Report Generated`,
         `Your water quality report has been successfully generated and shared.`,
-        [
-          {
-            text: "OK",
-            style: "cancel",
-          },
-        ]
+        [{ text: "OK", style: "cancel" }]
       );
     } catch (error) {
-      // Silent error handling - don't show console logs in UI
-      Alert.alert("Export Failed", "Unable to generate PDF report. Please try again.");
+      console.error("PDF Generation Error:", error);
+      Alert.alert(
+        "Export Failed",
+        "Unable to generate PDF report. Please try again."
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [reportData, geminiResponse]);
+  }, [reportData, processedParameters, geminiResponse]);
 
-  // New CSV export handler
   const handleExportCsv = useCallback(async () => {
     setIsExporting(true);
     try {
-      const insightsForReport = geminiResponse?.insights?.overallInsight || "No AI insights available.";
-      const { filePath } = await generateCsv(
+      // Prepare unified export data
+      const exportData = prepareExportData(
+        reportData,
         chartData,
-        processedParameters,
-        insightsForReport
+        geminiResponse
       );
+      const { filePath } = await generateCsv(exportData);
 
-      Alert.alert(
-        `CSV Report Generated`,
-        `Report saved to: ${filePath}`,
-        [
-          {
-            text: "OK",
-            onPress: () => shareFiles([filePath], "Share Water Quality Report"),
-          },
-        ]
-      );
+      Alert.alert(`CSV Report Generated`, `Report saved to: ${filePath}`, [
+        {
+          text: "OK",
+          onPress: () => shareFiles([filePath], "Share Water Quality Report"),
+        },
+      ]);
     } catch (error) {
-      // Silent error handling - don't show console logs in UI
-      Alert.alert("Export Failed", "Unable to generate CSV report. Please try again.");
+      console.error("CSV Generation Error:", error);
+      Alert.alert(
+        "Export Failed",
+        "Unable to generate CSV report. Please try again."
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [chartData, processedParameters, geminiResponse]);
+  }, [chartData, reportData, processedParameters, geminiResponse]);
 
   // Render loading state
   if (loading || (chartData === null && !error)) {
@@ -318,18 +295,18 @@ const ReportScreen = () => {
           disabled={true}
         />
         <GlobalWrapper>
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingContent}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Loading report data...</Text>
+          <View style={styles.loadingContainer}>
+            <View style={styles.loadingContent}>
+              <ActivityIndicator size="large" color="#3b82f6" />
+              <Text style={styles.loadingText}>Loading report data...</Text>
+            </View>
           </View>
-        </View>
         </GlobalWrapper>
 
-      <ExportToggleButton 
-        onExportPdf={handleExportPdf}
-        isExporting={isExporting}
-      />
+        <ExportToggleButton
+          onExportPdf={handleExportPdf}
+          isExporting={isExporting}
+        />
       </>
     );
   }
@@ -337,77 +314,33 @@ const ReportScreen = () => {
   // Render error state
   if (reportData.status === "error" || error) {
     return (
-      <View style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 24,
-        backgroundColor: "#fff",
-      }}>
-        <View style={{
-          backgroundColor: "#ffeaea",
-          borderRadius: 16,
-          padding: 28,
-          alignItems: "center",
-          width: "100%",
-          maxWidth: 380,
-          shadowColor: "#ef4444",
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 2,
-        }}>
-          <Ionicons name="warning-outline" size={54} color="#ef4444" style={{ marginBottom: 18 }} />
-          <Text style={{
-            fontSize: 22,
-            fontWeight: "bold",
-            color: "#b91c1c",
-            marginBottom: 8,
-            textAlign: "center",
-          }}>
+      <View style={styles.errorContainer}>
+        <View style={styles.errorCard}>
+          <Ionicons
+            name="warning-outline"
+            size={54}
+            color="#ef4444"
+            style={styles.errorIcon}
+          />
+          <Text style={styles.errorTitle}>
             Report Unavailable
           </Text>
-          <Text style={{
-            color: "#b91c1c",
-            fontSize: 16,
-            textAlign: "center",
-            marginBottom: 18,
-          }}>
-            {error?.message || reportData.message || "Failed to load report data"}
+          <Text style={styles.errorMessage}>
+            {error?.message ||
+              reportData.message ||
+              "Failed to load report data"}
           </Text>
           <TouchableOpacity
-            style={{
-              backgroundColor: "#3b82f6",
-              paddingHorizontal: 28,
-              paddingVertical: 12,
-              borderRadius: 8,
-              marginTop: 6,
-              marginBottom: 2,
-            }}
+            style={styles.retryButton}
             onPress={onRefresh}
           >
-            <Text style={{
-              color: "#fff",
-              fontWeight: "600",
-              fontSize: 16,
-              textAlign: "center",
-            }}>
+            <Text style={styles.retryButtonText}>
               Try Again
             </Text>
           </TouchableOpacity>
           {__DEV__ && error?.details && (
-            <View style={{
-              marginTop: 18,
-              padding: 10,
-              backgroundColor: "#fff",
-              borderRadius: 8,
-              width: "100%",
-            }}>
-              <Text style={{
-                fontSize: 12,
-                color: "#b91c1c",
-                fontFamily: "monospace",
-              }}>
+            <View style={styles.errorDetailsContainer}>
+              <Text style={styles.errorDetailsText}>
                 {error.details}
               </Text>
             </View>
@@ -426,7 +359,7 @@ const ReportScreen = () => {
           icon: "partly",
         }}
       />
-      
+
       <SegmentedFilter
         options={timePeriodOptions}
         selectedValue={activeFilter}
@@ -445,7 +378,7 @@ const ReportScreen = () => {
           }
         >
           {!loading && chartData && chartData.length === 0 ? (
-            <EmptyState 
+            <EmptyState
               icon="document-text-outline"
               title="No Data Available"
               description="There is no data available to generate the report for the selected time period."
@@ -456,8 +389,8 @@ const ReportScreen = () => {
             />
           ) : (
             <>
-              <View style={{ marginBottom: 16, marginTop: 60 }}>
-                <Text style={sectionLabelStyle}>Water Quality Summary</Text>
+              <View style={styles.summaryContainer}>
+                <Text style={styles.sectionLabel}>Water Quality Summary</Text>
                 <WaterQualitySummaryCard
                   qualityLevel={reportData.overallStatus || "normal"}
                   lastUpdated={
@@ -476,8 +409,8 @@ const ReportScreen = () => {
                 />
               </View>
 
-              <View styles={{ marginBottom: 14 }}>
-                <Text style={sectionLabelStyle}>Key Parameters Report</Text>
+              <View style={styles.parametersContainer}>
+                <Text style={styles.sectionLabel}>Key Parameters Report</Text>
                 {processedParameters.map((param, index) => (
                   <ParameterCard
                     key={param.parameter}
@@ -492,19 +425,24 @@ const ReportScreen = () => {
                 ))}
               </View>
 
-              <View style={{ marginBottom: 16, marginTop: 10 }}>
-                <Text style={sectionLabelStyle}>
+              <View style={styles.insightsContainer}>
+                <Text style={styles.sectionLabel}>
                   Quality Report and Recommendation
                 </Text>
                 {isGeminiLoading ? (
-                  <ActivityIndicator style={{ marginVertical: 20 }} color="#3b82f6" />
+                  <ActivityIndicator
+                    style={styles.insightsLoading}
+                    color="#3b82f6"
+                  />
                 ) : geminiResponse ? (
                   <>
                     {/* Overall Insight Card */}
                     <InsightsCard
                       type="info"
                       title="Overall Water Quality Insight"
-                      description={geminiResponse?.insights?.overallInsight || ""}
+                      description={
+                        geminiResponse?.insights?.overallInsight || ""
+                      }
                       timestamp={reportData.generatedAt}
                       componentId="report-overall-insight" // Unique componentId
                       autoRefresh={false} // Insights for report are generated once
@@ -525,15 +463,18 @@ const ReportScreen = () => {
                     ))}
                   </>
                 ) : (
-                  <Text>Failed to load insights. Please check your Gemini API quota or try again later.</Text>
+                  <Text style={styles.insightsFailedText}>
+                    Failed to load insights. Please check your Gemini API quota
+                    or try again later.
+                  </Text>
                 )}
               </View>
             </>
           )}
         </ScrollView>
       </GlobalWrapper>
-      
-      <ExportToggleButton 
+
+      <ExportToggleButton
         onExportPdf={handleExportPdf}
         onExportCsv={handleExportCsv}
         isExporting={isExporting}
@@ -591,20 +532,104 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     marginTop: 250,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center'
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingContent: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: 24,
     borderRadius: 8,
   },
   loadingText: {
     marginTop: 16,
-    color: '#666',
+    color: "#666",
     fontSize: 16,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: "#1a2d51",
+    marginBottom: 8,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    backgroundColor: "#fff",
+  },
+  errorCard: {
+    backgroundColor: "#ffeaea",
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 380,
+    shadowColor: "#ef4444",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  errorIcon: {
+    marginBottom: 18,
+  },
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#b91c1c",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  errorMessage: {
+    color: "#b91c1c",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 18,
+  },
+  retryButton: {
+    backgroundColor: "#3b82f6",
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  errorDetailsContainer: {
+    marginTop: 18,
+    padding: 10,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    width: "100%",
+  },
+  errorDetailsText: {
+    fontSize: 12,
+    color: "#b91c1c",
+    fontFamily: "monospace",
+  },
+  summaryContainer: {
+    marginBottom: 16,
+    marginTop: 60,
+  },
+  parametersContainer: {
+    marginBottom: 14,
+  },
+  insightsContainer: {
+    marginBottom: 16,
+    marginTop: 10,
+  },
+  insightsLoading: {
+    marginVertical: 20,
+  },
+  insightsFailedText: {
+    fontSize: 16,
+    color: "#666",
   },
 });
 export default ReportScreen;
-

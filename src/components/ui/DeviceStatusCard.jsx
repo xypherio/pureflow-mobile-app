@@ -17,11 +17,24 @@ export default function StatusCard({
   const isActive = status === "Active";
   const isBatteryLow = battery === "Low";
 
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(30);
 
   useEffect(() => {
+    const syncCountdown = () => {
+      // Sync countdown with 30-second backend fetch interval
+      const now = Date.now();
+      const remainder = now % 30000; // 30 seconds in milliseconds
+      const remainingSeconds = Math.ceil((30000 - remainder) / 1000);
+
+      setCountdown(remainingSeconds === 0 ? 30 : remainingSeconds);
+    };
+
+    // Initial sync
+    syncCountdown();
+
+    // Update every second
     const interval = setInterval(() => {
-      setCountdown((prev) => (prev <= 1 ? 15 : prev - 1));
+      setCountdown((prev) => (prev <= 1 ? 30 : prev - 1));
     }, 1000);
 
     return () => clearInterval(interval);

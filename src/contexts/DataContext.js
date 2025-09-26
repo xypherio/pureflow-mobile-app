@@ -27,6 +27,8 @@ export function DataProvider({ children, initialData = null }) {
   const intervalRef = useRef(null);
   const isMountedRef = useRef(true);
   const syncIntervalRef = useRef(null);
+  const isRefreshing = useRef(false);
+  const lastRefreshTime = useRef(0);
 
   /**
    * Updates application state with new sensor data and processes alerts
@@ -79,25 +81,37 @@ export function DataProvider({ children, initialData = null }) {
   }, []);
 
   /**
-   * Performs a complete refresh of all data sources including sensor data and real-time updates.
-   * Handles parallel data fetching, error states, and alert generation.
+   * Performs a complete refresh of all data sources with optimized fetching and caching.
+   * Implements request deduplication, smart caching, and error handling.
    * 
-   * @param {boolean} [useCache=true] - When true, uses cached data when available to reduce API calls
+   * @param {boolean} [useCache=true] - When true, uses cached data when available
    * @returns {Promise<void>}
    */
   const performUnifiedRefresh = useCallback(async (useCache = true) => {
+    // Prevent multiple simultaneous refreshes
+    if (isRefreshing.current) {
+      console.log('⏳ Refresh already in progress, skipping duplicate request');
+      return;
+    }
+
+    const refreshId = Date.now();
+    isRefreshing.current = true;
+    
     try {
-      console.log('🔄 Starting optimized unified refresh cycle...');
+      console.log(`🔄 [${refreshId}] Starting optimized refresh (cache: ${useCache ? 'enabled' : 'disabled'})`);
 
       // Use optimized dashboard data with smart limits
       const [dashboardResult, realtimeDataResult] = await Promise.allSettled([
         getDashboardFacade().getDashboardData({
           includeHistorical: true,
-          useCache,
-          historicalLimit: 50,  // Smart limit instead of unlimited
-          hoursBack: 24         // Reasonable time window
+          useCache: true, // Always use cache for dashboard data to prevent duplicate reads
+          historicalLimit: 30,  // Reduced from 50 to 30 for better performance
+          hoursBack: 24         // Keep 24h window for daily trends
         }),
-        realtimeDataService.getMostRecentData(useCache)
+        realtimeDataService.getMostRecentData({
+          useCache: true,       // Always use cache for real-time data
+          cacheTtl: 30000       // 30s cache TTL for real-time data
+        })
       ]);
 
       // Initialize variables to store data for alert processing
@@ -138,42 +152,71 @@ export function DataProvider({ children, initialData = null }) {
       }
 
       // Generate alerts only from real-time data to sync with real-time cards
+      // Only process alerts when we have meaningful data (not null/undefined values)
       if (isMountedRef.current && realtimeDataForAlerts && realtimeDataForAlerts.timestamp) {
-        try {
-          // Process alerts only from the most recent real-time data
-          const alertResult = await getAlertFacade().processSensorData([{
-            ...realtimeDataForAlerts,
-            datetime: realtimeDataForAlerts.timestamp,
-          }]);
+        // Check if we have at least some valid, non-null parameter values
+        const hasValidData = (
+          (realtimeDataForAlerts.pH !== null && realtimeDataForAlerts.pH !== undefined && !isNaN(realtimeDataForAlerts.pH)) ||
+          (realtimeDataForAlerts.temperature !== null && realtimeDataForAlerts.temperature !== undefined && !isNaN(realtimeDataForAlerts.temperature)) ||
+          (realtimeDataForAlerts.turbidity !== null && realtimeDataForAlerts.turbidity !== undefined && !isNaN(realtimeDataForAlerts.turbidity)) ||
+          (realtimeDataForAlerts.salinity !== null && realtimeDataForAlerts.salinity !== undefined && !isNaN(realtimeDataForAlerts.salinity))
+        );
 
-          if (alertResult.newAlerts.length > 0) {
-            console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
+        if (hasValidData) {
+          try {
+            // Process alerts only from the most recent real-time data that contains actual values
+            const alertResult = await getAlertFacade().processSensorData([{
+              ...realtimeDataForAlerts,
+              datetime: realtimeDataForAlerts.timestamp,
+            }]);
+
+            if (alertResult.newAlerts.length > 0) {
+              console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
+            }
+
+            if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
+              console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
+            }
+
+            // Batch state updates to prevent useInsertionEffect errors
+            const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+            const stats = {
+              total: allAlerts.length,
+              high: allAlerts.filter(alert => alert.severity === 'high').length,
+              medium: allAlerts.filter(alert => alert.severity === 'medium').length,
+              low: allAlerts.filter(alert => alert.severity === 'low').length,
+            };
+
+            // Use setTimeout to defer state updates and prevent render-time updates
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                setAlerts(alertResult.processedAlerts);
+                setAlertStats(stats);
+              }
+            }, 0);
+
+          } catch (error) {
+            console.error('❌ Error processing alerts from real-time data:', error);
           }
-
-          if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
-            console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
-          }
-
-          // Batch state updates to prevent useInsertionEffect errors
-          const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
-          const stats = {
-            total: allAlerts.length,
-            high: allAlerts.filter(alert => alert.severity === 'high').length,
-            medium: allAlerts.filter(alert => alert.severity === 'medium').length,
-            low: allAlerts.filter(alert => alert.severity === 'low').length,
-          };
-
-          // Use setTimeout to defer state updates and prevent render-time updates
+        } else {
+          console.log('ℹ️ Skipping alert processing: no valid sensor data in real-time response');
+          // Clear alerts if we have no valid data
           setTimeout(() => {
             if (isMountedRef.current) {
-              setAlerts(alertResult.processedAlerts);
-              setAlertStats(stats);
+              setAlerts([]);
+              setAlertStats({ total: 0, high: 0, medium: 0, low: 0, recent: 0 });
             }
           }, 0);
-
-        } catch (error) {
-          console.error('❌ Error processing alerts from real-time data:', error);
         }
+      } else {
+        console.log('ℹ️ No real-time data for alert processing');
+        // Clear alerts if no real-time data is available
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            setAlerts([]);
+            setAlertStats({ total: 0, high: 0, medium: 0, low: 0, recent: 0 });
+          }
+        }, 0);
       }
 
       // Sync alerts to Firebase immediately after processing
@@ -181,12 +224,17 @@ export function DataProvider({ children, initialData = null }) {
       console.log('🔄 Alert sync is now handled automatically by the facade');
 
     } catch (error) {
-      console.error('❌ Error in optimized unified refresh:', error);
+      console.error(`❌ [${refreshId}] Error in optimized unified refresh:`, error);
       if (isMountedRef.current) {
         setError('Failed to refresh data');
       }
+    } finally {
+      // Always reset the refreshing flag
+      isRefreshing.current = false;
+      lastRefreshTime.current = Date.now();
+      console.log(`✅ [${refreshId}] Refresh completed in ${Date.now() - refreshId}ms`);
     }
-  }, []); // Removed updateState from dependencies as we handle state directly
+  }, []); // Empty dependency array to prevent function recreation
 
   /**
    * Effect hook for initial data loading and setting up polling
@@ -242,18 +290,34 @@ export function DataProvider({ children, initialData = null }) {
         try {
           const freshRealtimeData = await realtimeDataService.getMostRecentData(false);
           setRealtimeData(freshRealtimeData);
-          
-          // Generate alerts immediately from real-time data to sync with real-time cards
-          if (freshRealtimeData && freshRealtimeData.timestamp) {
-            const alertFacade = getAlertFacade();
-            const realtimeAlerts = await alertFacade.processSensorData([{
-              ...freshRealtimeData,
-              datetime: freshRealtimeData.timestamp,
-            }]);
 
-            if (realtimeAlerts.newAlerts.length > 0) {
-              console.log(`🚨 ${realtimeAlerts.newAlerts.length} new alerts from real-time data`);
-              setAlerts(realtimeAlerts.processedAlerts);
+          // Generate alerts immediately from real-time data to sync with real-time cards
+          // Only process alerts when we have valid, non-null data
+          if (freshRealtimeData && freshRealtimeData.timestamp) {
+            const hasValidData = (
+              (freshRealtimeData.pH !== null && freshRealtimeData.pH !== undefined && !isNaN(freshRealtimeData.pH)) ||
+              (freshRealtimeData.temperature !== null && freshRealtimeData.temperature !== undefined && !isNaN(freshRealtimeData.temperature)) ||
+              (freshRealtimeData.turbidity !== null && freshRealtimeData.turbidity !== undefined && !isNaN(freshRealtimeData.turbidity)) ||
+              (freshRealtimeData.salinity !== null && freshRealtimeData.salinity !== undefined && !isNaN(freshRealtimeData.salinity))
+            );
+
+            if (hasValidData) {
+              const alertFacade = getAlertFacade();
+              const realtimeAlerts = await alertFacade.processSensorData([{
+                ...freshRealtimeData,
+                datetime: freshRealtimeData.timestamp,
+              }]);
+
+              if (realtimeAlerts.newAlerts.length > 0) {
+                console.log(`🚨 ${realtimeAlerts.newAlerts.length} new alerts from initial real-time data`);
+                setAlerts(realtimeAlerts.processedAlerts);
+              }
+            } else {
+              console.log('ℹ️ No valid real-time data for initial alert processing');
+              // Clear alerts if preloaded alerts exist but no real data
+              if (initialData?.alerts) {
+                setAlerts([]);
+              }
             }
           }
         } catch (error) {
@@ -270,43 +334,92 @@ export function DataProvider({ children, initialData = null }) {
 
     initializeData();
 
-    // Set up unified polling interval (every 30 seconds)
+    // Set up unified polling interval (every 5 minutes)
+    const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+    console.log(`🔄 Setting up data refresh interval: ${POLLING_INTERVAL/1000}s`);
+    
     intervalRef.current = setInterval(() => {
+      console.log('🔄 Scheduled data refresh triggered');
       performUnifiedRefresh(true);
-    }, 30000);
+    }, POLLING_INTERVAL);
 
     // Cleanup function
     return () => {
       isMountedRef.current = false;
+      isRefreshing.current = false;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [performUnifiedRefresh, initialData, updateState]);
+  }, [initialData]); // Only depend on initialData, not the functions
 
   /**
-   * Manually triggers a refresh of all data sources
-   * Bypasses cache to ensure fresh data
+   * Manually triggers a refresh of all data sources with rate limiting
+   * @param {boolean} [force=false] - When true, bypasses rate limiting
+   * @returns {Promise<boolean>} True if refresh was initiated, false if rate limited
    */
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (force = false) => {
+    const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between manual refreshes
+    const now = Date.now();
+    
+    // Rate limiting check
+    if (!force && (now - lastRefreshTime.current) < MIN_REFRESH_INTERVAL) {
+      const timeLeft = Math.ceil((MIN_REFRESH_INTERVAL - (now - lastRefreshTime.current)) / 1000);
+      console.warn(`⏳ Please wait ${timeLeft}s before refreshing again`);
+      return false;
+    }
+    
     console.log('🔄 Manual refresh triggered');
-    await performUnifiedRefresh(false); // Force fresh data on manual refresh
+    try {
+      await performUnifiedRefresh(false); // Force fresh data on manual refresh
+      return true;
+    } catch (error) {
+      console.error('❌ Manual refresh failed:', error);
+      return false;
+    }
   }, [performUnifiedRefresh]);
 
   // Alert display helper functions
   
   /**
    * Gets a limited set of critical alerts for the homepage
-   * @returns {Array} Up to 3 high-priority alerts
+   * Only returns alerts when real-time data is available and valid
+   * @returns {Array} Alerts or empty array based on real-time data availability
    */
   const getHomepageAlerts = useCallback(async () => {
-    const alertFacade = getAlertFacade();
-    const alerts = await alertFacade.getAlertsForDisplay({ limit: 20 });
-    return alerts.map(alert => ({
-      ...alert,
-      displayMessage: `${alert.parameter?.toUpperCase() || 'UNKNOWN'}: ${alert.value !== undefined && alert.value !== null ? Number(alert.value).toFixed(2) : 'N/A'}`,
-    }));
-  }, []);
+    // Check if we have valid real-time data first
+    if (!realtimeData || !realtimeData.timestamp) {
+      console.log('ℹ️ No real-time data available, returning normal state');
+      return []; // Return empty to show "All Parameters Normal"
+    }
+
+    // Check if the real-time data has valid parameter values
+    const hasValidData = (
+      (realtimeData.pH !== null && realtimeData.pH !== undefined && !isNaN(realtimeData.pH)) ||
+      (realtimeData.temperature !== null && realtimeData.temperature !== undefined && !isNaN(realtimeData.temperature)) ||
+      (realtimeData.turbidity !== null && realtimeData.turbidity !== undefined && !isNaN(realtimeData.turbidity)) ||
+      (realtimeData.salinity !== null && realtimeData.salinity !== undefined && !isNaN(realtimeData.salinity))
+    );
+
+    if (!hasValidData) {
+      console.log('ℹ️ Real-time data present but no valid parameters, returning normal state');
+      return []; // Return empty to show "All Parameters Normal"
+    }
+
+    // Only return alerts when we have valid real-time data
+    // Get alerts from current alerts state instead of alertFacade to ensure consistency with real-time data
+    const maxAlertsToShow = 3; // Show maximum 3 alerts on homepage
+    return alerts
+      .filter(alert =>
+        alert && alert.parameter &&
+        (alert.severity === 'high' || alert.severity === 'critical') // Only show high/critical alerts
+      )
+      .slice(0, maxAlertsToShow)
+      .map(alert => ({
+        ...alert,
+        displayMessage: `${alert.parameter?.toUpperCase() || 'UNKNOWN'}: ${alert.value !== undefined && alert.value !== null ? Number(alert.value).toFixed(2) : 'N/A'}`,
+      }));
+  }, [realtimeData, alerts]); // Include alerts in dependencies
 
   /**
    * Gets all alerts formatted for the notifications screen

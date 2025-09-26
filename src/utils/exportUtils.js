@@ -1,13 +1,40 @@
-// Enhanced exportUtils.js
+/**
+ * @file exportUtils.js
+ * @description Utility functions for exporting and sharing reports in various formats.
+ * Provides functionality for generating CSV reports, sharing files, and managing temporary files.
+ * 
+ * Key Features:
+ * - CSV report generation with comprehensive water quality data
+ * - Cross-platform file sharing capabilities
+ * - Memory-efficient file handling and cleanup
+ * - Data validation and error handling
+ * - Support for AI-generated insights and recommendations
+ */
+
+// Core Dependencies
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 
 /**
- * Shares files on native platforms with better error handling
- * @param {Array<string>} filePaths - Array of file paths to share
- * @param {string} title - Title for the share dialog
- * @param {string} mimeType - MIME type of the file
+ * ==============================================
+ * FILE SHARING UTILITIES
+ * ==============================================
+ */
+
+/**
+ * Shares files on native platforms with comprehensive error handling and fallback mechanisms.
+ * 
+ * @async
+ * @function shareFiles
+ * @param {Array<string>} filePaths - Array of absolute file paths to share
+ * @param {string} [title='Share Report'] - Title displayed in the share dialog
+ * @param {string} [mimeType='text/csv'] - MIME type of the file being shared
+ * @throws {Error} When no files are provided or file doesn't exist
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * await shareFiles(['/path/to/report.csv'], 'Water Quality Report', 'text/csv');
  */
 const shareFiles = async (filePaths, title = 'Share Report', mimeType = 'text/csv') => {
   try {
@@ -45,82 +72,89 @@ const shareFiles = async (filePaths, title = 'Share Report', mimeType = 'text/cs
 };
 
 /**
- * Generates a comprehensive CSV file from chart data and parameters
- * @param {Array<Object>} chartData - Raw chart data points
- * @param {Array<Object>} processedParameters - Processed parameter data
- * @param {string} insights - AI-generated insights text
- * @param {Object} reportMetadata - Additional report metadata
- * @returns {Promise<{filePath: string, fileName: string}>} - Path to the generated CSV file
+ * ==============================================
+ * REPORT GENERATION UTILITIES
+ * ==============================================
  */
-const generateCsv = async (chartData, processedParameters, insights, reportMetadata = {}) => {
+
+/**
+ * Generates a well-formatted CSV file from the provided export data.
+ * The CSV includes metadata, parameter summaries, AI insights, and raw data.
+ * 
+ * @async
+ * @function generateCsv
+ * @param {Object} exportData - The prepared export data containing report information
+ * @param {Object} exportData.metadata - Report metadata (title, timestamp, etc.)
+ * @param {Object} exportData.parameters - Water quality parameters and their values
+ * @param {Object} exportData.insights - AI-generated insights and recommendations
+ * @param {Array} exportData.rawData - Raw sensor data points
+ * @returns {Promise<{filePath: string, fileName: string, size: number}>} - File information
+ * @throws {Error} If CSV generation fails
+ * 
+ * @example
+ * const csvInfo = await generateCsv({
+ *   metadata: { title: 'Water Quality Report' },
+ *   parameters: { /* ... *\/ },
+ *   insights: { /* ... *\/ },
+ *   rawData: [/* ... *\/]
+ * });
+ */
+const generateCsv = async (exportData) => {
   try {
+    const { metadata, parameters, insights, rawData } = exportData;
     const timestamp = new Date().toISOString().split('T')[0];
     const csvFileName = `PureFlow_Report_${timestamp}.csv`;
-    const documentsPath = FileSystem.documentDirectory;
-    const filePath = `${documentsPath}${csvFileName}`;
+    const filePath = `${FileSystem.documentDirectory}${csvFileName}`;
 
     let csvContent = '';
 
     // Report Header
-    csvContent += `PureFlow Water Quality Report\n`;
-    csvContent += `Generated On: ${new Date().toLocaleString()}\n`;
-    csvContent += `Time Period: ${reportMetadata.timePeriod || 'Not specified'}\n`;
-    csvContent += `Total Data Points: ${chartData?.length || 0}\n`;
+    csvContent += `${metadata.title}\n`;
+    csvContent += `Generated On: ${new Date(metadata.generatedAt).toLocaleString()}\n`;
+    csvContent += `Time Period: ${metadata.timePeriod}\n`;
+    csvContent += `Overall Status: ${metadata.overallStatus}\n`;
+    csvContent += `Water Quality Index: ${metadata.wqi.value} (${metadata.wqi.status})\n\n`;
+
+    // Overall Insights
+    csvContent += `Overall Insights\n`;
+    csvContent += `"${insights.overall.replace(/"/g, '""')}"\n\n`;
+
+    // Parameter Summary
+    csvContent += `Parameter Summary\n`;
+    csvContent += `Parameter,Value,Unit,Status,Safe Range,Min,Max,Details\n`;
+    
+    Object.values(parameters).forEach(param => {
+      csvContent += `"${param.displayName}",${param.value},${param.unit},${param.status},"${param.safeRange}",${param.min},${param.max},"${param.details.replace(/"/g, '""')}"\n`;
+    });
+    
     csvContent += `\n`;
 
-    // Overall Insights Section
-    if (insights) {
-      csvContent += `AI-Generated Insights\n`;
-      csvContent += `"${insights.replace(/"/g, '""').replace(/\n/g, ' ')}"\n`;
-      csvContent += `\n`;
-    }
-
-    // Parameter Overview Section
-    if (processedParameters && processedParameters.length > 0) {
-      csvContent += `Parameter Summary\n`;
-      csvContent += `Parameter,Current Value,Unit,Status,Safe Range,Min Value,Max Value,Analysis\n`;
-      
-      processedParameters.forEach(param => {
-        const analysis = (param.analysis || '').replace(/"/g, '""').replace(/\n/g, ' ');
-        csvContent += `${param.parameter || ''},${param.value || ''},${param.unit || ''},${param.status || ''},${param.safeRange || ''},${param.minValue || ''},${param.maxValue || ''},"${analysis}"\n`;
+    // AI Recommendations
+    if (insights.recommendations.length > 0) {
+      csvContent += `AI Recommendations\n`;
+      insights.recommendations.forEach((rec, index) => {
+        csvContent += `${index + 1}. ${rec.recommendation || rec.details || 'No recommendation'}\n`;
       });
       csvContent += `\n`;
     }
 
-    // Raw Sensor Data Section
-    if (chartData && chartData.length > 0) {
+    // Raw Data
+    if (rawData.length > 0) {
       csvContent += `Raw Sensor Data\n`;
-      
-      // Get all unique keys from the data
-      const allKeys = new Set();
-      chartData.forEach(item => {
-        if (item && typeof item === 'object') {
-          Object.keys(item).forEach(key => allKeys.add(key));
-        }
-      });
-      
-      const headers = Array.from(allKeys);
+      const headers = Object.keys(rawData[0] || {});
       csvContent += headers.join(',') + '\n';
       
-      // Add data rows
-      chartData.forEach(item => {
-        if (item && typeof item === 'object') {
-          const row = headers.map(key => {
-            let value = item[key];
-            if (value === null || value === undefined) {
-              return '';
-            }
-            // Handle different data types
-            if (typeof value === 'string') {
-              // Escape quotes and wrap in quotes if contains comma or quote
-              if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-                return `"${value.replace(/"/g, '""')}"`;
-              }
-            }
-            return value;
-          });
-          csvContent += row.join(',') + '\n';
-        }
+      rawData.forEach(item => {
+        const row = headers.map(header => {
+          let value = item[header];
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'object') return JSON.stringify(value).replace(/"/g, '""');
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        });
+        csvContent += row.join(',') + '\n';
       });
     }
 
@@ -143,9 +177,21 @@ const generateCsv = async (chartData, processedParameters, insights, reportMetad
 };
 
 /**
- * Validates file before sharing
- * @param {string} filePath - Path to the file
- * @returns {Promise<boolean>} - Whether file is valid
+ * ==============================================
+ * FILE VALIDATION UTILITIES
+ * ==============================================
+ */
+
+/**
+ * Validates if a file exists and has content before sharing.
+ * 
+ * @async
+ * @function validateFile
+ * @param {string} filePath - Absolute path to the file to validate
+ * @returns {Promise<boolean>} - True if file exists and has content, false otherwise
+ * 
+ * @example
+ * const isValid = await validateFile('/path/to/file.csv');
  */
 const validateFile = async (filePath) => {
   try {
@@ -158,8 +204,75 @@ const validateFile = async (filePath) => {
 };
 
 /**
- * Clean up temporary files
- * @param {Array<string>} filePaths - Array of file paths to clean up
+ * ==============================================
+ * DATA PREPARATION UTILITIES
+ * ==============================================
+ */
+
+/**
+ * Transforms raw report data into a standardized format for export.
+ * Merges report data, processed parameters, and AI insights into a single object.
+ * 
+ * @function prepareExportData
+ * @param {Object} reportData - The main report data object containing metadata and WQI
+ * @param {Array} processedParameters - Processed water quality parameter data
+ * @param {Object} geminiResponse - AI-generated insights and recommendations
+ * @returns {Object} - Unified export data structure
+ * 
+ * @example
+ * const exportData = prepareExportData(reportData, processedParameters, geminiResponse);
+ */
+const prepareExportData = (reportData, processedParameters, geminiResponse) => {
+  // Base report metadata
+  const exportData = {
+    metadata: {
+      title: "PureFlow Water Quality Report",
+      generatedAt: new Date().toISOString(),
+      timePeriod: reportData.timePeriod || "N/A",
+      overallStatus: reportData.overallStatus || "normal",
+      wqi: reportData.wqi || { value: 0, status: "unknown" }
+    },
+    
+    // Parameters data
+    parameters: {
+      ph: formatParameterData(reportData.parameters?.pH, "pH", "", "6.5 - 8.5"),
+      temperature: formatParameterData(reportData.parameters?.temperature, "Temperature", "°C", "26 - 30°C"),
+      turbidity: formatParameterData(reportData.parameters?.turbidity, "Turbidity", "NTU", "0 - 50 NTU"),
+      salinity: formatParameterData(reportData.parameters?.salinity, "Salinity", "ppt", "0 - 5 ppt"),
+      tds: formatParameterData(reportData.parameters?.tds, "TDS", "mg/L", "0 - 1000 mg/L")
+    },
+    
+    // AI insights and recommendations
+    insights: {
+      overall: geminiResponse?.insights?.overallInsight || "No AI insights available",
+      forecast: geminiResponse?.forecast?.overallForecast || "No forecast available",
+      recommendations: geminiResponse?.suggestions || []
+    },
+    
+    // Raw data for CSV export
+    rawData: processedParameters || []
+  };
+  
+  return exportData;
+};
+
+/**
+ * ==============================================
+ * FILE MANAGEMENT UTILITIES
+ * ==============================================
+ */
+
+/**
+ * Asynchronously deletes temporary files to free up storage space.
+ * Silently handles errors to prevent disruption of main application flow.
+ * 
+ * @async
+ * @function cleanupFiles
+ * @param {Array<string>} filePaths - Array of absolute file paths to delete
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * await cleanupFiles(['/path/to/temp1.csv', '/path/to/temp2.pdf']);
  */
 const cleanupFiles = async (filePaths) => {
   try {
@@ -176,9 +289,55 @@ const cleanupFiles = async (filePaths) => {
 };
 
 /**
- * Get file size in human readable format
+ * Formats water quality parameter data for consistent display in exports.
+ * 
+ * @private
+ * @function formatParameterData
+ * @param {Object|null} paramData - Raw parameter data
+ * @param {string} displayName - Human-readable parameter name
+ * @param {string} unit - Measurement unit (e.g., '°C', 'NTU')
+ * @param {string} safeRange - Recommended safe range for the parameter
+ * @returns {Object} - Formatted parameter data object
+ */
+const formatParameterData = (paramData, displayName, unit, safeRange) => {
+  if (!paramData) {
+    return {
+      displayName,
+      value: "N/A",
+      unit,
+      safeRange,
+      status: "unknown",
+      details: "No data available",
+      average: 0,
+      min: 0,
+      max: 0,
+      trend: { message: "No trend data" }
+    };
+  }
+  
+  return {
+    displayName,
+    value: paramData.average?.toFixed(2) || "0",
+    unit,
+    safeRange,
+    status: paramData.status || "normal",
+    details: paramData.trend?.message || "No details available",
+    average: paramData.average || 0,
+    min: paramData.min || 0,
+    max: paramData.max || 0,
+    trend: paramData.trend || { message: "No trend data" }
+  };
+};
+
+/**
+ * Converts file size in bytes to a human-readable string.
+ * 
+ * @function formatFileSize
  * @param {number} bytes - File size in bytes
- * @returns {string} - Formatted file size
+ * @returns {string} - Formatted file size (e.g., '2.5 MB')
+ * 
+ * @example
+ * const size = formatFileSize(1024); // Returns '1 KB'
  */
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
@@ -188,9 +347,21 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+// ==============================================
+// EXPORTS
+// ==============================================
+
 export {
+  // File Management
   cleanupFiles,
-  formatFileSize, generateCsv,
-  shareFiles,
-  validateFile
+  validateFile,
+  formatFileSize,
+  
+  // Report Generation
+  generateCsv,
+  prepareExportData,
+  
+  // Sharing
+  shareFiles
 };
+

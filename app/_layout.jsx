@@ -1,14 +1,15 @@
 import { DataProvider } from "@contexts/DataContext";
 import { InsightsProvider } from "@contexts/InsightsContext";
 import { NotificationProvider } from "@contexts/NotificationContext";
+import { OptimizedDataProvider } from "@contexts/OptimizedDataContext";
 import { SuggestionProvider } from "@contexts/SuggestionContext";
-import { initializeServices } from '@services/ServiceContainer';
 import {
-  Poppins_400Regular,
-  Poppins_600SemiBold,
-  Poppins_700Bold,
-  useFonts,
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    useFonts,
 } from "@expo-google-fonts/poppins";
+import { initializeServices } from '@services/ServiceContainer';
 import SplashScreenComponent from "@ui/SplashScreen";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -112,18 +113,20 @@ export default function RootLayout() {
   return (
     <NotificationProvider>
       <InsightsProvider>
-        <DataProvider initialData={preloadedData}>
-          <SuggestionProvider>
-            <Stack>
-              <Stack.Screen
-                name="(tabs)"
-                options={{
-                  headerShown: false,
-                }}
-              />
-            </Stack>
-          </SuggestionProvider>
-        </DataProvider>
+        <OptimizedDataProvider>
+          <DataProvider initialData={preloadedData}>
+            <SuggestionProvider>
+              <Stack>
+                <Stack.Screen
+                  name="(tabs)"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+              </Stack>
+            </SuggestionProvider>
+          </DataProvider>
+        </OptimizedDataProvider>
       </InsightsProvider>
     </NotificationProvider>
   );

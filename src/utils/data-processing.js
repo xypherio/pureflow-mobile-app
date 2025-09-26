@@ -1,5 +1,8 @@
 import { CHART_PARAMETERS } from './chart-config';
 
+// Cache for processed chart data to prevent unnecessary reprocessing
+const chartDataCache = new Map();
+
 /**
  * Processes raw data from the hook into a format suitable for the LineChart component.
  * @param {Array} chartData - The raw data array from useChartData.
@@ -9,6 +12,15 @@ import { CHART_PARAMETERS } from './chart-config';
 export const processChartData = (chartData, selectedParameter) => {
   if (!chartData || chartData.length === 0) {
     return { datasets: [], labels: [] };
+  }
+
+  // Create a cache key based on data length, last timestamp, and selected parameter
+  const lastTimestamp = chartData[chartData.length - 1]?.datetime?.getTime() || 0;
+  const cacheKey = `${chartData.length}_${lastTimestamp}_${selectedParameter || 'all'}`;
+  
+  // Check cache first
+  if (chartDataCache.has(cacheKey)) {
+    return chartDataCache.get(cacheKey);
   }
 
   // Ensure data is sorted chronologically
@@ -27,7 +39,16 @@ export const processChartData = (chartData, selectedParameter) => {
     parameter: param, // Pass parameter for color mapping
   }));
 
-  return { datasets, labels };
+  const result = { datasets, labels };
+  
+  // Cache the result and limit cache size
+  chartDataCache.set(cacheKey, result);
+  if (chartDataCache.size > 10) {
+    const firstKey = chartDataCache.keys().next().value;
+    chartDataCache.delete(firstKey);
+  }
+  
+  return result;
 };
 
 /**

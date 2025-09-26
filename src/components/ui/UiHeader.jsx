@@ -1,7 +1,8 @@
 import { globalStyles } from "@styles/globalStyles.js";
-import { CloudRain, CloudSun, Sun } from "lucide-react-native";
-import { useState } from "react";
-import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { CloudRain, CloudSun, RefreshCw, Sun } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { weatherService } from "../../services/weatherService";
 
 const LOGO_PATH = require("../../../assets/logo/pureflow-logo.png");
 
@@ -12,11 +13,55 @@ const weatherIconMap = {
 };
 
 export default function PureFlowLogo({
-  weather = { label: "Light Rain", temp: "30°C", icon: "rain" },
   style,
   ...props
 }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [weather, setWeather] = useState({
+    label: "Loading...",
+    temp: "--°C",
+    icon: "partly"
+  });
+  const [isLoadingWeather, setIsLoadingWeather] = useState(true);
+  const [weatherError, setWeatherError] = useState(false);
+
+  const fetchWeather = async () => {
+    setIsLoadingWeather(true);
+    setWeatherError(false);
+    
+    try {
+      // You can also use coordinates if you have location permissions
+      // const weatherData = await weatherService.getCurrentWeather(10.3157, 123.9223); // Mandaue coordinates
+      const weatherData = await weatherService.getCurrentWeatherByCity('Bogo City');
+      setWeather(weatherData);
+    } catch (error) {
+      console.error('Failed to fetch weather:', error);
+      setWeatherError(true);
+      setWeather({
+        label: "Weather unavailable",
+        temp: "--°C",
+        icon: "partly"
+      });
+    } finally {
+      setIsLoadingWeather(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather();
+    
+    // Refresh weather every 10 minutes
+    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleWeatherRefresh = () => {
+    if (!isLoadingWeather) {
+      fetchWeather();
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* PureFlow Logo */}
@@ -30,15 +75,30 @@ export default function PureFlowLogo({
       </Pressable>
 
       {/* Weather Info */}
-      <View style={styles.weatherContainer}>
-        {weatherIconMap[weather.icon] || (
-          <CloudRain size={24} color="#3b82f6" />
+      <Pressable 
+        style={styles.weatherContainer}
+        onPress={handleWeatherRefresh}
+        disabled={isLoadingWeather}
+      >
+        {isLoadingWeather ? (
+          <ActivityIndicator size="small" color="#3b82f6" />
+        ) : weatherError ? (
+          <RefreshCw size={20} color="#ef4444" />
+        ) : (
+          weatherIconMap[weather.icon] || (
+            <CloudRain size={24} color="#3b82f6" />
+          )
         )}
+        
         <View style={styles.weatherTextContainer}>
-          <Text style={styles.weatherLabel}>{weather.label}</Text>
-          <Text style={styles.weatherTemp}>{weather.temp}</Text>
+          <Text style={styles.weatherLabel} numberOfLines={1}>
+            {weather.label}
+          </Text>
+          <Text style={styles.weatherTemp}>
+            {weather.temp}
+          </Text>
         </View>
-      </View>
+      </Pressable>
 
       {/* App Info Modal */}
       <Modal
@@ -55,6 +115,12 @@ export default function PureFlowLogo({
             <Text style={styles.modalDescription}>
               PureFlow is a water quality monitoring system that utilizes IoT devices to track and analyze water parameters in real-time. It leverages AI to provide insights and recommendations based on real-time sensor data. Stay informed about your water quality with ease.
             </Text>
+            {weather.city && (
+              <Text style={styles.modalWeatherInfo}>
+                Current weather in {weather.city}: {weather.label}, {weather.temp}
+                {weather.humidity && ` • Humidity: ${weather.humidity}%`}
+              </Text>
+            )}
             <Text style={styles.modalCopyright}>
               © {new Date().getFullYear()} PureFlow. All rights reserved.
             </Text>
@@ -79,19 +145,28 @@ const styles = StyleSheet.create({
   },
   weatherContainer: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
+    maxWidth: 130, // Prevent overflow
   },
   weatherTextContainer: {
-    marginLeft: 8
+    marginLeft: 8,
+    flex: 1,
   },
   weatherLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#1e293b"
+    color: "#1e293b",
+    textTransform: "capitalize",
   },
   weatherTemp: {
     fontSize: 11,
-    color: "#64748b"
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  weatherCity: {
+    fontSize: 10,
+    color: "#94a3b8",
+    marginTop: 1,
   },
   modalOverlay: {
     position: 'absolute',
@@ -110,28 +185,19 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },
-  modalLogo: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1a2d51',
-    marginBottom: 8,
-  },
-  modalVersion: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 16,
-  },
   modalDescription: {
     fontSize: 14,
     color: '#334155',
     textAlign: 'left',
-    marginBottom: 20,
+    marginBottom: 12,
     lineHeight: 24,
+  },
+  modalWeatherInfo: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
   modalCopyright: {
     fontSize: 12,

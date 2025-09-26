@@ -114,6 +114,7 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
   const [current, setCurrent] = useState(0);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
+  const previousAlertTypeRef = useRef('success');
 
   const hasAlertsWithParameter =
     Array.isArray(alerts) && alerts.some((a) => a && a.parameter);
@@ -127,11 +128,15 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
           parameter: "",
           type: "success",
           title: "All Parameters Normal",
-          message: `All key parameters (${keyParameters.join(
+          message: `All parameters (${keyParameters.join(
             ", "
           )}) are within the normal range.`,
         },
       ];
+
+  // Sound effects disabled due to expo-av compatibility issues
+  // TODO: Re-enable when expo-av is properly configured in the project
+  // For now, alerts work visually without audio
 
   // Animation and index logic
   useEffect(() => {
@@ -261,20 +266,6 @@ export default function AlertsCard({ alerts = [], interval = 4000 }) {
           </Text>
         </View>
       </Animated.View>
-      {/* Indicator dots */}
-      {displayAlerts.length > 1 && (
-        <View style={styles.dotsContainer}>
-          {displayAlerts.map((_, idx) => (
-            <View
-              key={idx}
-              style={[
-                styles.dot,
-                idx === current && styles.dotActive,
-              ]}
-            />
-          ))}
-        </View>
-      )}
     </View>
   );
 }

@@ -13,6 +13,11 @@ class RealtimeDataService {
     /** @private */
     this.performanceMonitor = null;    // Performance monitoring utility
     
+    // Cache management
+    this._cache = new Map();
+    this._pendingRequests = new Map();
+    this.CACHE_TTL = 30000; // 30 seconds
+    
     console.log('🔧 RealtimeDataService constructed');
   }
 
@@ -28,28 +33,78 @@ class RealtimeDataService {
   }
 
   /**
-   * Fetches the most recent sensor data readings
-   * @param {boolean} [useCache=true] - Whether to use cached data when available
+   * Fetches the most recent sensor data readings with optimized caching
+   * @param {Object} [options] - Fetching options
+   * @param {boolean} [options.useCache=true] - Whether to use cached data when available
+   * @param {number} [options.cacheTtl] - Cache TTL in milliseconds (default: 30s)
    * @returns {Promise<Object>} Processed sensor data with metadata
-   * @throws {Error} If there's an error fetching the data
    */
-  async getMostRecentData(useCache = true) {
-    return await this.performanceMonitor.measureAsync('realtimeData.getMostRecent', async () => {
-      try {
-        const dashboardData = await this.dashboardFacade.getDashboardData({ useCache });
-        
-        // Return processed data if available
-        if (dashboardData?.current) {
-          return dashboardData.current; // Data is already processed by the facade
-        }
-        
-        console.warn('⚠️ No real-time data available from facade, returning default.');
-        return this.getDefaultData();
-      } catch (error) {
-        console.error('❌ Error fetching real-time data:', error);
-        return this.getDefaultData();
+  async getMostRecentData({ useCache = true, cacheTtl } = {}) {
+    const CACHE_KEY = 'realtime_data_latest';
+    const now = Date.now();
+    const ttl = cacheTtl !== undefined ? cacheTtl : this.CACHE_TTL;
+
+    // Return existing promise if request is in progress
+    if (this._pendingRequests.has(CACHE_KEY)) {
+      console.log('🔄 Returning pending request');
+      return this._pendingRequests.get(CACHE_KEY);
+    }
+    
+    // Check cache if enabled
+    if (useCache && this._cache.has(CACHE_KEY)) {
+      const { data, timestamp } = this._cache.get(CACHE_KEY);
+      if ((now - timestamp) < ttl) {
+        console.log('📦 Using cached real-time data');
+        return data;
       }
-    });
+    }
+    
+    try {
+      // Create and store the promise to handle concurrent requests
+      const requestPromise = (async () => {
+        try {
+          const dashboardData = await this.performanceMonitor.measureAsync(
+            'realtimeData.getMostRecent', 
+            async () => {
+              const data = await this.dashboardFacade.getDashboardData({ 
+                useCache: true,
+                includeHistorical: false,
+                historicalLimit: 1
+              });
+              return data?.current || this.getDefaultData();
+            }
+          );
+          
+          // Update cache
+          this._cache.set(CACHE_KEY, {
+            data: dashboardData,
+            timestamp: Date.now()
+          });
+          
+          return dashboardData;
+        } finally {
+          // Clean up pending request
+          this._pendingRequests.delete(CACHE_KEY);
+        }
+      })();
+      
+      // Store the promise to handle concurrent requests
+      this._pendingRequests.set(CACHE_KEY, requestPromise);
+      
+      return await requestPromise;
+      
+    } catch (error) {
+      console.error('❌ Error in getMostRecentData:', error);
+      
+      // Return cached data if available, even if expired
+      if (this._cache.has(CACHE_KEY)) {
+        console.warn('⚠️ Using stale cached data due to fetch error');
+        return this._cache.get(CACHE_KEY).data;
+      }
+      
+      // If no cached data is available, return default data
+      return this.getDefaultData();
+    }
   }
 
   /**
@@ -75,13 +130,45 @@ class RealtimeDataService {
   }
 
   /**
-   * @deprecated Caches are now managed automatically by their respective services.
-   * This method is kept for backward compatibility.
+   * Clears the cache for a specific key or all caches if no key is provided
+   * @param {string} [key] - Optional cache key to clear
    */
-  clearCache() {
-    console.warn('⚠️ `clearCache` is deprecated. Caches are managed by their respective services.');
-    // Implementation note: If manual cache clearing is needed, uncomment:
-    // this.dashboardFacade?.clearCache();
+  clearCache(key) {
+    if (key) {
+      this._cache.delete(key);
+      console.log(`🧹 Cleared cache for key: ${key}`);
+    } else {
+      this._cache.clear();
+      console.log('🧹 Cleared all caches');
+    }
+  }
+  
+  /**
+   * Clears expired cache entries
+   * @private
+   */
+  _clearExpiredCache() {
+    const now = Date.now();
+    let clearedCount = 0;
+    
+    for (const [key, { timestamp }] of this._cache.entries()) {
+      if ((now - timestamp) > this.CACHE_TTL) {
+        this._cache.delete(key);
+        clearedCount++;
+      }
+    }
+    
+    if (clearedCount > 0) {
+      console.log(`🧹 Cleared ${clearedCount} expired cache entries`);
+    }
+  }
+  
+  /**
+   * Clears expired cache entries
+   * Can be called periodically to clean up old data
+   */
+  clearExpiredCache() {
+    this._clearExpiredCache();
   }
 
 }

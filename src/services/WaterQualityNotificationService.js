@@ -263,6 +263,14 @@ class WaterQualityNotificationService {
   }
 
   /**
+   * Monitor data fetch attempts and trigger connection alerts
+   */
+  async monitorDataFetch(success, options = {}) {
+    // Delegate to the WaterQualityNotifier
+    return this.waterQualityNotifier.monitorDataFetch(success, options);
+  }
+
+  /**
    * Test notification system
    */
   async testNotifications() {
@@ -276,7 +284,7 @@ class WaterQualityNotificationService {
 
       console.log('🧪 Testing notification system with data:', testData);
       const result = await this.processSensorData(testData);
-      
+
       return {
         success: true,
         testData,
