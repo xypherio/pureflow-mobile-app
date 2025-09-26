@@ -106,10 +106,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingTop: 8,
     paddingLeft: 16,
-    paddingRight: 16
+    paddingRight: 16,
   },
   tabBarLabel: {
     fontSize: 12,
-    fontFamily: 'Poppins_500Medium',
   },
 });

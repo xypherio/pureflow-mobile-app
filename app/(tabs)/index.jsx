@@ -1,4 +1,3 @@
-import NotificationTestPanel from "@components/NotificationTestPanel";
 import { useData } from "@contexts/DataContext";
 import AlertsCard from "@dataDisplay/AlertsCard";
 import InsightsCard from "@dataDisplay/InsightsCard";
@@ -82,42 +81,68 @@ export default function HomeScreen() {
         const receivedListener = addNotificationListener(
           "received",
           (notification) => {
-            console.log(
-              "📱 Home screen received notification:",
-              notification.request.content.title
-            );
+            try {
+              const content = notification?.request?.content;
+              const title = content?.title || 'Unknown Notification';
+              const body = content?.body || '';
+              const notificationData = content?.data || {};
 
-            // You can add custom logic here for handling received notifications
-            // For example, refresh data, show in-app alerts, etc.
+              console.log("📱 Home screen received notification:", {
+                title,
+                body,
+                data: notificationData
+              });
+
+              // You can add custom logic here for handling received notifications
+              // For example, refresh data, show in-app alerts, update UI, etc.
+              // This triggers when notification is received while app is in foreground
+            } catch (error) {
+              console.error("Error handling received notification:", error);
+            }
           }
         );
 
         const responseListener = addNotificationListener(
           "response",
           (response) => {
-            console.log(
-              "👆 Home screen notification tapped:",
-              response.notification.request.content.title
-            );
+            try {
+              // Extract notification content with proper error handling
+              const content = response.notification?.request?.content;
+              const title = content?.title || 'Unknown Notification';
+              const body = content?.body || '';
+              const notificationData = content?.data || {};
 
-            // Handle notification tap - navigate to specific screen, refresh data, etc.
-            const notificationData = response.notification.request.content.data;
+              console.log("👆 Home screen notification tapped:", {
+                title,
+                body,
+                data: notificationData,
+                actionIdentifier: response.actionIdentifier
+              });
 
-            switch (notificationData?.type) {
-              case "water_quality_alert":
-                // Navigate to specific parameter or alerts screen
-                console.log("Navigate to water quality alerts");
-                break;
-              case "device_offline":
-                // Show device status or troubleshooting
-                console.log("Navigate to device status");
-                break;
-              case "maintenance_reminder":
-                // Navigate to maintenance screen
-                console.log("Navigate to maintenance");
-                break;
-              default:
-                console.log("Handle general notification tap");
+              // Handle notification tap - navigate to specific screen, refresh data, etc.
+              switch (notificationData?.type) {
+                case "water_quality_alert":
+                  // Navigate to specific parameter or alerts screen
+                  console.log("Navigate to water quality alerts");
+                  break;
+                case "device_offline":
+                case "device_online":
+                  // Show device status or troubleshooting
+                  console.log("Navigate to device status");
+                  break;
+                case "maintenance_reminder":
+                  // Navigate to maintenance screen
+                  console.log("Navigate to maintenance");
+                  break;
+                case "forecast_alert":
+                  // Navigate to forecast screen
+                  console.log("Navigate to forecast alerts");
+                  break;
+                default:
+                  console.log("Handle general notification tap");
+              }
+            } catch (error) {
+              console.error("Error handling notification response:", error);
             }
           }
         );
@@ -232,9 +257,6 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </GlobalWrapper>
-      
-      {/* Development Test Panel - Only visible in development mode */}
-      <NotificationTestPanel />
     </>
   );
 }

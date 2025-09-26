@@ -95,7 +95,6 @@ const PdfGenerator = async (reportData) => {
     { name: 'Temperature', data: reportData.temperature, unit: '°C' },
     { name: 'Turbidity', data: reportData.turbidity, unit: ' NTU' },
     { name: 'Salinity', data: reportData.salinity, unit: ' PSU' },
-    { name: 'TDS', data: reportData.tds, unit: ' mg/L' },
   ];
 
   for (const param of parameters) {

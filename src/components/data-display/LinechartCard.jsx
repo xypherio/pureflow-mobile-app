@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { colors } from "../../constants/colors";
-import { useChartData } from "../../hooks/useChartData";
+import { useOptimizedChartData } from "../../contexts/OptimizedDataContext";
 import { globalStyles } from "../../styles/globalStyles";
 import {
   CHART_DIMENSIONS,
@@ -16,7 +16,6 @@ import {
   getDefaultChartConfig,
   getParameterOptions,
 } from "../../utils/chart-config";
-import { processChartData } from "../../utils/data-processing";
 import SegmentedFilter from "../navigation/SegmentedFilters";
 import ChartTooltip from "../ui/ChartToolTip";
 
@@ -47,47 +46,49 @@ const LineChartCard = ({
   // Parameter options for the segmented filter
   const parameterOptions = getParameterOptions();
 
-  // Get chart data using the hook if no data is passed via props
-  const hookResult = useChartData("home", "daily", selectedParameter);
+  // Get optimized chart data
+  const {
+    processedData,
+    hasData,
+    dataCount,
+    lastUpdateTime,
+    isInitialized,
+    getLatestValue,
+    getDataRange
+  } = useOptimizedChartData(selectedParameter);
 
-  const loading = propLoading !== undefined ? propLoading : hookResult.loading;
-  const error = propError !== undefined ? propError : hookResult.error;
-  const lastUpdated =
-    propLastUpdated !== undefined ? propLastUpdated : hookResult.lastUpdated;
+  const loading = propLoading !== undefined ? propLoading : !isInitialized;
+  const error = propError !== undefined ? propError : null;
+  const lastUpdated = propLastUpdated !== undefined ? propLastUpdated : (lastUpdateTime ? new Date(lastUpdateTime) : null);
 
-  // Prepare chart data based on filters
+  // Use optimized processed data or prop data
   const { datasets, labels } = useMemo(() => {
     if (propData) {
       return propData; // Use passed data directly
     }
 
-    const processedData = processChartData(
-      hookResult.chartData,
-      selectedParameter
-    );
-
-    // Always color code each dataset based on parameter
-    if (processedData.datasets) {
-      return {
-        labels: processedData.labels,
-        datasets: processedData.datasets.map((dataset) => ({
-          ...dataset,
-          color: (opacity = 1) => {
-            const color = getParameterColor(dataset.parameter || dataset.name);
-            return color;
-          },
-          propsForDots: {
-            r: "4",
-            strokeWidth: "2",
-            stroke: getParameterColor(dataset.parameter || dataset.name),
-            fill: "#FFF",
-          },
-        })),
-      };
+    if (!processedData || !processedData.datasets) {
+      return { datasets: [], labels: [] };
     }
 
-    return processedData;
-  }, [propData, hookResult.chartData, selectedParameter]);
+    // Color code each dataset based on parameter
+    return {
+      labels: processedData.labels,
+      datasets: processedData.datasets.map((dataset) => ({
+        ...dataset,
+        color: (opacity = 1) => {
+          const color = getParameterColor(dataset.parameter || dataset.name);
+          return color;
+        },
+        propsForDots: {
+          r: "4",
+          strokeWidth: "2",
+          stroke: getParameterColor(dataset.parameter || dataset.name),
+          fill: "#FFF",
+        },
+      })),
+    };
+  }, [propData, processedData, selectedParameter]);
 
   // Handle parameter selection change
   const handleParameterChange = (value) => {
@@ -137,19 +138,20 @@ const LineChartCard = ({
     setTooltipVisible(true);
   };
 
-  // Chart configuration
-  const chartConfig = getDefaultChartConfig();
+  // Memoize chart configuration to prevent recreation on every render
+  const chartConfig = useMemo(() => getDefaultChartConfig(), []);
 
-  const hasData =
-    propData && propData.datasets && propData.datasets.length > 0
-      ? propData.datasets.some((d) => d.data.length > 0)
-      : hookResult.hasData;
+  const hasDataToShow = useMemo(() => {
+    if (propData && propData.datasets && propData.datasets.length > 0) {
+      return propData.datasets.some((d) => d.data.length > 0);
+    }
+    return hasData && dataCount > 0;
+  }, [propData?.datasets, hasData, dataCount]);
 
-  // Update Y-axis configuration
-  const getYAxisConfig = (parameter) => {
-    // Get the correct configuration based on parameter
-    const config = parameter
-      ? chartYAxisConfig[parameter.toLowerCase()]
+  // Memoize Y-axis configuration to prevent recreation
+  const yAxisConfig = useMemo(() => {
+    const config = selectedParameter
+      ? chartYAxisConfig[selectedParameter.toLowerCase()]
       : chartYAxisConfig.default;
 
     return {
@@ -159,9 +161,7 @@ const LineChartCard = ({
       // Calculate number of segments based on range and interval
       count: Math.floor((config.max - config.min) / config.interval),
     };
-  };
-
-  const yAxisConfig = getYAxisConfig(selectedParameter);
+  }, [selectedParameter]);
 
   return (
     <View style={styles.container}>
@@ -177,7 +177,7 @@ const LineChartCard = ({
 
       {/* Chart Container */}
       <View style={styles.chartContainer}>
-        {hasData && datasets.length > 0 ? (
+        {hasDataToShow && datasets.length > 0 ? (
           <View style={styles.chartWrapper}>
             <TouchableOpacity
               activeOpacity={1}
@@ -251,7 +251,7 @@ const LineChartCard = ({
             )}
             {!loading && !error && (!datasets || datasets.length === 0) && (
               <Text style={styles.errorText}>
-                No data fetched from database
+                Data points: {dataCount}, Initialized: {isInitialized ? 'Yes' : 'No'}
               </Text>
             )}
           </View>
@@ -261,7 +261,7 @@ const LineChartCard = ({
       {/* Last Updated */}
       {lastUpdated && (
         <Text style={styles.lastUpdated}>
-          Last updated: {lastUpdated.toLocaleTimeString()}
+          Last updated: {lastUpdated instanceof Date ? lastUpdated.toLocaleTimeString() : new Date(lastUpdated).toLocaleTimeString()}
         </Text>
       )}
 

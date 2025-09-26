@@ -89,7 +89,8 @@
     "twrnc": "^4.9.1",
     "typescript": "~5.8.3",
     "uuid": "^13.0.0",
-    "victory-native": "^41.17.4"
+    "victory-native": "^41.17.4",
+    "expo-av": "~15.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",

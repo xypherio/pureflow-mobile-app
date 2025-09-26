@@ -5,9 +5,9 @@ import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
 import WeatherBanner from "@ui/WeatherBanner";
 
-import { generateInsight } from "@services/ai/geminiAPI"; // Import generateInsight
+import { generateInsight } from "@services/ai/geminiAPI";
 import { getMockForecast } from "@services/mockForecastService";
-import React, { useEffect, useState } from "react"; // Add useEffect and useState
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 export default function HomeScreen() {
@@ -84,7 +84,7 @@ export default function HomeScreen() {
       <GlobalWrapper style={{ flex: 1 }}>
         {/* Weather Summary Section */}
         <View>
-          <WeatherBanner forecast="Light rain expected at 4PM. Humidity: 82%, Temp: 30°C." />
+          <WeatherBanner showCurrentWeather={true} city="Bogo City" /> 
         </View>
 
         {/* Forecast Parameters Section */}

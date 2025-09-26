@@ -1,145 +1,133 @@
-#!/usr/bin/env node
 /**
- * Command-line notification test script
- * Run with: node test-notifications.js
+ * Test script for the PureFlow notification system
+ *
+ * This script tests the key components of the notification system:
+ * - ScheduledNotificationManager
+ * - notification templates
+ * - WaterQualityNotifier enhanced features
  */
 
-const { execSync } = require('child_process');
-const path = require('path');
+import { scheduledNotificationManager } from './src/services/notifications/ScheduledNotificationManager.js';
+import { notificationManager } from './src/services/notifications/NotificationManager.js';
+import { NotificationTemplates } from './src/services/notifications/NotificationTemplates.js';
+import { waterQualityNotificationService } from './src/services/WaterQualityNotificationService.js';
 
-console.log('🧪 PureFlow Mobile - Notification System Test');
-console.log('=============================================\n');
+async function testNotificationSystem() {
+  console.log('🧪 Testing PureFlow Notification System...\n');
 
-// Test 1: Check if Expo is running
-console.log('1️⃣ Checking if Expo development server is running...');
-try {
-  const result = execSync('npx expo start --help', { encoding: 'utf8' });
-  console.log('   ✅ Expo CLI is available');
-} catch (error) {
-  console.log('   ❌ Expo CLI not found. Please install: npm install -g @expo/cli');
-  process.exit(1);
-}
-
-// Test 2: Check dependencies
-console.log('\n2️⃣ Checking notification dependencies...');
-const packageJson = require('./package.json');
-const requiredDeps = [
-  'expo-notifications',
-  'expo-device',
-  '@react-native-async-storage/async-storage'
-];
-
-let allDepsInstalled = true;
-requiredDeps.forEach(dep => {
-  if (packageJson.dependencies[dep]) {
-    console.log(`   ✅ ${dep}: ${packageJson.dependencies[dep]}`);
-  } else {
-    console.log(`   ❌ ${dep}: Not installed`);
-    allDepsInstalled = false;
-  }
-});
-
-if (!allDepsInstalled) {
-  console.log('\n⚠️  Some dependencies are missing. Installing...');
   try {
-    execSync('npx expo install expo-notifications expo-device @react-native-async-storage/async-storage', { stdio: 'inherit' });
-    console.log('   ✅ Dependencies installed successfully');
+    // Test 1: Initialize NotificationManager
+    console.log('1️⃣ Testing NotificationManager initialization...');
+    const initResult = await notificationManager.initialize();
+    console.log('✅ NotificationManager initialized:', initResult);
+
+    // Test 2: Initialize ScheduledNotificationManager
+    console.log('\n2️⃣ Testing ScheduledNotificationManager initialization...');
+    const scheduledInit = await scheduledNotificationManager.initialize();
+    console.log('✅ ScheduledNotificationManager initialized:', scheduledInit);
+
+    // Test 3: Check if daily reminders are scheduled
+    console.log('\n3️⃣ Checking scheduled reminders...');
+    const reminderStatus = scheduledNotificationManager.areDailyRemindersActive();
+    console.log('📅 Reminder status:', reminderStatus);
+
+    // Test 4: Show scheduled notifications
+    console.log('\n4️⃣ Current scheduled notifications:');
+    const schedules = scheduledNotificationManager.getSchedulesStatus();
+    console.log(JSON.stringify(schedules, null, 2));
+
+    // Test 5: Test notification templates
+    console.log('\n5️⃣ Testing notification templates...');
+    const testTemplates = {
+      forecast: NotificationTemplates.forecastReminder(),
+      report: NotificationTemplates.reportReminder(),
+      borderline: NotificationTemplates.borderlineAlert('pH', 8.2, 8.5, 'high'),
+      harmful: NotificationTemplates.harmfulStateAlert(['pH', 'temperature'], 2),
+      unstable: NotificationTemplates.connectionUnstable('DATM', 3),
+      deviceUnstable: NotificationTemplates.deviceUnstable('DATM')
+    };
+
+    Object.entries(testTemplates).forEach(([name, template]) => {
+      console.log(`   🌅 ${name.charAt(0).toUpperCase() + name.slice(1)}:`, {
+        title: template.title,
+        hasBody: !!template.body,
+        priority: template.priority
+      });
+    });
+
+    // Test 6: Test threshold analysis (mock data)
+    console.log('\n6️⃣ Testing threshold analysis...');
+    if (waterQualityNotificationService.processSensorDataWithThresholdAlerts) {
+      const testSensorData = {
+        pH: 8.2, // Borderline high
+        temperature: 29.5, // Borderline high
+        turbidity: 45, // Within normal range
+        salinity: 2.2 // Within normal range
+      };
+
+      console.log('📊 Test sensor data:', testSensorData);
+      const result = await waterQualityNotificationService.processSensorDataWithThresholdAlerts(testSensorData);
+      console.log('📊 Analysis result:', result);
+    }
+
+    // Test 7: Send a test local notification
+    console.log('\n7️⃣ Testing local notification...');
+    const testNotification = {
+      title: '🧪 Test Notification',
+      body: 'This is a test of the PureFlow notification system',
+      data: { test: true }
+    };
+
+    const localResult = await notificationManager.sendLocalNotification(testNotification);
+    console.log('📱 Test notification result:', localResult);
+
+    // Test 8: Check monitoring status
+    console.log('\n8️⃣ Checking monitoring status...');
+    const monitoringStatus = waterQualityNotificationService.getMonitoringStatus();
+    console.log('📊 Monitoring status:', {
+      connectionState: monitoringStatus.connectionState,
+      connectionAttempts: monitoringStatus.connectionAttempts,
+      maxAttempts: monitoringStatus.maxAttempts
+    });
+
+    console.log('\n✅ All notification system tests completed successfully!');
+
+    // Cleanup
+    console.log('\n🧹 Cleaning up...');
+    scheduledNotificationManager.destroy();
+
+    return {
+      success: true,
+      results: {
+        initialization: !!initResult.success,
+        scheduling: !!scheduledInit.success,
+        reminders: reminderStatus,
+        templates: Object.keys(testTemplates).length,
+        monitoring: monitoringStatus
+      }
+    };
+
   } catch (error) {
-    console.log('   ❌ Failed to install dependencies:', error.message);
+    console.error('❌ Notification system test failed:', error);
+
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
 
-// Test 3: Check app.json configuration
-console.log('\n3️⃣ Checking app.json configuration...');
-try {
-  const appConfig = require('./app.json');
-  
-  if (appConfig.expo?.plugins?.some(plugin => 
-    (Array.isArray(plugin) && plugin[0] === 'expo-notifications') ||
-    plugin === 'expo-notifications'
-  )) {
-    console.log('   ✅ expo-notifications plugin configured');
-  } else {
-    console.log('   ⚠️  expo-notifications plugin not found in app.json');
-    console.log('   📝 Add this to your app.json:');
-    console.log('   "plugins": ["expo-notifications"]');
-  }
-  
-  if (appConfig.expo?.notification) {
-    console.log('   ✅ Notification configuration found');
-  } else {
-    console.log('   ⚠️  No notification configuration in app.json');
-  }
-} catch (error) {
-  console.log('   ❌ Could not read app.json:', error.message);
+// Run the test if this file is executed directly
+if (require.main === module) {
+  testNotificationSystem()
+    .then(result => {
+      console.log('\n� Final Result:', result);
+      process.exit(result.success ? 0 : 1);
+    })
+    .catch(error => {
+      console.error('💥 Test execution failed:', error);
+      process.exit(1);
+    });
 }
 
-// Test 4: Check notification files exist
-console.log('\n4️⃣ Checking notification system files...');
-const requiredFiles = [
-  'src/services/notifications/NotificationManager.js',
-  'src/services/notifications/NotificationTemplates.js',
-  'src/services/notifications/NotificationStorage.js',
-  'src/hooks/useNotifications.js',
-  'src/contexts/NotificationContext.js',
-  'src/services/WaterQualityNotificationService.js',
-  'src/hooks/useWaterQualityNotifications.js',
-  'src/components/NotificationTestPanel.js'
-];
-
-let allFilesExist = true;
-requiredFiles.forEach(file => {
-  try {
-    require.resolve(`./${file}`);
-    console.log(`   ✅ ${file}`);
-  } catch (error) {
-    console.log(`   ❌ ${file} - Not found`);
-    allFilesExist = false;
-  }
-});
-
-// Test 5: Check for common issues
-console.log('\n5️⃣ Checking for common issues...');
-
-// Check for crypto polyfill
-try {
-  const notificationManager = require('./src/services/notifications/NotificationManager.js');
-  console.log('   ✅ NotificationManager loads without errors');
-} catch (error) {
-  console.log('   ❌ NotificationManager has errors:', error.message);
-}
-
-// Check for uuid dependency issues
-if (packageJson.dependencies?.uuid) {
-  console.log('   ⚠️  uuid dependency found - this may cause crypto issues in React Native');
-  console.log('   💡 Consider using the custom generateId function instead');
-}
-
-// Summary
-console.log('\n📊 Test Summary:');
-console.log('================');
-
-if (allDepsInstalled && allFilesExist) {
-  console.log('✅ All checks passed! Your notification system should work correctly.');
-  console.log('\n🚀 Next steps:');
-  console.log('1. Start your Expo development server: npx expo start');
-  console.log('2. Open the app on your device/emulator');
-  console.log('3. Look for the "Notification Test Panel" button in the bottom-right corner');
-  console.log('4. Tap it to open the test panel and run individual tests');
-  console.log('5. Check your device\'s notification tray for test notifications');
-} else {
-  console.log('❌ Some issues found. Please fix them before testing notifications.');
-}
-
-console.log('\n📱 Manual Testing Instructions:');
-console.log('1. Open the app on your device');
-console.log('2. Look for the floating "Notification Test Panel" button');
-console.log('3. Tap it to expand the test panel');
-console.log('4. Test each notification type individually');
-console.log('5. Check your device\'s notification settings if notifications don\'t appear');
-
-console.log('\n🔧 Troubleshooting:');
-console.log('- If notifications don\'t appear, check device notification permissions');
-console.log('- On Android, ensure notification channels are properly configured');
-console.log('- On iOS, ensure notifications are enabled in device settings');
-console.log('- Check the console for any error messages');
+export { testNotificationSystem };

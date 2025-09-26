@@ -180,4 +180,124 @@ class NotificationTemplates {
       priority: rating === 'poor' || rating === 'veryPoor' ? 'high' : 'normal'
     };
   }
+
+  static forecastReminder() {
+    return {
+      title: '🌅 Water Parameter Forecast Ready',
+      body: 'Tomorrow\'s water parameter forecast is ready for viewing. Check your PureFlow app to stay ahead of water quality trends.',
+      data: {
+        type: 'forecast_reminder',
+        timestamp: new Date().toISOString(),
+        category: 'reminders',
+        deepLink: 'pureflow://forecast'
+      },
+      categoryId: 'reminders',
+      priority: 'normal'
+    };
+  }
+
+  static reportReminder() {
+    return {
+      title: '📊 Daily Report Available',
+      body: 'Your daily water quality report is ready. Tap to view today\'s comprehensive analysis.',
+      data: {
+        type: 'report_reminder',
+        timestamp: new Date().toISOString(),
+        category: 'reminders',
+        deepLink: 'pureflow://report'
+      },
+      categoryId: 'reminders',
+      priority: 'normal'
+    };
+  }
+
+  static borderlineAlert(parameter, value, threshold, direction) {
+    const status = direction === 'high' ? 'approaching maximum' : 'approaching minimum';
+    const emoji = direction === 'high' ? '📈' : '📉';
+
+    return {
+      title: `${emoji} Parameter Warning`,
+      body: `${parameter} (${value}) is ${status} threshold (${threshold}). Consider taking preventive action.`,
+      data: {
+        type: 'borderline_alert',
+        parameter: parameter.toLowerCase(),
+        value,
+        threshold,
+        direction,
+        timestamp: new Date().toISOString(),
+        category: 'alerts'
+      },
+      categoryId: 'alerts',
+      priority: 'normal'
+    };
+  }
+
+  static connectionUnstable(deviceName = 'DATM', attemptCount = 0) {
+    const attempts = attemptCount > 0 ? ` (${attemptCount} failed attempts)` : '';
+
+    return {
+      title: '⚠️ Device Connection Unstable',
+      body: `${deviceName} connection is unstable${attempts}. Please check for potential problems.`,
+      data: {
+        type: 'connection_unstable',
+        deviceName,
+        attemptCount,
+        timestamp: new Date().toISOString(),
+        category: 'system'
+      },
+      categoryId: 'alerts',
+      priority: 'high'
+    };
+  }
+
+  static deviceUnstable(deviceName = 'DATM') {
+    return {
+      title: '🚨 DATM Unstable',
+      body: `${deviceName} is unstable. Multiple fetch attempts failed. Check for potential problems.`,
+      data: {
+        type: 'device_unstable',
+        deviceName,
+        timestamp: new Date().toISOString(),
+        category: 'alerts'
+      },
+      categoryId: 'alerts',
+      priority: 'high'
+    };
+  }
+
+  static harmfulStateAlert(parameters, affectedCount) {
+    const count = affectedCount > 1 ? ` (${affectedCount} parameters)` : '';
+    const params = parameters.join(', ');
+
+    return {
+      title: '🚨 Harmful Water Parameters Detected',
+      body: `${params}${count} are in harmful state. Tap to open PureFlow and take action.`,
+      data: {
+        type: 'harmful_state_alert',
+        parameters: parameters.map(p => p.toLowerCase()),
+        affectedCount,
+        timestamp: new Date().toISOString(),
+        category: 'alerts',
+        deepLink: 'pureflow://alerts'
+      },
+      categoryId: 'alerts',
+      priority: 'high'
+    };
+  }
+
+  static monitoringReminder(hoursInterval = 4) {
+    return {
+      title: '🌊 Time to Monitor Water Parameters',
+      body: `It's been a while! Open PureFlow to check your water quality parameters and ensure everything is running smoothly.`,
+      data: {
+        type: 'monitoring_reminder',
+        hoursInterval,
+        timestamp: new Date().toISOString(),
+        category: 'reminders',
+        deepLink: 'pureflow://parameters'
+      },
+      categoryId: 'reminders',
+      priority: 'normal'
+    };
+  }
 }

@@ -1,162 +1,202 @@
-import { useCallback, useEffect, useState } from 'react';
+import { debounce } from 'lodash';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { historicalDataService } from '../services/historicalDataService';
 
-export const useChartData = (type, timeFilter = 'daily', selectedParameter = null) => {
-  const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+// Reducer for managing chart data state
+const chartDataReducer = (state, action) => {
+  switch (action.type) {
+    case 'FETCH_START':
+      return { ...state, loading: true, error: null };
+    case 'FETCH_SUCCESS':
+      return {
+        ...state,
+        loading: false,
+        chartData: action.payload,
+        lastUpdated: new Date(),
+        error: null,
+        hasData: action.payload.length > 0
+      };
+    case 'FETCH_ERROR':
+      return {
+        ...state,
+        loading: false,
+        error: action.error,
+        hasData: state.chartData.length > 0
+      };
+    case 'USE_CACHED_DATA':
+      return {
+        ...state,
+        loading: false,
+        error: action.error,
+        hasData: state.chartData.length > 0
+      };
+    default:
+      return state;
+  }
+};
 
-  console.log('🎯 useChartData hook called:', {
-    type,
-    timeFilter,
-    selectedParameter,
-    currentState: { chartDataLength: chartData.length, loading, error: !!error }
+export const useChartData = (type, timeFilter = 'daily', selectedParameter = null) => {
+  const [state, dispatch] = useReducer(chartDataReducer, {
+    chartData: [],
+    loading: true,
+    error: null,
+    lastUpdated: null,
+    hasData: false
   });
 
-  // Fetch data for home tab (current day, all readings)
+  const { chartData, loading, error, lastUpdated, hasData } = state;
+  const abortControllerRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Process and validate data from the service
+  const processChartData = useCallback((data, limit = 50) => {
+    if (!Array.isArray(data)) {
+      console.warn('⚠️ [useChartData] Invalid data format, expected array:', data);
+      return [];
+    }
+
+    return data
+      .filter(item => {
+        if (!item || typeof item !== 'object') {
+          console.warn('⚠️ [useChartData] Invalid data item:', item);
+          return false;
+        }
+
+        if (!item.datetime) {
+          console.warn('⚠️ [useChartData] Missing datetime in data item:', item);
+          return false;
+        }
+
+        // Check if datetime is valid
+        const datetime = typeof item.datetime === 'string'
+          ? new Date(item.datetime)
+          : item.datetime;
+
+        if (isNaN(datetime.getTime())) {
+          console.warn('⚠️ [useChartData] Invalid datetime in data item:', item);
+          return false;
+        }
+
+        return true;
+      })
+      .map(item => ({
+        ...item,
+        datetime: typeof item.datetime === 'string' 
+          ? new Date(item.datetime) 
+          : item.datetime
+      }))
+      .sort((a, b) => b.datetime - a.datetime) // Newest first
+      .slice(0, limit); // Limit number of items
+  }, []);
+
+  // Fetch data for home tab (current day, all readings) - stable reference
   const fetchHomeData = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     console.log('🏠 Starting fetchHomeData...');
+    
+    // Abort any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    dispatch({ type: 'FETCH_START' });
 
     try {
-      setLoading(true);
-      setError(null);
-
       console.log('⏳ Fetching current day data from historicalDataService...');
-
-      // Add timeout to prevent hanging
+      
       const fetchPromise = historicalDataService.getCurrentDayData();
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Fetch timeout after 30 seconds')), 30000);
       });
 
       const data = await Promise.race([fetchPromise, timeoutPromise]);
+      
+      // Check if component is still mounted
+      if (!isMountedRef.current) return;
 
-      // Validate the response
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid response format: expected array');
-      }
-
-      console.log('📊 Data received from historicalDataService:', {
-        dataLength: data.length,
-        sampleData: data.slice(0, 2).map(d => ({
-          datetime: d.datetime,
-          pH: d.pH,
-          temperature: d.temperature,
-          turbidity: d.turbidity,
-          salinity: d.salinity
-        }))
+      // Process and validate the data
+      const processedData = processChartData(Array.isArray(data) ? data : []);
+      
+      console.log('✅ Home data fetch completed successfully', {
+        originalCount: Array.isArray(data) ? data.length : 0,
+        processedCount: processedData.length
       });
-
-      // Filter data to show only recent readings that fit in chart
-      // We'll limit to last 50 readings to avoid clutter
-      const recentData = data
-        .filter(item => {
-          // Validate each data item
-          if (!item || typeof item !== 'object') {
-            console.warn('⚠️ [useChartData] Invalid data item:', item);
-            return false;
-          }
-
-          if (!item.datetime) {
-            console.warn('⚠️ [useChartData] Missing datetime in data item:', item);
-            return false;
-          }
-
-          // Check if datetime is valid
-          const datetime = typeof item.datetime === 'string'
-            ? new Date(item.datetime)
-            : item.datetime;
-
-          if (isNaN(datetime.getTime())) {
-            console.warn('⚠️ [useChartData] Invalid datetime in data item:', item);
-            return false;
-          }
-
-          return true;
-        })
-        .map(item => {
-          // Normalize datetime to Date object
-          const datetime = typeof item.datetime === 'string'
-            ? new Date(item.datetime)
-            : item.datetime;
-
-          return { ...item, datetime };
-        })
-        .sort((a, b) => b.datetime - a.datetime) // Sort by newest first
-        .slice(0, 50); // Take only the most recent 50 readings
-
-      console.log('✂️ Filtered to recent 50 readings:', {
-        originalCount: data.length,
-        filteredCount: recentData.length
+      
+      dispatch({ 
+        type: 'FETCH_SUCCESS', 
+        payload: processedData 
       });
-
-      // Validate final data
-      if (!Array.isArray(recentData)) {
-        throw new Error('Filtered data is not an array');
-      }
-
-      setChartData(recentData);
-      setLastUpdated(new Date());
-      setError(null);
-
-      console.log('✅ Home data fetch completed successfully');
 
     } catch (err) {
+      // Ignore aborted requests
+      if (err.name === 'AbortError') {
+        console.log('⏹️ Fetch aborted');
+        return;
+      }
+      
+      if (!isMountedRef.current) return;
+      
       console.error('❌ Error in fetchHomeData:', {
         error: err.message,
         stack: err.stack,
         type: typeof err
       });
 
-      // Set user-friendly error message
+      // Try to use cached data as fallback
+      try {
+        console.log('🔄 Attempting to get cached data as fallback...');
+        const cachedData = await historicalDataService.getCurrentDayData();
+        
+        if (Array.isArray(cachedData) && cachedData.length > 0) {
+          const processedData = processChartData(cachedData);
+          
+          console.log('📦 Using cached data fallback:', {
+            cachedCount: cachedData.length,
+            processedCount: processedData.length
+          });
+          
+          dispatch({ 
+            type: 'USE_CACHED_DATA', 
+            payload: processedData,
+            error: 'Using cached data due to: ' + (err.message || 'Unknown error')
+          });
+          return;
+        }
+      } catch (cacheErr) {
+        console.error('❌ Cache fallback failed:', cacheErr);
+      }
+      
+      // If we get here, we couldn't use cached data
       const errorMessage = err.message.includes('timeout')
         ? 'Request timed out. Please check your connection and try again.'
         : err.message.includes('network') || err.message.includes('fetch')
         ? 'Network error. Please check your connection.'
         : 'Failed to load home data. Please try again.';
-
-      setError(errorMessage);
-
-      // Try to get cached data as fallback
-      try {
-        console.log('🔄 Attempting to get cached data as fallback...');
-        const cachedData = await historicalDataService.getCurrentDayData();
-
-        if (Array.isArray(cachedData) && cachedData.length > 0) {
-          const recentData = cachedData
-            .filter(item => item && item.datetime)
-            .map(item => ({
-              ...item,
-              datetime: typeof item.datetime === 'string' ? new Date(item.datetime) : item.datetime
-            }))
-            .sort((a, b) => b.datetime - a.datetime)
-            .slice(0, 50);
-
-          console.log('📦 Using cached data fallback:', {
-            cachedCount: cachedData.length,
-            recentCount: recentData.length
-          });
-
-          setChartData(recentData);
-          setLastUpdated(new Date());
-          setError(`${errorMessage} (Showing cached data)`);
-        } else {
-          console.log('⚠️ No cached data available');
-          setChartData([]);
-        }
-      } catch (cacheErr) {
-        console.error('❌ Cache fallback failed:', {
-          error: cacheErr.message,
-          stack: cacheErr.stack
-        });
-        setChartData([]);
-      }
+      
+      dispatch({ 
+        type: 'FETCH_ERROR', 
+        error: errorMessage 
+      });
     } finally {
-      setLoading(false);
-      console.log('🏁 fetchHomeData completed, loading set to false');
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
-  }, []);
+  }, []); // Remove processChartData dependency to prevent function recreation
 
   // Helper function to validate if a date is within the specified range
   const isDateInRange = (date, rangeStart, rangeEnd) => {
@@ -179,10 +219,17 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
   const fetchReportsData = useCallback(async (filter) => {
     console.log('📅 [useChartData] Fetching reports data with filter:', filter);
 
+    // Abort any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    dispatch({ type: 'FETCH_START' });
+
     try {
-      setLoading(true);
-      setChartData([]);
-      setError(null);
 
       // Validate input parameters
       if (!filter || typeof filter !== 'string') {
@@ -372,17 +419,30 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
         throw new Error('Final data is not an array');
       }
 
-      setChartData(data);
-      setLastUpdated(new Date());
-      setError(null);
+      // Process and validate the data
+      const processedData = processChartData(data, null);
+      
+      dispatch({ 
+        type: 'FETCH_SUCCESS', 
+        payload: processedData 
+      });
 
       console.log('✅ [useChartData] Data fetch completed successfully:', {
         filter,
         dataCount: data.length,
+        processedCount: processedData.length,
         lastUpdated: new Date().toISOString()
       });
 
     } catch (err) {
+      // Ignore aborted requests
+      if (err.name === 'AbortError') {
+        console.log('⏹️ Fetch aborted');
+        return;
+      }
+      
+      if (!isMountedRef.current) return;
+
       console.error('❌ Error in fetchReportsData:', {
         error: err.message,
         stack: err.stack,
@@ -397,8 +457,6 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
         ? 'Network error. Please check your connection.'
         : 'Failed to load data. Please try again.';
 
-      setError(errorMessage);
-
       // Try to get cached data as last resort
       try {
         console.log('🔄 [useChartData] Attempting to get cached data as last resort...');
@@ -411,78 +469,97 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
         });
 
         if (Array.isArray(cachedData) && cachedData.length > 0) {
-          setChartData(cachedData);
-          setLastUpdated(new Date());
-          setError(`${errorMessage} (Showing cached data)`);
+          const processedCachedData = processChartData(cachedData, null);
+          
+          dispatch({ 
+            type: 'USE_CACHED_DATA', 
+            payload: processedCachedData,
+            error: `${errorMessage} (Showing cached data)`
+          });
           console.log('✅ [useChartData] Using cached data as fallback');
         } else {
           console.log('⚠️ [useChartData] No cached data available for filter:', filter);
-          setChartData([]);
+          dispatch({ 
+            type: 'FETCH_ERROR', 
+            error: errorMessage 
+          });
         }
       } catch (cacheErr) {
         console.error('❌ [useChartData] Cache fallback failed:', {
           error: cacheErr.message,
           stack: cacheErr.stack
         });
-        setChartData([]);
+        dispatch({ 
+          type: 'FETCH_ERROR', 
+          error: errorMessage 
+        });
       }
     } finally {
-      setLoading(false);
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
       console.log('🏁 [useChartData] fetchReportsData completed for filter:', filter);
     }
-  }, [timeFilter]); // Add timeFilter to dependency array
-
-  // Refresh data
+  }, []); // Empty dependency array to prevent function recreation
+  // Stable debounced refresh function - created once and reused
+  const debouncedRefresh = useMemo(
+    () => debounce((refreshFn) => {
+      if (isMountedRef.current) {
+        refreshFn();
+      }
+    }, 1000), // 1 second debounce
+    [] // Empty dependency array - created once
+  );
+  
+  // Optimized refresh function
   const refreshData = useCallback(() => {
     console.log('🔄 [useChartData] Manual refresh triggered');
-
-    try {
-      if (type === 'home') {
-        fetchHomeData();
-      } else if (type === 'reports') {
-        if (timeFilter && typeof timeFilter === 'string') {
-          fetchReportsData(timeFilter);
-        } else {
-          console.error('❌ [useChartData] Invalid timeFilter for reports:', timeFilter);
-          setError('Invalid time filter. Please select a valid time period.');
-        }
-      } else {
-        console.error('❌ [useChartData] Unknown data type:', type);
-        setError('Unknown data type. Please try again.');
-      }
-    } catch (error) {
-      console.error('❌ [useChartData] Error in refreshData:', {
-        error: error.message,
-        stack: error.stack,
-        type,
-        timeFilter
-      });
-      setError('Failed to refresh data. Please try again.');
-    }
-  }, [type, timeFilter, fetchHomeData, fetchReportsData]);
-
-  // Auto-refresh for home tab every 30 seconds
-  useEffect(() => {
+    
+    if (!isMountedRef.current) return;
+    
     if (type === 'home') {
-      fetchHomeData();
-
-      const interval = setInterval(() => {
-        fetchHomeData();
-      }, 30 * 1000); // 30 seconds
-
-      return () => {
-        clearInterval(interval);
-        console.log('🧹 [useChartData] Home auto-refresh interval cleared');
-      };
+      debouncedRefresh(fetchHomeData);
+    } else if (type === 'reports' && timeFilter) {
+      console.log('Refreshing reports data...');
+      // Use debounced refresh for reports as well
+      debouncedRefresh(() => fetchReportsData(timeFilter));
+    } else {
+      console.error('❌ [useChartData] Invalid refresh parameters:', { type, timeFilter });
+      dispatch({ 
+        type: 'FETCH_ERROR', 
+        error: 'Invalid refresh parameters. Please try again.' 
+      });
     }
-  }, [type, fetchHomeData]);
+  }, [type, timeFilter]); // Only depend on primitive values
+
+  // Auto-refresh for home tab every 30 seconds - stable dependencies
+  useEffect(() => {
+    if (type !== 'home') return;
+    
+    // Initial fetch
+    fetchHomeData();
+    
+    // Set up interval for auto-refresh
+    const interval = setInterval(() => {
+      if (isMountedRef.current) {
+        console.log('🔄 Auto-refreshing home data...');
+        debouncedRefresh(fetchHomeData);
+      }
+    }, 30 * 1000); // 30 seconds
+    
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      console.log('🧹 [useChartData] Home auto-refresh interval cleared');
+    };
+  }, [type]); // Only depend on type, not the functions
 
   // Fetch reports data when time filter changes
   useEffect(() => {
     if (type === 'reports' && timeFilter) {
       fetchReportsData(timeFilter);
     }
-  }, [type, timeFilter, fetchReportsData]);
+  }, [type, timeFilter]); // Only depend on primitive values
 
   // Clear expired cache entries periodically
   useEffect(() => {
@@ -500,12 +577,13 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
     };
   }, []);
 
-  return {
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({
     chartData,
     loading,
     error,
     lastUpdated,
     refreshData,
     hasData: chartData.length > 0
-  };
+  }), [chartData, loading, error, lastUpdated, refreshData]);
 }; 

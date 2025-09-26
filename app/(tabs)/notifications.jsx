@@ -67,7 +67,7 @@ export default function NotificationsScreen() {
 
   // Fetch historical alerts from Firebase
   const fetchHistoricalAlerts = useCallback(
-    async (showRefreshIndicator = false) => {
+    async (showRefreshIndicator = false, additionalLimit = 0) => {
       try {
         if (showRefreshIndicator) {
           setRefreshing(true);
@@ -76,15 +76,33 @@ export default function NotificationsScreen() {
         }
         setError(null);
 
-        console.log("🔄 Fetching historical alerts...");
+        const baseLimit = 30; // Initial limit of 30 records
+        const totalLimit = baseLimit + additionalLimit;
+
+        console.log(`🔄 Fetching historical alerts (limit: ${totalLimit})...`);
         const alertsData = await historicalAlertsService.getHistoricalAlerts({
           useCache: !showRefreshIndicator,
-          limitCount: 200, // Fetch more alerts to support pagination
+          limitCount: totalLimit, // Use the total limit (30 + additional)
           filterType: activeSeverity !== "all" ? activeSeverity : null, // Severity filter (error, warning, info, normal)
           filterParameter: activeParameter !== "all" ? activeParameter : null, // Parameter filter (pH, temperature, etc.)
         });
 
-        setHistoricalData(alertsData);
+        // Check if we got fewer alerts than requested (means we've reached the end)
+        const requestedAdditionalLimit = additionalLimit;
+        const initialLimit = 30;
+        const expectedBatchSize = requestedAdditionalLimit > 0 ? 30 : initialLimit; // Always fetch 30 alerts per batch
+
+        const actuallyReceived = alertsData.totalCount - (historicalData?.totalCount || 0);
+        const hasMoreDataInDatabase = requestedAdditionalLimit === 0 ||
+          actuallyReceived >= expectedBatchSize ||
+          alertsData.totalCount >= 50; // Assume we have more if we have 50+ total
+
+        console.log(`🔍 Load More Check: Requested ${expectedBatchSize}, received ${actuallyReceived}, hasMore=${hasMoreDataInDatabase}`);
+
+        setHistoricalData({
+          ...alertsData,
+          hasMoreDataInDatabase, // Add flag to indicate if there are more alerts available
+        });
         console.log(
           `✅ Loaded ${alertsData.totalCount} historical alerts in ${alertsData.sections.length} sections`
         );
@@ -94,26 +112,33 @@ export default function NotificationsScreen() {
       } finally {
         setLoading(false);
         setRefreshing(false);
+        setLoadingMore(false);
       }
     },
     [activeParameter, activeSeverity]
   );
 
-  // Load more alerts function
+  // Load more alerts function - fetches another 30 alerts from Firebase
   const loadMoreAlerts = useCallback(async () => {
     if (loadingMore) return;
 
     setLoadingMore(true);
     try {
-      // Increase display limit by 20
+      // Always fetch the next batch of 30 alerts
+      const currentBatchNumber = Math.max(1, Math.ceil((historicalData?.totalCount || 30) / 30));
+      const newAdditionalLimit = currentBatchNumber * 30;
+
+      console.log(`📈 Loading more alerts from Firebase: +30 records (batch ${currentBatchNumber + 1}, total limit: ${30 + newAdditionalLimit})`);
+      await fetchHistoricalAlerts(false, newAdditionalLimit);
+
+      // Also increase displayed limit
       setDisplayLimit((prev) => prev + 20);
-      console.log(`📈 Increased display limit to ${displayLimit + 20} alerts`);
     } catch (err) {
       console.error("❌ Error loading more alerts:", err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, displayLimit]);
+  }, [loadingMore, displayLimit, historicalData, fetchHistoricalAlerts]);
 
   // Get limited sections for display
   const getLimitedSections = useCallback(
@@ -151,7 +176,12 @@ export default function NotificationsScreen() {
       (sum, section) => sum + section.data.length,
       0
     );
-    return totalAlerts > displayLimit;
+
+    // Only show Load More if we have more alerts than displayed AND more data exists in Firebase
+    const hasUndisplayedAlerts = totalAlerts > displayLimit;
+    const hasMoreDataInDatabase = historicalData.hasMoreDataInDatabase !== false; // Default to true if undefined
+
+    return hasUndisplayedAlerts && hasMoreDataInDatabase;
   }, [historicalData, displayLimit]);
 
   // Initial load
@@ -279,60 +309,6 @@ export default function NotificationsScreen() {
     </View>
   );
 
-  // Loading state
-  if (loading && !historicalData) {
-    return (
-      <>
-        <PureFlowLogo
-          weather={{
-            label: "Light Rain",
-            temp: "30°C",
-            icon: "partly",
-          }}
-        />
-
-        <ActivityIndicator size="large" color="#007AFF" />
-
-        <GlobalWrapper className="flex-1 bg-[#e6fbff]">
-          <View style={{ marginBottom: 16, alignItems: "flex-start" }}></View>
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading alerts...</Text>
-          </View>
-        </GlobalWrapper>
-      </>
-    );
-  }
-
-  // Error state
-  if (error && !historicalData) {
-    return (
-      <GlobalWrapper className="flex-1 bg-[#e6fbff]">
-        <View style={{ marginBottom: 16, alignItems: "flex-start" }}>
-          <PureFlowLogo
-            weather={{
-              label: "Light Rain",
-              temp: "30°C",
-              icon: "partly",
-            }}
-          />
-        </View>
-        <View style={styles.errorContainer}>
-          <AlertTriangle size={48} color="#ef4444" style={styles.errorIcon} />
-          <Text style={styles.errorTitle}>
-            Failed to Load Alerts
-          </Text>
-          <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity
-            onPress={() => fetchHistoricalAlerts()}
-            style={styles.retryButton}
-          >
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </GlobalWrapper>
-    );
-  }
-
   const allSections = historicalData?.sections || [];
   const limitedSections = getLimitedSections(allSections);
   const hasAlerts = limitedSections.length > 0;
@@ -346,9 +322,9 @@ export default function NotificationsScreen() {
     0
   );
 
-  // Render Load More button (only when near bottom)
+  // Render Load More button (shown whenever there are more alerts to load)
   const renderLoadMoreButton = () => {
-    if (!showLoadMore || !isNearBottom) return null;
+    if (!showLoadMore) return null;
 
     return (
       <View style={styles.loadMoreContainer}>
@@ -397,7 +373,7 @@ export default function NotificationsScreen() {
       />
 
       <GlobalWrapper disableScrollView>
-        {/* Filters */}
+        {/* Filters - Always visible even during loading */}
         <View style={styles.filtersContainer}>
           <NotificationFilter
             selectedAlert={activeParameter}
@@ -407,48 +383,75 @@ export default function NotificationsScreen() {
           />
         </View>
 
-        {/* Alerts List */}
-        {hasAlerts ? (
-          <>
-            <SectionList
-              sections={limitedSections}
-              keyExtractor={(item) => item.id}
-              renderItem={renderAlertItem}
-              renderSectionHeader={renderSectionHeader}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  colors={["#007AFF"]}
-                  tintColor={"#007AFF"}
-                />
-              }
-              contentContainerStyle={[
-                styles.sectionListContent,
-                {
-                  paddingBottom: showLoadMore && isNearBottom ? 0 : 24,
-                },
-              ]}
-              showsVerticalScrollIndicator={false}
-              style={styles.sectionListContainer}
-            />
-            {renderLoadMoreButton()}
-          </>
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <Bell size={48} color="#9ca3af" style={styles.emptyStateIcon} />
-            <Text style={styles.emptyStateTitle}>
-              No Alerts Found
-            </Text>
-            <Text style={styles.emptyStateMessage}>
-              {activeParameter !== "all" || activeSeverity !== "all"
-                ? "Try adjusting your filters to see more alerts."
-                : "No historical alerts available at the moment."}
-            </Text>
+        {/* Loading State */}
+        {loading && !historicalData ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading alerts...</Text>
           </View>
-        )}
+        ) : (
+            /* Error State */
+            error && !historicalData ? (
+              <View style={styles.errorContainer}>
+                <AlertTriangle size={48} color="#ef4444" style={styles.errorIcon} />
+                <Text style={styles.errorTitle}>
+                  Failed to Load Alerts
+                </Text>
+                <Text style={styles.errorMessage}>{error}</Text>
+                <TouchableOpacity
+                  onPress={() => fetchHistoricalAlerts()}
+                  style={styles.retryButton}
+                >
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Alerts List - Only show when not in loading or error states */
+              <>
+                {hasAlerts ? (
+                  <>
+                    <SectionList
+                      sections={limitedSections}
+                      keyExtractor={(item) => item.id}
+                      renderItem={renderAlertItem}
+                      renderSectionHeader={renderSectionHeader}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
+                      refreshControl={
+                        <RefreshControl
+                          refreshing={refreshing}
+                          onRefresh={onRefresh}
+                          colors={["#007AFF"]}
+                          tintColor={"#007AFF"}
+                        />
+                      }
+                      contentContainerStyle={[
+                        styles.sectionListContent,
+                        {
+                          paddingBottom: showLoadMore ? 120 : 24, // Extra space for button
+                        },
+                      ]}
+                      showsVerticalScrollIndicator={false}
+                      style={styles.sectionListContainer}
+                    />
+                    {renderLoadMoreButton()}
+                  </>
+                ) : (
+                  <View style={styles.emptyStateContainer}>
+                    <Bell size={48} color="#9ca3af" style={styles.emptyStateIcon} />
+                    <Text style={styles.emptyStateTitle}>
+                      No Alerts Found
+                    </Text>
+                    <Text style={styles.emptyStateMessage}>
+                      {activeParameter !== "all" || activeSeverity !== "all"
+                        ? "Try adjusting your filters to see more alerts."
+                        : "No historical alerts available at the moment."}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )
+          )}
       </GlobalWrapper>
     </>
   );

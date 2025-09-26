@@ -9,8 +9,8 @@ class HistoricalAlertsService {
   constructor() {
     // Initialize in-memory cache
     this.cache = {
-      alerts: null,      // Cached alerts array
-      timestamp: null,   // When cache was last updated
+      alerts: null,     
+      timestamp: null,  
     };
     this.CACHE_DURATION = 60000; // Cache expires after 1 minute
   }
@@ -48,9 +48,10 @@ class HistoricalAlertsService {
         console.log('🔄 Fetching historical alerts from Firebase...');
 
         // Fetch alerts from Firebase ordered by timestamp (most recent first)
+        console.log(`🔄 Fetching alerts from Firebase with limit: ${limitCount}`);
         const alerts = await fetchAllDocuments('alerts', {
           useCache: false,
-          limitCount,
+          limitCount, // Use the dynamic limit count passed as parameter
           orderByField: 'timestamp',
           orderDirection: 'desc'
         });

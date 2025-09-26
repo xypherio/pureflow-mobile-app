@@ -30,15 +30,6 @@ const GlobalWrapper = forwardRef(({ children, disableScrollView = false, style }
           </ScrollView>
         </View>
       )}
-      {/* Subtle bottom gradient overlay */}
-      <View style={styles.gradientOverlay}>
-        <LinearGradient
-          colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.8)"]}
-          style={styles.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        />
-      </View>
     </SafeAreaView>
   );
 });
@@ -58,16 +49,5 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
     paddingHorizontal: 16,
-  },
-  gradientOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 80,
-    pointerEvents: "none",
-  },
-  gradient: {
-    flex: 1,
   },
 });
