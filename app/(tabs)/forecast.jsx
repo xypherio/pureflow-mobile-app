@@ -5,35 +5,57 @@ import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
 import WeatherBanner from "@ui/WeatherBanner";
 
+import useForecastService from "@hooks/useForecastService";
 import { generateInsight } from "@services/ai/geminiAPI";
-import { getMockForecast } from "@services/mockForecastService";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
 
 export default function HomeScreen() {
+  // UI State Management (Single Responsibility: Handle modal and navigation state)
   const [isModalVisible, setIsModalVisible] = React.useState(false);
   const [selectedParam, setSelectedParam] = React.useState(null);
   const [forecastDetails, setForecastDetails] = React.useState(null);
-  const [forecastPredicted, setForecastPredicted] = React.useState(null);
-  const [geminiResponse, setGeminiResponse] = useState(null); // State for Gemini response
-  const [isGeminiLoading, setIsGeminiLoading] = useState(false); // State for Gemini loading
 
+  // AI Insights States (Single Responsibility: Handle AI-generated insights)
+  const [geminiResponse, setGeminiResponse] = useState(null);
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+
+  // Use custom hook for prediction logic (Single Responsibility Principle)
+  const {
+    forecastPredicted,
+    isLoading,
+    predictionError,
+    initializePrediction,
+  } = useForecastService();
+
+  // Initialize component and set up automated prediction refresh
   React.useEffect(() => {
-    (async () => {
-      const result = await getMockForecast("6h");
-      setForecastDetails(result.details);
-      setForecastPredicted(result.predicted);
-    })();
+    // Use the custom hook's initialization method
+    const cleanup = initializePrediction();
+
+    // Return cleanup function from the hook
+    return cleanup;
   }, []);
 
-  // Fetch Gemini insights when forecastPredicted data is available
+  // Generate AI insights whenever new predictions are available
   useEffect(() => {
     if (forecastPredicted) {
       const getForecastInsight = async () => {
         setIsGeminiLoading(true);
         setGeminiResponse(null);
         try {
-          const insight = await generateInsight(forecastPredicted, "forecast-overall-insight"); // Pass forecastPredicted and unique componentId
+          // Generate AI-powered insights and recommendations using Gemini API
+          const insight = await generateInsight(
+            forecastPredicted,
+            "forecast-overall-insight"
+          );
           setGeminiResponse(insight);
           console.log("Forecast Gemini API Response:", insight);
         } catch (error) {
@@ -49,6 +71,10 @@ export default function HomeScreen() {
     }
   }, [forecastPredicted]);
 
+  /**
+   * Opens detailed forecast modal for a specific parameter
+   * @param {string} paramKey - The parameter key (pH, Temperature, Turbidity, Salinity)
+   */
   function openDetails(paramKey) {
     if (forecastDetails && forecastDetails[paramKey]) {
       setSelectedParam({ key: paramKey, ...forecastDetails[paramKey] });
@@ -58,17 +84,27 @@ export default function HomeScreen() {
     setIsModalVisible(true);
   }
 
+  /**
+   * Closes the forecast detail modal
+   */
   function closeDetails() {
     setIsModalVisible(false);
   }
 
+  /**
+   * Formats parameter values for display with appropriate units
+   * @param {string} key - Parameter name (pH, Temperature, Turbidity, Salinity)
+   * @param {number} value - Raw parameter value
+   * @returns {string} - Formatted value with units or "-" if null/undefined
+   */
   function formatValue(key, value) {
     if (value === null || value === undefined) return "-";
-    if (key === "pH") return String(value);
-    if (key === "Temperature") return `${value}°C`;
-    if (key === "Turbidity") return `${value} NTU`;
-    if (key === "Salinity") return `${value} ppt`;
-    return String(value);
+    const roundedValue = Math.round(value * 100) / 100;
+    if (key === "pH") return String(roundedValue);
+    if (key === "Temperature") return `${roundedValue}°C`;
+    if (key === "Turbidity") return `${roundedValue} NTU`;
+    if (key === "Salinity") return `${roundedValue} ppt`;
+    return String(roundedValue);
   }
 
   return (
@@ -84,14 +120,24 @@ export default function HomeScreen() {
       <GlobalWrapper style={{ flex: 1 }}>
         {/* Weather Summary Section */}
         <View>
-          <WeatherBanner showCurrentWeather={true} city="Bogo City" /> 
+          <WeatherBanner showCurrentWeather={true} city="Bogo City" />
         </View>
 
+        {/* Error Message Display */}
+        {predictionError && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>
+              <Text style={{ fontWeight: "bold" }}>
+                Failed to retrieve latest forecast:
+              </Text>{" "}
+              {predictionError}. Displaying last available data.
+            </Text>
+          </View>
+        )}
+
         {/* Forecast Parameters Section */}
-        <View style={{ marginBottom: 10 }}>
-          <Text style={{ fontSize: 12, color: "#1a2d51", marginBottom: 10 }}>
-            Forecast Parameters
-          </Text>
+        <View style={styles.forecastParametersContainer}>
+          <Text style={styles.sectionTitle}>Forecast Parameters</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <ForecastCard
               title="pH"
@@ -130,27 +176,16 @@ export default function HomeScreen() {
 
         {/* Forecast Insights Section */}
         <View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 12,
-                color: "#1a2d51",
-                marginBottom: 5,
-                marginTop: 10,
-              }}
-            >
-              Insights & Suggestions
-            </Text>
+          <View style={styles.insightsHeader}>
+            <Text style={styles.sectionTitle}>Insights & Suggestions</Text>
           </View>
 
           {isGeminiLoading ? (
-            <ActivityIndicator size="large" color="#4a90e2" style={{ marginTop: 20 }} />
+            <ActivityIndicator
+              size="large"
+              color="#4a90e2"
+              style={styles.loadingIndicator}
+            />
           ) : geminiResponse ? (
             <>
               {/* Overall Forecast Insight Card */}
@@ -173,12 +208,18 @@ export default function HomeScreen() {
                   timestamp={geminiResponse?.insights?.timestamp}
                   componentId={`forecast-param-insight-${suggestion.parameter}`} // Unique componentId
                   autoRefresh={true} // Allow auto-refresh for forecast insights
-                  sensorData={{ [suggestion.parameter.toLowerCase()]: forecastPredicted?.[suggestion.parameter] }} // Pass individual parameter data
+                  sensorData={{
+                    [suggestion.parameter.toLowerCase()]:
+                      forecastPredicted?.[suggestion.parameter],
+                  }} // Pass individual parameter data
                 />
               ))}
             </>
           ) : (
-            <Text>Failed to load forecast insights. Please check your Gemini API quota or try again later.</Text>
+            <Text>
+              Failed to load forecast insights. Please check your Gemini API
+              quota or try again later.
+            </Text>
           )}
         </View>
 
@@ -191,3 +232,34 @@ export default function HomeScreen() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  errorContainer: {
+    backgroundColor: "#FFD2D2",
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#D9534F",
+  },
+  errorText: {
+    color: "#A94442",
+    fontSize: 12,
+  },
+  forecastParametersContainer: {
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    color: "#1a2d51",
+    marginBottom: 10,
+  },
+  insightsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  loadingIndicator: {
+    marginTop: 20,
+  },
+});

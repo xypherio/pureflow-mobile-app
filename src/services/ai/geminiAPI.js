@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GEMINI_API_KEY } from "@env";
 
-const API_KEY = "AIzaSyA1J4Ue-GM0pJT2rcILsJD52tTyuRbmuO0";
-
+const API_KEY = GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Component-specific cache and timing
@@ -11,8 +11,9 @@ const componentTimers = new Map();
 const FETCH_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 // Global quota management
-let geminiQuota = 0;
-const maxGeminiQuota = 50; // Increased quota for more frequent calls
+let isQuotaExceeded = false;
+let quotaResetTime = null;
+const QUOTA_COOLDOWN_PERIOD = 15 * 60 * 1000; // 15-minute cooldown
 
 // Cache keys
 const CACHE_PREFIX = 'gemini_insights_';
@@ -20,7 +21,6 @@ const CACHE_EXPIRY_PREFIX = 'gemini_insights_expiry_';
 
 // Environment check for production
 const isProduction = __DEV__ === false;
-
 /**
  * Silent logging that only shows in development
  */
@@ -144,41 +144,28 @@ const updateComponentFetchTime = (componentId) => {
  * Generate insight using Gemini API
  */
 const generateInsightFromAPI = async (sensorData) => {
-  if (geminiQuota >= maxGeminiQuota) {
-    silentLog("Gemini quota exceeded. Using fallback model.");
+  // If quota was exceeded, check if cooldown is over
+  if (isQuotaExceeded && quotaResetTime && Date.now() > quotaResetTime) {
+    isQuotaExceeded = false; // Cooldown finished, allow requests again
+    quotaResetTime = null;
+    silentLog("✨ Gemini API cooldown finished. Resuming requests.");
+  }
+
+  // If quota is still exceeded, return a fallback response immediately
+  if (isQuotaExceeded) {
+    silentLog("🛑 Gemini API quota exceeded. Cooldown active.");
     return {
       insights: {
-        overallInsight: "AI quota exceeded. Using fallback analysis.",
+        overallInsight: "AI features are temporarily unavailable due to high demand. Please try again later.",
         timestamp: new Date().toISOString(),
-        source: "fallback"
+        source: "quota-fallback"
       },
-      suggestions: [
-        {
-          parameter: "pH",
-          recommendation: "Monitor pH levels regularly. Current readings appear stable.",
-          status: "normal"
-        },
-        {
-          parameter: "temperature",
-          recommendation: "Temperature within acceptable range. Continue monitoring.",
-          status: "normal"
-        },
-        {
-          parameter: "salinity",
-          recommendation: "Salinity levels are optimal for water quality.",
-          status: "normal"
-        },
-        {
-          parameter: "turbidity",
-          recommendation: "Turbidity readings are within safe parameters.",
-          status: "normal"
-        }
-      ]
+      suggestions: []
     };
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
     Based on the following water quality sensor data, provide a detailed analysis and recommendations.
@@ -224,7 +211,6 @@ const generateInsightFromAPI = async (sensorData) => {
     const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
     try {
-      geminiQuota++;
       const parsedResponse = JSON.parse(cleanedText);
 
       // Ensure the response has the expected structure
@@ -242,6 +228,13 @@ const generateInsightFromAPI = async (sensorData) => {
     }
   } catch (error) {
     silentError("Error generating insight from Gemini API:", error);
+
+    // Check if the error is a 429 quota exceeded error
+    if (error.message && error.message.includes("[429 ")) {
+      silentLog("🚫 Gemini API quota limit reached. Activating cooldown.");
+      isQuotaExceeded = true;
+      quotaResetTime = Date.now() + QUOTA_COOLDOWN_PERIOD;
+    }
     // If there's an API error, return a fallback response instead of re-throwing
     return {
       insights: {

@@ -1,20 +1,101 @@
 import { getWaterQualityThresholds } from "@constants/thresholds";
-import { useOptimizedRealtimeData } from "@contexts/OptimizedDataContext";
+import { useData } from "@contexts/DataContext";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 const thresholds = getWaterQualityThresholds();
 
 export default function RealTimeData({ data = [] }) {
   const { 
-    data: realtimeData, 
-    hasData, 
-    dataAge, 
-    isInitialized,
-    getParameterValue,
-    getAllParameters 
-  } = useOptimizedRealtimeData();
+    realtimeData, 
+    loading, 
+    refreshData,
+    lastUpdate
+  } = useData();
+
+  // Debug logging to understand what data we're receiving
+  useEffect(() => {
+    console.log('🔍 RealtimeDataCards Debug Info:', {
+      realtimeData,
+      loading,
+      lastUpdate,
+      hasRealtimeData: !!realtimeData,
+      realtimeDataType: typeof realtimeData,
+      realtimeDataKeys: realtimeData ? Object.keys(realtimeData) : [],
+      realtimeDataStructure: realtimeData ? {
+        pH: realtimeData.pH || realtimeData.reading?.pH,
+        temperature: realtimeData.temperature || realtimeData.reading?.temperature,
+        turbidity: realtimeData.turbidity || realtimeData.reading?.turbidity,
+        salinity: realtimeData.salinity || realtimeData.reading?.salinity,
+        timestamp: realtimeData.timestamp || realtimeData.reading?.timestamp,
+        datetime: realtimeData.datetime || realtimeData.reading?.datetime,
+        hasReadingProperty: !!realtimeData.reading
+      } : null
+    });
+  }, [realtimeData, loading, lastUpdate]);
+
+  // Set up 30-second refresh interval
+  const refreshIntervalRef = useRef(null);
+
+  useEffect(() => {
+    // Set up 30-second refresh interval
+    const setupRefreshInterval = () => {
+      refreshIntervalRef.current = setInterval(() => {
+        console.log('🔄 30s refresh triggered for RealtimeDataCards');
+        refreshData();
+      }, 30000); // 30 seconds
+    };
+
+    setupRefreshInterval();
+
+    // Cleanup interval on unmount
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [refreshData]);
+
+  // Calculate data age - handle both timestamp formats
+  const dataAge = useMemo(() => {
+    if (!realtimeData) return 'No data';
+    
+    // Handle different timestamp formats
+    let dataTime = null;
+    if (realtimeData.timestamp) {
+      dataTime = new Date(realtimeData.timestamp).getTime();
+    } else if (realtimeData.datetime) {
+      dataTime = new Date(realtimeData.datetime).getTime();
+    } else if (realtimeData.reading?.timestamp) {
+      dataTime = new Date(realtimeData.reading.timestamp).getTime();
+    } else if (realtimeData.reading?.datetime) {
+      dataTime = new Date(realtimeData.reading.datetime).getTime();
+    }
+    
+    if (!dataTime || isNaN(dataTime)) return 'No data';
+    
+    const now = Date.now();
+    const ageSeconds = Math.floor((now - dataTime) / 1000);
+    
+    if (ageSeconds < 60) return `${ageSeconds}s ago`;
+    if (ageSeconds < 3600) return `${Math.floor(ageSeconds / 60)}m ago`;
+    return `${Math.floor(ageSeconds / 3600)}h ago`;
+  }, [realtimeData]);
+
+  // Check if we have valid data - handle different data structures
+  const hasData = realtimeData && (
+    realtimeData.timestamp || 
+    realtimeData.datetime || 
+    realtimeData.reading?.timestamp || 
+    realtimeData.reading?.datetime ||
+    // Fallback: if we have any sensor data, consider it valid
+    (realtimeData.pH !== undefined || realtimeData.temperature !== undefined || 
+     realtimeData.turbidity !== undefined || realtimeData.salinity !== undefined) ||
+    (realtimeData.reading?.pH !== undefined || realtimeData.reading?.temperature !== undefined || 
+     realtimeData.reading?.turbidity !== undefined || realtimeData.reading?.salinity !== undefined)
+  );
+  const isInitialized = true; // DataContext is always initialized
 
   // Memoized parameters to prevent unnecessary re-renders
   const parameters = useMemo(() => {
@@ -22,65 +103,102 @@ export default function RealTimeData({ data = [] }) {
       return [];
     }
 
-    // Get all parameters at once to prevent multiple function calls
-    const allParams = getAllParameters();
+    // Handle different data structures - some might have nested 'reading' property
+    let sensorData = realtimeData;
+    if (realtimeData.reading) {
+      sensorData = realtimeData.reading;
+      console.log('📊 Using nested reading data from realtimeData.reading');
+    } else {
+      console.log('📊 Using direct realtimeData');
+    }
+
+    // Extract parameters directly from sensor data
+    const { pH, temperature, turbidity, salinity } = sensorData;
+
+    console.log('🔍 Processing sensor data:', {
+      pH, temperature, turbidity, salinity,
+      pHValid: pH !== null && pH !== undefined && !isNaN(pH),
+      temperatureValid: temperature !== null && temperature !== undefined && !isNaN(temperature),
+      turbidityValid: turbidity !== null && turbidity !== undefined && !isNaN(turbidity),
+      salinityValid: salinity !== null && salinity !== undefined && !isNaN(salinity)
+    });
 
     return [
       {
         label: "pH Level",
-        value: allParams.pH !== null && allParams.pH !== undefined ? String(allParams.pH) : "--",
-        unit: "pH",
+        value: pH !== null && pH !== undefined ? String(Number(pH).toFixed(1)) : "--",
+        unit: "PH",
         icon: <Gauge size={30} color="#007bff" />,
         color: "#007bff",
         threshold: thresholds["pH"],
-        hasData: allParams.pH !== null && allParams.pH !== undefined,
+        hasData: pH !== null && pH !== undefined && !isNaN(pH),
       },
       {
         label: "Temperature",
-        value: allParams.temperature !== null && allParams.temperature !== undefined ? String(allParams.temperature) : "--",
+        value: temperature !== null && temperature !== undefined ? String(Number(temperature).toFixed(1)) : "--",
         unit: "°C",
         icon: <Thermometer size={30} color="#e83e8c" />,
         color: "#e83e8c",
         threshold: thresholds["temperature"],
-        hasData: allParams.temperature !== null && allParams.temperature !== undefined,
+        hasData: temperature !== null && temperature !== undefined && !isNaN(temperature),
       },
       {
         label: "Turbidity",
-        value: allParams.turbidity !== null && allParams.turbidity !== undefined ? String(allParams.turbidity) : "--",
+        value: turbidity !== null && turbidity !== undefined ? String(Number(turbidity).toFixed(1)) : "--",
         unit: "NTU",
         icon: <Waves size={30} color="#28a745" />,
         color: "#28a745",
         threshold: thresholds["turbidity"],
-        hasData: allParams.turbidity !== null && allParams.turbidity !== undefined,
+        hasData: turbidity !== null && turbidity !== undefined && !isNaN(turbidity),
       },
       {
         label: "Salinity",
-        value: allParams.salinity !== null && allParams.salinity !== undefined ? String(allParams.salinity) : "--",
-        unit: "ppt",
+        value: salinity !== null && salinity !== undefined ? String(Number(salinity).toFixed(1)) : "--",
+        unit: "PPT",
         icon: <Droplet size={30} color="#8b5cf6" />,
         color: "#8b5cf6",
         threshold: thresholds["salinity"],
-        hasData: allParams.salinity !== null && allParams.salinity !== undefined,
+        hasData: salinity !== null && salinity !== undefined && !isNaN(salinity),
       },
     ];
-  }, [hasData, realtimeData, getAllParameters]);
+  }, [hasData, realtimeData]);
 
-  // Show loading state if data is still initializing
-  if (!isInitialized) {
+  // Show loading state only if actively loading
+  if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Initializing real-time data...</Text>
+        <Text style={styles.loadingText}>Loading real-time data...</Text>
+      </View>
+    );
+  }
+
+  // Show no data state if no data is available
+  if (!hasData) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <Text style={styles.loadingText}>No real-time data available</Text>
+        <Text style={styles.dataAgeText}>Please check your connection and try again</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Real-Time Parameters</Text>
+        <Text style={styles.lastRefreshText}>Updated: {dataAge}</Text>
+      </View>
       <View style={styles.parametersContainer}>
-        {parameters.map((param, index) => (
-          <ParameterCard key={`${param.label}-${index}`} param={param} />
-        ))}
+        {parameters.length > 0 ? (
+          parameters.map((param, index) => (
+            <ParameterCard key={`${param.label}-${index}`} param={param} />
+          ))
+        ) : (
+          <View style={styles.noDataContainer}>
+            <Text style={styles.noDataText}>No sensor data available</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -148,6 +266,11 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     marginBottom: 8,
   },
+  dataAgeText: {
+    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginTop: 4,
+  },
   parametersContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -170,7 +293,7 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   valueText: {
-    fontSize: 50,
+    fontSize: 45,
     fontWeight: "bold",
     marginRight: 4,
   },
@@ -201,5 +324,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     fontStyle: "italic",
+  },
+  noDataContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  noDataText: {
+    fontSize: 16,
+    color: "#ffffff",
+    textAlign: "center",
   },
 });

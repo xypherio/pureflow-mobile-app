@@ -4,24 +4,51 @@ export class AlertEngine {
     }
   
     generateAlertsFromSensorData(sensorData) {
+      console.log('🚨 AlertEngine: Processing sensor data:', {
+        isArray: Array.isArray(sensorData),
+        length: sensorData?.length,
+        sensorData
+      });
+
       if (!Array.isArray(sensorData) || sensorData.length === 0) {
+        console.log('🚨 AlertEngine: No valid sensor data provided');
         return [];
       }
-  
+
       const alerts = [];
       const latestReading = sensorData[sensorData.length - 1];
-  
+      
+      console.log('🚨 AlertEngine: Latest reading:', {
+        latestReading,
+        readingKeys: Object.keys(latestReading),
+        readingValues: {
+          pH: latestReading.pH,
+          temperature: latestReading.temperature,
+          turbidity: latestReading.turbidity,
+          salinity: latestReading.salinity
+        }
+      });
+
       for (const [parameter, value] of Object.entries(latestReading)) {
+        console.log(`🚨 AlertEngine: Checking parameter ${parameter} = ${value}`);
+        
         if (this.isWaterQualityParameter(parameter) && value !== null && value !== undefined) {
+          console.log(`🚨 AlertEngine: Parameter ${parameter} is valid water quality parameter`);
+          
           const alertLevel = this.thresholdManager.evaluateValue(parameter, value);
+          console.log(`🚨 AlertEngine: Parameter ${parameter} alert level: ${alertLevel}`);
           
           if (alertLevel !== 'normal') {
             const alert = this.createAlert(parameter, value, alertLevel, latestReading);
             alerts.push(alert);
+            console.log(`🚨 AlertEngine: Created alert for ${parameter}:`, alert);
           }
+        } else {
+          console.log(`🚨 AlertEngine: Parameter ${parameter} is NOT a valid water quality parameter or has invalid value`);
         }
       }
-  
+
+      console.log(`🚨 AlertEngine: Generated ${alerts.length} alerts total`);
       return alerts;
     }
   
@@ -55,7 +82,7 @@ export class AlertEngine {
     generateAlertMessage(parameter, value, threshold, alertLevel) {
       const paramName = parameter.charAt(0).toUpperCase() + parameter.slice(1);
       const formattedValue = this.formatParameterValue(parameter, value);
-      
+
       let rangeText = '';
       if (threshold.min && threshold.max) {
         rangeText = ` (Safe range: ${threshold.min} - ${threshold.max})`;
@@ -64,14 +91,14 @@ export class AlertEngine {
       } else if (threshold.min) {
         rangeText = ` (Safe min: ${threshold.min})`;
       }
-  
+
       return `${paramName} reading of ${formattedValue} is ${alertLevel}${rangeText}`;
     }
-  
+
     formatParameterValue(parameter, value) {
       const numValue = parseFloat(value);
       if (isNaN(numValue)) return String(value);
-  
+
       switch (parameter.toLowerCase()) {
         case 'ph':
           return numValue.toFixed(2);
@@ -87,7 +114,7 @@ export class AlertEngine {
           return numValue.toFixed(2);
       }
     }
-  
+
     isWaterQualityParameter(parameter) {
       const waterQualityParams = ['ph', 'temperature', 'turbidity', 'salinity', 'tds'];
       return waterQualityParams.includes(parameter.toLowerCase());

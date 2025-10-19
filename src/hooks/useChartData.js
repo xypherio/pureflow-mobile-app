@@ -217,7 +217,16 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
 
   // Fetch data for reports tab (aggregated based on time filter)
   const fetchReportsData = useCallback(async (filter) => {
-    console.log('📅 [useChartData] Fetching reports data with filter:', filter);
+    console.log('📅 [useChartData] Fetching reports data with filter:', filter, 'type:', type);
+    
+    // Log the current state before fetching
+    console.log('📊 [useChartData] Current state:', {
+      loading,
+      error,
+      hasData,
+      lastUpdated,
+      chartData: chartData ? `Array(${chartData.length})` : 'null',
+    });
 
     // Abort any pending request
     if (abortControllerRef.current) {
@@ -292,7 +301,16 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
             console.log('🔄 [useChartData] Cache disabled for retry attempt');
           }
 
-          // Fetch data with current settings and timeout
+              // Fetch data with current settings and timeout
+          console.log('🔄 [useChartData] Fetching aggregated data...', {
+            filter,
+            startDate: adjustedStartDate.toISOString(),
+            endDate: adjustedEndDate.toISOString(),
+            useCache,
+            attempt: attempts,
+            maxAttempts
+          });
+
           const fetchPromise = historicalDataService.getAggregatedData(
             filter,
             adjustedStartDate,
@@ -306,43 +324,75 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
           });
 
           const result = await Promise.race([fetchPromise, timeoutPromise]);
+          
+          console.log('✅ [useChartData] Received data from historicalDataService:', {
+            resultType: Array.isArray(result) ? 'array' : typeof result,
+            resultLength: Array.isArray(result) ? result.length : 'N/A',
+            firstItem: Array.isArray(result) && result.length > 0 ? result[0] : 'N/A',
+            lastItem: Array.isArray(result) && result.length > 0 ? result[result.length - 1] : 'N/A'
+          });
 
           console.log(`📊 [useChartData] Received ${result?.length || 0} data points on attempt ${attempts}`);
 
           if (result && Array.isArray(result) && result.length > 0) {
+            console.log('🔍 [useChartData] Processing raw data items:', {
+              count: result.length,
+              firstItem: result[0],
+              lastItem: result[result.length - 1]
+            });
+
             // Process and validate the data
             data = result
-              .filter(item => {
-                // Validate each data item
-                if (!item || typeof item !== 'object') {
-                  console.warn('⚠️ [useChartData] Invalid data item:', item);
-                  return false;
-                }
-
-                if (!item.datetime) {
-                  console.warn('⚠️ [useChartData] Missing datetime in data item:', item);
-                  return false;
-                }
-
-                return true;
-              })
               .map(item => {
+                // Create a copy to avoid mutating the original
+                const processedItem = { ...item };
+                
+                // Handle datetime conversion
                 try {
-                  const datetime = typeof item.datetime === 'string'
-                    ? new Date(item.datetime)
-                    : item.datetime;
-
-                  // Skip invalid dates
-                  if (isNaN(datetime.getTime())) {
-                    console.warn('⚠️ [useChartData] Invalid date in data point:', item);
+                  if (typeof processedItem.datetime === 'string' || processedItem.datetime instanceof Date) {
+                    processedItem.datetime = new Date(processedItem.datetime);
+                    
+                    // Skip invalid dates
+                    if (isNaN(processedItem.datetime.getTime())) {
+                      console.warn('⚠️ [useChartData] Invalid date in data point:', processedItem);
+                      return null;
+                    }
+                  } else {
+                    console.warn('⚠️ [useChartData] Missing or invalid datetime:', processedItem);
                     return null;
                   }
-
-                  return { ...item, datetime };
-                } catch (parseError) {
-                  console.warn('⚠️ [useChartData] Error parsing data item:', item, parseError);
+                } catch (error) {
+                  console.warn('⚠️ [useChartData] Error processing datetime:', error, processedItem);
                   return null;
                 }
+
+                // Check for required parameters (at least one should be valid)
+                const hasValidParameter = ['pH', 'temperature', 'salinity', 'turbidity'].some(
+                  param => processedItem[param] !== undefined && processedItem[param] !== null
+                );
+
+                if (!hasValidParameter) {
+                  console.warn('⚠️ [useChartData] No valid parameters in data point:', processedItem);
+                  return null;
+                }
+
+                // Log but don't filter out extreme values
+                if (processedItem.pH !== undefined) {
+                  if (processedItem.pH < 0 || processedItem.pH > 14) {
+                    console.warn('⚠️ [useChartData] Extreme pH value detected (should be 0-14):', processedItem.pH);
+                  }
+                  // Ensure pH is a number
+                  processedItem.pH = Number(processedItem.pH);
+                }
+
+                // Convert other parameters to numbers if they exist
+                ['temperature', 'salinity', 'turbidity'].forEach(param => {
+                  if (processedItem[param] !== undefined) {
+                    processedItem[param] = Number(processedItem[param]);
+                  }
+                });
+
+                return processedItem;
               })
               .filter(Boolean) // Remove null entries
               .filter(item => {
@@ -356,13 +406,20 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
               });
 
             // Sort by datetime
-            data.sort((a, b) => a.datetime - b.datetime);
+            data.sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
 
-            console.log('📊 [useChartData] Processed data:', {
+            console.log(`📊 [useChartData] Processed data:`, {
               count: data.length,
               first: data[0]?.datetime?.toISOString(),
               last: data[data.length - 1]?.datetime?.toISOString(),
-              sample: data[0] || 'No data'
+              sample: data[0],
+              parameters: data[0] ? Object.keys(data[0]).filter(k => k !== 'datetime') : 'no data'
+            });
+
+            console.log('📊 [useChartData] Data filtering statistics:', {
+              originalCount: todayData.length,
+              filteredCount: data.length,
+              filteredPercentage: (data.length / todayData.length) * 100
             });
 
             // If we got data, break out of retry loop
@@ -420,7 +477,7 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
       }
 
       // Process and validate the data
-      const processedData = processChartData(data, null);
+      const processedData = data; // Data is already processed above
       
       dispatch({ 
         type: 'FETCH_SUCCESS', 
@@ -469,11 +526,10 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
         });
 
         if (Array.isArray(cachedData) && cachedData.length > 0) {
-          const processedCachedData = processChartData(cachedData, null);
-          
+          // Use cached data directly since it's already processed
           dispatch({ 
             type: 'USE_CACHED_DATA', 
-            payload: processedCachedData,
+            payload: cachedData,
             error: `${errorMessage} (Showing cached data)`
           });
           console.log('✅ [useChartData] Using cached data as fallback');
