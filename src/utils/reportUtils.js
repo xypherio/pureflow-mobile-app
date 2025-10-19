@@ -306,24 +306,69 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     };
   }
 
-  // Filter out invalid readings
-  const validReadings = readings.filter((r) => r && r.datetime);
+  // Log the structure of the incoming data
+  console.log('📦 Input data structure:', {
+    isArray: Array.isArray(readings),
+    length: readings?.length || 0,
+    firstItem: readings?.[0] ? {
+      ...readings[0],
+      datetime: readings[0].datetime,
+      hasPH: 'pH' in readings[0],
+      hasDatetime: 'datetime' in readings[0],
+      keys: Object.keys(readings[0] || {})
+    } : 'No data',
+  });
 
-  // Log first few readings to check pH values
-  console.log("First 3 readings with pH values:");
+  // Filter out invalid readings - be more lenient with validation
+  const validReadings = readings.filter((r) => {
+    if (!r) return false;
+    
+    // Convert datetime if it's a string
+    if (r.datetime && typeof r.datetime === 'string') {
+      try {
+        r.datetime = new Date(r.datetime);
+      } catch (e) {
+        console.warn('⚠️ Invalid datetime format:', r.datetime);
+        return false;
+      }
+    }
+    
+    // Check if we have at least one valid parameter
+    const hasValidParameter = ['pH', 'temperature', 'salinity', 'turbidity'].some(
+      param => param in r && r[param] !== undefined && r[param] !== null
+    );
+    
+    if (!hasValidParameter) {
+      console.warn('⚠️ No valid parameters in reading:', {
+        datetime: r.datetime,
+        keys: Object.keys(r),
+        values: Object.entries(r).reduce((acc, [k, v]) => {
+          acc[k] = v;
+          return acc;
+        }, {})
+      });
+    }
+    
+    return hasValidParameter;
+  });
+
+  // Log first few readings to check values
+  console.log(`🔍 First ${Math.min(3, validReadings.length)} of ${validReadings.length} valid readings:`);
   validReadings.slice(0, 3).forEach((reading, i) => {
-    console.log(`Reading ${i + 1}:`, {
+    console.log(`   Reading ${i + 1}:`, {
       datetime: reading.datetime,
       pH: reading.pH,
-      ph: reading.ph, // Check for lowercase 'ph'
-      allKeys: Object.keys(reading),
-      hasPH: "pH" in reading,
-      has_ph: "ph" in reading,
+      temperature: reading.temperature,
+      salinity: reading.salinity,
+      turbidity: reading.turbidity,
+      hasPH: 'pH' in reading,
+      hasDatetime: 'datetime' in reading,
+      keys: Object.keys(reading)
     });
   });
 
   if (validReadings.length === 0) {
-    console.log("No valid readings with datetime found");
+    console.error("❌ No valid readings found after filtering");
     return {
       status: "error",
       message: "No valid data points found in the selected time period",

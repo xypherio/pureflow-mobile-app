@@ -7,9 +7,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useChartData } from "@hooks/useChartData";
 import SegmentedFilter from "@navigation/SegmentedFilters";
 import { generateInsight } from "@services/ai/geminiAPI";
+import PdfGenerator from "../../src/PdfGenerator";
 import EmptyState from "@ui/EmptyState";
 import GlobalWrapper from "@ui/GlobalWrapper";
-import { generateCsv, shareFiles } from "@utils/exportUtils"; // Import new functions
+import { generateCsv, prepareExportData, shareFiles } from "@utils/exportUtils"; // Import new functions
 import {
   generateWaterQualityReport,
   prepareChartData,
@@ -25,7 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import PdfGenerator from "../../src/PdfGenerator";
 
 const PARAMETER_CONFIG = {
   pH: { unit: "", safeRange: "6.5 - 8.5", displayName: "pH" },
@@ -36,6 +36,7 @@ const PARAMETER_CONFIG = {
   },
   salinity: { unit: "ppt", safeRange: "0 - 5 ppt", displayName: "Salinity" },
   turbidity: { unit: "NTU", safeRange: "0 - 50 NTU", displayName: "Turbidity" },
+  tds: { unit: "mg/L", safeRange: "0 - 1000 mg/L", displayName: "TDS" },
 };
 
 const getStatusColor = (status) => {
@@ -100,8 +101,29 @@ const ReportScreen = () => {
 
   // Process the data when chartData changes
   useEffect(() => {
+    console.log('📊 [Report] Chart data changed:', {
+      chartData: chartData ? `Array(${chartData.length})` : 'null',
+      loading,
+      error: chartError,
+      activeFilter,
+      hasPH: chartData?.[0]?.pH !== undefined ? 'yes' : 'no',
+      keys: chartData?.[0] ? Object.keys(chartData[0]) : 'no data',
+      sample: chartData?.[0] || 'no data'
+    });
+    
     if (chartData && !loading) {
       try {
+        // Log the first few data points for inspection
+        if (chartData.length > 0) {
+          console.log('🔍 [Report] Sample data points:', {
+            count: chartData.length,
+            first: chartData[0],
+            last: chartData[chartData.length - 1],
+            allKeys: [...new Set(chartData.flatMap(Object.keys))]
+          });
+        } else {
+          console.warn('⚠️ [Report] Empty chartData array received');
+        }
         if (chartData.length === 0) {
           // Silent handling - no console logs in production
           setReportData({
@@ -117,11 +139,39 @@ const ReportScreen = () => {
         }
 
         // Generate report using the data from useChartData
+        console.log('🔄 [Report] Generating water quality report...', {
+          dataPoints: chartData.length,
+          timeRange: activeFilter,
+          firstPoint: chartData[0],
+          lastPoint: chartData[chartData.length - 1]
+        });
+        
         const report = generateWaterQualityReport(chartData, activeFilter);
+        
+        console.log('✅ [Report] Report generated:', {
+          status: report.status,
+          parameters: report.parameters ? Object.keys(report.parameters) : 'none',
+          message: report.message,
+          hasWQI: !!report.wqi,
+          parametersWithData: report.parameters ? 
+            Object.entries(report.parameters)
+              .filter(([_, param]) => param.value !== undefined && param.value !== null)
+              .map(([key]) => key) : 'no parameters'
+        });
+        
+        // Log any potential issues with the data
+        if (report.parameters) {
+          Object.entries(report.parameters).forEach(([param, data]) => {
+            if (data.value === undefined || data.value === null) {
+              console.warn(`⚠️ [Report] Missing value for parameter: ${param}`);
+            }
+          });
+        }
 
         setReportData({
           ...report,
           generatedAt: new Date().toISOString(),
+          timePeriod: activeFilter,
         });
         setError(null);
       } catch (err) {
@@ -254,7 +304,7 @@ const ReportScreen = () => {
       // Prepare unified export data
       const exportData = prepareExportData(
         reportData,
-        chartData,
+        processedParameters,
         geminiResponse
       );
       const { filePath } = await generateCsv(exportData);
@@ -411,18 +461,35 @@ const ReportScreen = () => {
 
               <View style={styles.parametersContainer}>
                 <Text style={styles.sectionLabel}>Key Parameters Report</Text>
-                {processedParameters.map((param, index) => (
-                  <ParameterCard
-                    key={param.parameter}
-                    parameter={param.parameter}
-                    value={param.value}
-                    unit={param.unit}
-                    safeRange={param.safeRange}
-                    status={param.status}
-                    analysis={param.analysis}
-                    chartData={param.chartData}
-                  />
-                ))}
+                {processedParameters.map((param, index) => {
+                  // Filter chartData to only include the relevant parameter
+                  const parameterKey = param.parameter.toLowerCase();
+                  const sensorData = chartData
+                    ? chartData
+                        .filter(item => item[parameterKey] !== undefined)
+                        .map(item => ({
+                          ...item,
+                          // Ensure the parameter key matches exactly what's expected
+                          [parameterKey]: Number(item[parameterKey]) || 0
+                        }))
+                    : [];
+
+                  return (
+                    <ParameterCard
+                      key={param.parameter}
+                      parameter={param.parameter}
+                      value={param.value}
+                      unit={param.unit}
+                      safeRange={param.safeRange}
+                      status={param.status}
+                      analysis={param.analysis}
+                      chartData={param.chartData}
+                      sensorData={sensorData}
+                      minValue={param.minValue}
+                      maxValue={param.maxValue}
+                    />
+                  );
+                })}
               </View>
 
               <View style={styles.insightsContainer}>

@@ -1,8 +1,11 @@
 // src/components/data-display/ParameterCard.jsx
 import { ChevronDown, ChevronUp, Droplet, Gauge, Minus, Plus, Thermometer, Waves } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+import { colors } from '../../constants/colors';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 // Parameter title colors
 const PARAMETER_COLORS = {
@@ -15,11 +18,11 @@ const PARAMETER_COLORS = {
 
 const getParameterIcon = (paramName) => {
   const iconSize = 170;
-  const iconStyles = stylesheet.iconStyles;
-  
+  const iconStyles = styles.iconStyles;
+
   if (!paramName) return null;
-  
-  switch(paramName.toString().toLowerCase()) {
+
+  switch (paramName.toString().toLowerCase()) {
     case 'ph':
     case 'ph value':
       return <Gauge size={iconSize} color="rgba(59, 130, 246, 0.08)" style={iconStyles} />;
@@ -34,20 +37,21 @@ const getParameterIcon = (paramName) => {
   }
 };
 
-const ParameterCard = ({ 
-  parameter, 
-  value, 
-  unit, 
-  safeRange, 
-  status, 
-  analysis, 
+const ParameterCard = ({
+  parameter,
+  value,
+  unit,
+  safeRange,
+  status,
+  analysis,
   chartData,
   minValue,
   maxValue,
-  style 
+  style,
+  sensorData = []
 }) => {
   const [expanded, setExpanded] = useState(false);
-  
+
   const statusColors = {
     normal: {
       borderColor: '#10B981',
@@ -71,40 +75,40 @@ const ParameterCard = ({
       gradientColors: ['#FEE2E2', '#FECACA']
     }
   };
-  
+
   const statusConfig = statusColors[status] || statusColors.normal;
 
   const backgroundIcon = getParameterIcon(parameter);
-  
+
   return (
     <View style={[
-        stylesheet.card, 
-        style, 
-        { 
-          shadowColor: statusConfig.shadowColor,
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: statusConfig.borderColor + '80',
-          overflow: 'hidden',
-        }
-      ]}>
+      stylesheet.card,
+      style,
+      {
+        shadowColor: statusConfig.shadowColor,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: statusConfig.borderColor + '80',
+        overflow: 'hidden',
+      }
+    ]}>
       {backgroundIcon && (
         <View style={stylesheet.backgroundIconContainer}>
           {backgroundIcon}
         </View>
       )}
-      <View style={[stylesheet.gradientOverlay, { 
+      <View style={[stylesheet.gradientOverlay, {
         backgroundColor: statusConfig.borderColor + '30',
         opacity: 0.3
       }]} />
-      <TouchableOpacity 
-        style={stylesheet.header} 
+      <TouchableOpacity
+        style={stylesheet.header}
         onPress={() => setExpanded(!expanded)}
       >
         <View style={stylesheet.headerContent}>
           <View style={stylesheet.parameterHeader}>
             <Text style={[
-              stylesheet.parameterName, 
+              stylesheet.parameterName,
               { color: PARAMETER_COLORS[parameter] || '#1e293b' }
             ]}>
               {parameter}
@@ -128,7 +132,7 @@ const ParameterCard = ({
           <Text style={stylesheet.statusText}>{status.toUpperCase()}</Text>
           <Text style={stylesheet.safeRange}>Safe range: {safeRange}</Text>
         </View>
-        
+
         {expanded && (minValue !== undefined || maxValue !== undefined) && (
           <View style={stylesheet.valueRangeContainer}>
             <View style={stylesheet.rangeItem}>
@@ -149,6 +153,59 @@ const ParameterCard = ({
           {analysis}
         </Text>
 
+        {expanded && sensorData.length > 0 && (
+          <View style={stylesheet.chartContainer}>
+            <BarChart
+              data={{
+                labels: sensorData
+                  .filter(item => item[parameter.toLowerCase()] !== undefined)
+                  .slice(-10)
+                  .map((_, index) => (index % 2 === 0 ? index : '')), // Show every other label for better readability
+                datasets: [{
+                  data: sensorData
+                    .map(item => {
+                      const val = item[parameter.toLowerCase()];
+                      return val !== null && val !== undefined ? Number(val) : 0;
+                    })
+                    .slice(-10), // Show last 10 data points
+                }],
+              }}
+              width={screenWidth - 80}
+              height={200}
+              yAxisSuffix={` ${unit}`}
+              yAxisInterval={1}
+              fromZero
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 2,
+                color: (opacity = 1) => PARAMETER_COLORS[parameter] || `rgba(0, 123, 255, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16,
+                },
+                barPercentage: 0.7,
+                propsForBackgroundLines: {
+                  strokeWidth: 0.5,
+                  stroke: 'rgba(0, 0, 0, 0.05)',
+                },
+                propsForLabels: {
+                  fontSize: 10,
+                },
+              }}
+              style={{
+                marginVertical: 8,
+                borderRadius: 16,
+              }}
+              verticalLabelRotation={0}
+            />
+            <Text style={styles.chartNote}>
+              Showing last 10 readings. Pull down to refresh data.
+            </Text>
+          </View>
+        )}
+
         {expanded && chartData && (
           <View style={stylesheet.chartContainer}>
             <BarChart
@@ -162,9 +219,9 @@ const ParameterCard = ({
                 decimalPlaces: 1,
                 color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                 barPercentage: chartData.timeRange === 'daily' ? 0.5 : 0.7,
-                style: { 
+                style: {
                   borderRadius: 16,
-                  marginLeft: -20, 
+                  marginLeft: -20,
                   paddingRight: 15,
                 },
                 propsForBackgroundLines: {
@@ -209,7 +266,17 @@ const ParameterCard = ({
   );
 };
 
-const stylesheet = StyleSheet.create({
+const styles = StyleSheet.create({
+  chartContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  chartNote: {
+    fontSize: 10,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 8,
+  },
   card: {
     borderRadius: 20,
     padding: 20,
@@ -310,10 +377,10 @@ const stylesheet = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 8,
   },
-  iconStyles: { 
-    position: 'absolute', 
-    bottom: 0, 
-    right: -40 
+  iconStyles: {
+    position: 'absolute',
+    bottom: 0,
+    right: -40
   },
   rangeItem: {
     flexDirection: 'row',
@@ -323,11 +390,6 @@ const stylesheet = StyleSheet.create({
   rangeText: {
     fontSize: 14,
     color: '#64748b',
-    marginLeft: 4,
-  },
-  valueRangeContainer: {
-    marginTop: 8,
-    marginBottom: 8,
   }
 });
 

@@ -9,7 +9,7 @@ import { globalStyles } from "@styles/globalStyles";
 import StatusCard from "@ui/DeviceStatusCard.jsx";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -32,11 +32,8 @@ export default function HomeScreen() {
     error,
     refreshData,
     lastUpdate,
-    getHomepageAlerts,
     realtimeData,
   } = useData();
-
-  const [homepageAlerts, setHomepageAlerts] = useState([]);
 
   const {
     isInitialized,
@@ -48,20 +45,15 @@ export default function HomeScreen() {
 
   useWaterQualityNotifications();
 
-  // Fetch homepage alerts on component mount and when alerts change
+  // Debug logging for alerts
   useEffect(() => {
-    const fetchHomepageAlerts = async () => {
-      try {
-        const alerts = await getHomepageAlerts();
-        setHomepageAlerts(alerts || []);
-      } catch (error) {
-        console.error('Error fetching homepage alerts:', error);
-        setHomepageAlerts([]);
-      }
-    };
-
-    fetchHomepageAlerts();
-  }, [getHomepageAlerts, alerts]); // Re-fetch when alerts change
+    console.log('🔍 Index.jsx - Current alerts:', {
+      alertsCount: alerts?.length || 0,
+      alerts: alerts,
+      hasAlerts: !!alerts && alerts.length > 0,
+      alertsWithParameters: alerts?.filter(a => a && a.parameter) || []
+    });
+  }, [alerts]);
 
   useEffect(() => {
     // Initialize notifications and request permission if needed
@@ -83,14 +75,14 @@ export default function HomeScreen() {
           (notification) => {
             try {
               const content = notification?.request?.content;
-              const title = content?.title || 'Unknown Notification';
-              const body = content?.body || '';
+              const title = content?.title || "Unknown Notification";
+              const body = content?.body || "";
               const notificationData = content?.data || {};
 
               console.log("📱 Home screen received notification:", {
                 title,
                 body,
-                data: notificationData
+                data: notificationData,
               });
 
               // You can add custom logic here for handling received notifications
@@ -108,15 +100,15 @@ export default function HomeScreen() {
             try {
               // Extract notification content with proper error handling
               const content = response.notification?.request?.content;
-              const title = content?.title || 'Unknown Notification';
-              const body = content?.body || '';
+              const title = content?.title || "Unknown Notification";
+              const body = content?.body || "";
               const notificationData = content?.data || {};
 
               console.log("👆 Home screen notification tapped:", {
                 title,
                 body,
                 data: notificationData,
-                actionIdentifier: response.actionIdentifier
+                actionIdentifier: response.actionIdentifier,
               });
 
               // Handle notification tap - navigate to specific screen, refresh data, etc.
@@ -174,7 +166,6 @@ export default function HomeScreen() {
     requestPermission,
   ]);
 
-  
   return (
     <>
       {/* Header */}
@@ -208,7 +199,7 @@ export default function HomeScreen() {
           {/* Critical Alerts Section */}
           <View style={{ marginBottom: 12 }}>
             <Text style={sectionLabelStyle}>Active Alerts</Text>
-            <AlertsCard alerts={homepageAlerts} interval={2500} />
+            <AlertsCard alerts={alerts} interval={2500} />
           </View>
 
           {/* Real-Time Data Section */}

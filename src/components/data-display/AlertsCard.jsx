@@ -279,7 +279,7 @@ const stylesheet = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
     minHeight: 70,
-    height: 70,
+    height: 75,
     ...globalStyles.boxShadow,
     position: "relative",
   },

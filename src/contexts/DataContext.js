@@ -29,6 +29,27 @@ export function DataProvider({ children, initialData = null }) {
   const syncIntervalRef = useRef(null);
   const isRefreshing = useRef(false);
   const lastRefreshTime = useRef(0);
+  const lastProcessedDataSignature = useRef(null);
+
+  /**
+   * Generates a signature for sensor data to detect changes
+   * @param {Object} sensorData - Sensor data object
+   * @returns {string} Data signature
+   */
+  const generateDataSignature = useCallback((sensorData) => {
+    if (!sensorData) return null;
+    
+    // Extract key sensor values for signature
+    const signature = {
+      pH: sensorData.pH,
+      temperature: sensorData.temperature,
+      turbidity: sensorData.turbidity,
+      salinity: sensorData.salinity,
+      timestamp: sensorData.timestamp || sensorData.datetime
+    };
+    
+    return JSON.stringify(signature);
+  }, []);
 
   /**
    * Updates application state with new sensor data and processes alerts
@@ -165,35 +186,72 @@ export function DataProvider({ children, initialData = null }) {
         if (hasValidData) {
           try {
             // Process alerts only from the most recent real-time data that contains actual values
-            const alertResult = await getAlertFacade().processSensorData([{
-              ...realtimeDataForAlerts,
-              datetime: realtimeDataForAlerts.timestamp,
-            }]);
-
-            if (alertResult.newAlerts.length > 0) {
-              console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
+            // Extract the actual sensor reading from the real-time data structure
+            let actualSensorData = realtimeDataForAlerts;
+            if (realtimeDataForAlerts.reading) {
+              actualSensorData = realtimeDataForAlerts.reading;
             }
+            
+            // Generate data signature to check for changes
+            const currentDataSignature = generateDataSignature(actualSensorData);
+            const hasDataChanged = currentDataSignature !== lastProcessedDataSignature.current;
+            
+            console.log('🚨 Debug: Processing alerts for sensor data:', {
+              realtimeDataForAlerts,
+              actualSensorData,
+              hasRealtimeData: !!realtimeDataForAlerts,
+              hasReading: !!realtimeDataForAlerts?.reading,
+              currentDataSignature,
+              lastProcessedSignature: lastProcessedDataSignature.current,
+              hasDataChanged,
+              realtimeDataStructure: realtimeDataForAlerts ? {
+                pH: realtimeDataForAlerts.pH || realtimeDataForAlerts.reading?.pH,
+                temperature: realtimeDataForAlerts.temperature || realtimeDataForAlerts.reading?.temperature,
+                turbidity: realtimeDataForAlerts.turbidity || realtimeDataForAlerts.reading?.turbidity,
+                salinity: realtimeDataForAlerts.salinity || realtimeDataForAlerts.reading?.salinity,
+                timestamp: realtimeDataForAlerts.timestamp || realtimeDataForAlerts.reading?.timestamp
+              } : null
+            });
+            
+            // Only process alerts if data has actually changed
+            if (hasDataChanged) {
+              const sensorDataForAlerts = [{
+                ...actualSensorData,
+                datetime: actualSensorData.timestamp || realtimeDataForAlerts.timestamp,
+              }];
+              
+              const alertResult = await getAlertFacade().processSensorData(sensorDataForAlerts);
+              
+              // Update the last processed signature
+              lastProcessedDataSignature.current = currentDataSignature;
 
-            if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
-              console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
-            }
-
-            // Batch state updates to prevent useInsertionEffect errors
-            const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
-            const stats = {
-              total: allAlerts.length,
-              high: allAlerts.filter(alert => alert.severity === 'high').length,
-              medium: allAlerts.filter(alert => alert.severity === 'medium').length,
-              low: allAlerts.filter(alert => alert.severity === 'low').length,
-            };
-
-            // Use setTimeout to defer state updates and prevent render-time updates
-            setTimeout(() => {
-              if (isMountedRef.current) {
-                setAlerts(alertResult.processedAlerts);
-                setAlertStats(stats);
+              if (alertResult.newAlerts.length > 0) {
+                console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
               }
-            }, 0);
+
+              if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
+                console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
+              }
+
+              // Batch state updates to prevent useInsertionEffect errors
+              const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+              const stats = {
+                total: allAlerts.length,
+                high: allAlerts.filter(alert => alert.severity === 'high').length,
+                medium: allAlerts.filter(alert => alert.severity === 'medium').length,
+                low: allAlerts.filter(alert => alert.severity === 'low').length,
+              };
+
+              // Use setTimeout to defer state updates and prevent render-time updates
+              setTimeout(() => {
+                if (isMountedRef.current) {
+                  setAlerts(alertResult.processedAlerts);
+                  setAlertStats(stats);
+                }
+              }, 0);
+            } else {
+              console.log('🚨 Skipping alert processing - data has not changed since last processing');
+            }
 
           } catch (error) {
             console.error('❌ Error processing alerts from real-time data:', error);
@@ -303,9 +361,16 @@ export function DataProvider({ children, initialData = null }) {
 
             if (hasValidData) {
               const alertFacade = getAlertFacade();
+              
+              // Extract the actual sensor reading from the real-time data structure
+              let actualSensorData = freshRealtimeData;
+              if (freshRealtimeData.reading) {
+                actualSensorData = freshRealtimeData.reading;
+              }
+              
               const realtimeAlerts = await alertFacade.processSensorData([{
-                ...freshRealtimeData,
-                datetime: freshRealtimeData.timestamp,
+                ...actualSensorData,
+                datetime: actualSensorData.timestamp || freshRealtimeData.timestamp,
               }]);
 
               if (realtimeAlerts.newAlerts.length > 0) {

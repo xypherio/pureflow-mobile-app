@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
 import {
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { colors } from "../../constants/colors";
-import { useOptimizedChartData } from "../../contexts/OptimizedDataContext";
+import { useData } from "../../contexts/DataContext";
 import { globalStyles } from "../../styles/globalStyles";
 import {
-  CHART_DIMENSIONS,
-  chartYAxisConfig,
-  getDefaultChartConfig,
-  getParameterOptions,
+    CHART_DIMENSIONS,
+    chartYAxisConfig,
+    getDefaultChartConfig,
+    getParameterOptions,
 } from "../../utils/chart-config";
 import SegmentedFilter from "../navigation/SegmentedFilters";
 import ChartTooltip from "../ui/ChartToolTip";
@@ -46,49 +46,60 @@ const LineChartCard = ({
   // Parameter options for the segmented filter
   const parameterOptions = getParameterOptions();
 
-  // Get optimized chart data
+  // Get data from DataContext
   const {
-    processedData,
-    hasData,
-    dataCount,
-    lastUpdateTime,
-    isInitialized,
-    getLatestValue,
-    getDataRange
-  } = useOptimizedChartData(selectedParameter);
+    sensorData,
+    realtimeData,
+    loading: contextLoading,
+    lastUpdate
+  } = useData();
 
-  const loading = propLoading !== undefined ? propLoading : !isInitialized;
+  const loading = propLoading !== undefined ? propLoading : contextLoading;
   const error = propError !== undefined ? propError : null;
-  const lastUpdated = propLastUpdated !== undefined ? propLastUpdated : (lastUpdateTime ? new Date(lastUpdateTime) : null);
+  const lastUpdated = propLastUpdated !== undefined ? propLastUpdated : (lastUpdate ? new Date(lastUpdate) : null);
 
-  // Use optimized processed data or prop data
+  // Process chart data from DataContext
   const { datasets, labels } = useMemo(() => {
     if (propData) {
       return propData; // Use passed data directly
     }
 
-    if (!processedData || !processedData.datasets) {
+    if (!sensorData || sensorData.length === 0) {
       return { datasets: [], labels: [] };
     }
 
-    // Color code each dataset based on parameter
-    return {
-      labels: processedData.labels,
-      datasets: processedData.datasets.map((dataset) => ({
-        ...dataset,
-        color: (opacity = 1) => {
-          const color = getParameterColor(dataset.parameter || dataset.name);
-          return color;
-        },
-        propsForDots: {
-          r: "4",
-          strokeWidth: "2",
-          stroke: getParameterColor(dataset.parameter || dataset.name),
-          fill: "#FFF",
-        },
-      })),
-    };
-  }, [propData, processedData, selectedParameter]);
+    // Process sensor data for chart display
+    const labels = sensorData.map(item => 
+      item.datetime ? new Date(item.datetime).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      }) : 'Unknown'
+    );
+
+    const parameters = selectedParameter ? [selectedParameter] : ['pH', 'temperature', 'turbidity', 'salinity'];
+    
+    const datasets = parameters.map(param => ({
+      data: sensorData.map(item => {
+        const value = item[param.toLowerCase()];
+        return value !== null && value !== undefined ? Number(value) : 0;
+      }),
+      parameter: param,
+      name: param,
+      color: (opacity = 1) => {
+        const color = getParameterColor(param);
+        return color;
+      },
+      propsForDots: {
+        r: "4",
+        strokeWidth: "2",
+        stroke: getParameterColor(param),
+        fill: "#FFF",
+      },
+    }));
+
+    return { datasets, labels };
+  }, [propData, sensorData, selectedParameter]);
 
   // Handle parameter selection change
   const handleParameterChange = (value) => {
@@ -145,8 +156,8 @@ const LineChartCard = ({
     if (propData && propData.datasets && propData.datasets.length > 0) {
       return propData.datasets.some((d) => d.data.length > 0);
     }
-    return hasData && dataCount > 0;
-  }, [propData?.datasets, hasData, dataCount]);
+    return sensorData && sensorData.length > 0 && datasets.length > 0;
+  }, [propData?.datasets, sensorData, datasets]);
 
   // Memoize Y-axis configuration to prevent recreation
   const yAxisConfig = useMemo(() => {
@@ -251,7 +262,7 @@ const LineChartCard = ({
             )}
             {!loading && !error && (!datasets || datasets.length === 0) && (
               <Text style={styles.errorText}>
-                Data points: {dataCount}, Initialized: {isInitialized ? 'Yes' : 'No'}
+                Data points: {sensorData?.length || 0}, Datasets: {datasets?.length || 0}
               </Text>
             )}
           </View>
