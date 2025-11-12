@@ -199,7 +199,7 @@ export default function HomeScreen() {
           {/* Critical Alerts Section */}
           <View style={{ marginBottom: 12 }}>
             <Text style={sectionLabelStyle}>Active Alerts</Text>
-            <AlertsCard alerts={alerts} interval={2500} />
+            <AlertsCard alerts={alerts} realtimeData={realtimeData} interval={2500} />
           </View>
 
           {/* Real-Time Data Section */}

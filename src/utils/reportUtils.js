@@ -75,95 +75,519 @@ const calculateDailyAverages = (readings) => {
   }));
 };
 
-export const aggregateData = (readings, timeRange = "daily") => {
-  if (!readings || readings.length === 0) {
-    return { labels: [], datasets: { pH: [], temperature: [], salinity: [], turbidity: [] } };
+const normalizeNumber = (value) => {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const resolveValue = (reading, keys) => {
+  for (const key of keys) {
+    if (key in reading) {
+      const normalized = normalizeNumber(reading[key]);
+      if (normalized !== null) {
+        return normalized;
+      }
+    }
+  }
+  return null;
+};
+
+const getTimeRangeBounds = (referenceDate, timeRange) => {
+  if (!referenceDate || isNaN(referenceDate.getTime())) {
+    return null;
   }
 
-  const now = new Date();
-  const datasets = { pH: [], temperature: [], salinity: [], turbidity: [] };
+  const end = new Date(referenceDate);
+  end.setHours(23, 59, 59, 999);
+
+  const start = new Date(referenceDate);
+  start.setHours(0, 0, 0, 0);
+
+  switch (timeRange) {
+    case "weekly": {
+      start.setDate(end.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      break;
+    }
+    case "monthly": {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate());
+      end.setHours(23, 59, 59, 999);
+      break;
+    }
+    case "daily":
+    default:
+      break;
+  }
+
+  return { start, end };
+};
+
+const filterReadingsByBounds = (readings, bounds) => {
+  if (!bounds) return readings;
+  const startMs = bounds.start.getTime();
+  const endMs = bounds.end.getTime();
+  return readings.filter((reading) => {
+    if (!reading?.datetime) return false;
+    const time = reading.datetime.getTime();
+    return time >= startMs && time <= endMs;
+  });
+};
+
+export const aggregateData = (readings, timeRange = "daily") => {
+  const params = ["pH", "temperature", "salinity", "turbidity"];
+
+  const emptyResult = {
+    labels: [],
+    datasets: params.reduce((acc, key) => ({ ...acc, [key]: [] }), {}),
+    filteredReadings: [],
+    latestReadingDate: null,
+  };
+
+  if (!readings || readings.length === 0) {
+    return emptyResult;
+  }
+
+  const sanitizedReadings = readings
+    .map((reading) => {
+      if (!reading?.datetime) return null;
+      const datetime = new Date(reading.datetime);
+      if (isNaN(datetime.getTime())) return null;
+
+      const pH = resolveValue(reading, ["pH", "ph", "PH", "Ph"]);
+      const temperature = resolveValue(reading, ["temperature", "Temperature", "temp", "Temp"]);
+      const salinity = resolveValue(reading, ["salinity", "Salinity"]);
+      const turbidity = resolveValue(reading, ["turbidity", "Turbidity"]);
+
+      const meta = reading._meta || reading.meta || reading.metadata || {};
+      const getMetaCount = (paramKey, value) => {
+        const directKey = `${paramKey}_count`;
+        const lowerKey = `${paramKey.toLowerCase()}_count`;
+        const upperKey = `${paramKey.toUpperCase()}_COUNT`;
+
+        const metaValue =
+          typeof meta[directKey] === "number"
+            ? meta[directKey]
+            : typeof meta[lowerKey] === "number"
+            ? meta[lowerKey]
+            : typeof meta[upperKey] === "number"
+            ? meta[upperKey]
+            : undefined;
+
+        if (typeof metaValue === "number" && Number.isFinite(metaValue) && metaValue >= 0) {
+          return metaValue;
+        }
+
+        const normalizedValue = Number(value);
+        return Number.isFinite(normalizedValue) ? 1 : 0;
+      };
+
+      return {
+        datetime,
+        pH,
+        temperature,
+        salinity,
+        turbidity,
+        counts: {
+          pH: getMetaCount("pH", pH),
+          temperature: getMetaCount("temperature", temperature),
+          salinity: getMetaCount("salinity", salinity),
+          turbidity: getMetaCount("turbidity", turbidity),
+        },
+      };
+    })
+    .filter(Boolean);
+
+  if (!sanitizedReadings.length) {
+    return emptyResult;
+  }
+
+  const latestReadingDate = new Date(
+    Math.max(...sanitizedReadings.map((r) => r.datetime.getTime()))
+  );
+
+  const bounds =
+    getTimeRangeBounds(latestReadingDate, timeRange) ||
+    getTimeRangeBounds(latestReadingDate, "daily");
+
+  const filteredReadings = filterReadingsByBounds(sanitizedReadings, bounds);
+
+  if (!filteredReadings.length) {
+    return { ...emptyResult, latestReadingDate };
+  }
+
+  const datasets = params.reduce((acc, key) => ({ ...acc, [key]: [] }), {});
   let labels = [];
 
-  if (timeRange === "daily") {
-    labels = ["4AM", "8AM", "12PM", "4PM", "8PM", "12AM"];
-    const intervals = Array(6).fill(null).map(() => ({ pH: [], temperature: [], salinity: [], turbidity: [] }));
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
+  const createMetricAccumulator = () => ({
+    sum: 0,
+    totalWeight: 0,
+    min: null,
+    max: null,
+    samples: 0,
+  });
 
-    readings.forEach(r => {
-      const recordDate = new Date(r.datetime);
-      if (recordDate >= todayStart) {
-        const hour = recordDate.getHours();
-        const intervalIndex = Math.floor(hour / 4);
-        if (intervals[intervalIndex]) {
-          if (r.pH != null) intervals[intervalIndex].pH.push(r.pH);
-          if (r.temperature != null) intervals[intervalIndex].temperature.push(r.temperature);
-          if (r.salinity != null) intervals[intervalIndex].salinity.push(r.salinity);
-          if (r.turbidity != null) intervals[intervalIndex].turbidity.push(r.turbidity);
-        }
+  const initializeMetricStore = () =>
+    params.reduce((acc, key) => {
+      acc[key] = createMetricAccumulator();
+      return acc;
+    }, {});
+
+  const updateMetric = (metric, value, weight = 1, sampleIncrement = 1) => {
+    if (
+      metric &&
+      Number.isFinite(value) &&
+      Number.isFinite(weight) &&
+      weight > 0
+    ) {
+      metric.sum += value * weight;
+      metric.totalWeight += weight;
+      if (
+        Number.isFinite(sampleIncrement) &&
+        sampleIncrement > 0
+      ) {
+        metric.samples += sampleIncrement;
       }
+      metric.min = metric.min === null ? value : Math.min(metric.min, value);
+      metric.max = metric.max === null ? value : Math.max(metric.max, value);
+    }
+  };
+
+  const extractWeight = (reading, param, value) => {
+    const baseValue = Number(value);
+    if (!Number.isFinite(baseValue)) return 0;
+
+    const counts = reading?.counts;
+    const meta = reading?._meta || reading?.meta || {};
+    const weightCandidates = [
+      counts?.[param],
+      meta?.[`${param}_count`],
+      meta?.[`${param.toLowerCase()}_count`],
+      meta?.[`${param.toUpperCase()}_COUNT`],
+      meta?.count,
+      reading?.count,
+    ];
+
+    for (const candidate of weightCandidates) {
+      if (typeof candidate === "number" && Number.isFinite(candidate) && candidate > 0) {
+        return candidate;
+      }
+    }
+
+    return baseValue !== null ? 1 : 0;
+  };
+
+  const normalizedRange = ["daily", "weekly", "monthly"].includes(timeRange)
+    ? timeRange
+    : "daily";
+
+  const periodAccumulator = initializeMetricStore();
+
+  if (normalizedRange === "daily") {
+    const start = new Date(bounds.start);
+    const end = new Date(bounds.end);
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    const bucketSizeMs = 3 * 60 * 60 * 1000; // 3-hour buckets
+    const totalDurationMs = Math.max(endMs - startMs, bucketSizeMs);
+    const bucketCount = Math.max(
+      1,
+      Math.ceil(totalDurationMs / bucketSizeMs)
+    );
+
+    const buckets = Array.from({ length: bucketCount }, () =>
+      initializeMetricStore()
+    );
+
+    labels = Array.from({ length: bucketCount }, (_, index) => {
+      const bucketStart = new Date(startMs + index * bucketSizeMs);
+      const hours = bucketStart.getHours();
+      const suffix = hours >= 12 ? "PM" : "AM";
+      const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+      return `${displayHour}${suffix}`;
     });
 
-    Object.keys(datasets).forEach(param => {
-      datasets[param] = intervals.map(interval => {
-        const data = interval[param];
-        return data.length > 0 ? data.reduce((a, b) => a + b, 0) / data.length : null;
+    const sortedReadings = [...filteredReadings]
+      .filter((reading) => reading.datetime)
+      .sort((a, b) => a.datetime - b.datetime);
+
+    const intervalCandidates = [];
+    for (let i = 1; i < sortedReadings.length; i += 1) {
+      const prev = sortedReadings[i - 1]?.datetime?.getTime();
+      const current = sortedReadings[i]?.datetime?.getTime();
+      if (
+        Number.isFinite(prev) &&
+        Number.isFinite(current)
+      ) {
+        const diff = current - prev;
+        if (diff > 0) {
+          intervalCandidates.push(diff);
+        }
+      }
+    }
+
+    const medianInterval = (() => {
+      if (!intervalCandidates.length) {
+        return 2 * 60 * 60 * 1000;
+      }
+      const sortedDiffs = intervalCandidates.sort((a, b) => a - b);
+      const mid = Math.floor(sortedDiffs.length / 2);
+      if (sortedDiffs.length % 2 === 0) {
+        return Math.round((sortedDiffs[mid - 1] + sortedDiffs[mid]) / 2);
+      }
+      return sortedDiffs[mid];
+    })();
+
+    const estimatedIntervalMs = Math.min(
+      Math.max(medianInterval, 15 * 60 * 1000),
+      6 * 60 * 60 * 1000
+    );
+
+    sortedReadings.forEach((reading, index) => {
+      const readingStartOriginal = reading.datetime?.getTime();
+      if (!Number.isFinite(readingStartOriginal)) {
+        return;
+      }
+
+      const readingStartMs = Math.max(startMs, readingStartOriginal);
+      if (readingStartMs >= endMs) {
+        return;
+      }
+
+      const nextStartOriginal =
+        index < sortedReadings.length - 1
+          ? sortedReadings[index + 1]?.datetime?.getTime()
+          : null;
+
+      let readingEndMs = readingStartMs + estimatedIntervalMs;
+      if (
+        Number.isFinite(nextStartOriginal) &&
+        nextStartOriginal > readingStartMs
+      ) {
+        readingEndMs = Math.min(readingEndMs, nextStartOriginal);
+      }
+      readingEndMs = Math.min(readingEndMs, endMs);
+      if (readingEndMs <= readingStartMs) {
+        readingEndMs = Math.min(
+          endMs,
+          readingStartMs + estimatedIntervalMs
+        );
+      }
+      if (readingEndMs <= readingStartMs) {
+        return;
+      }
+
+      const effectiveDuration = readingEndMs - readingStartMs;
+      if (effectiveDuration <= 0) {
+        return;
+      }
+
+      params.forEach((param) => {
+        const value = reading[param];
+        if (value === null || value === undefined) {
+          return;
+        }
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) {
+          return;
+        }
+
+        const firstBucket = Math.max(
+          0,
+          Math.floor((readingStartMs - startMs) / bucketSizeMs)
+        );
+        const lastBucket = Math.min(
+          bucketCount - 1,
+          Math.floor(
+            (readingEndMs - 1 - startMs) / bucketSizeMs
+          )
+        );
+
+        for (
+          let bucketIndex = firstBucket;
+          bucketIndex <= lastBucket;
+          bucketIndex += 1
+        ) {
+          const bucketStartMs = startMs + bucketIndex * bucketSizeMs;
+          const bucketEndMs = bucketStartMs + bucketSizeMs;
+          const overlapStart = Math.max(bucketStartMs, readingStartMs);
+          const overlapEnd = Math.min(bucketEndMs, readingEndMs);
+          const overlap = overlapEnd - overlapStart;
+
+          if (overlap <= 0) {
+            continue;
+          }
+
+          const sampleIncrement = overlap / effectiveDuration;
+
+          updateMetric(
+            buckets[bucketIndex][param],
+            numericValue,
+            overlap,
+            sampleIncrement
+          );
+          updateMetric(
+            periodAccumulator[param],
+            numericValue,
+            overlap,
+            sampleIncrement
+          );
+        }
       });
     });
 
-  } else if (timeRange === "weekly") {
-    labels = ["D1", "D2", "D3", "D4", "D5", "D6", "D7"];
-    const weeklyData = Array(7).fill(null).map(() => ({ pH: [], temperature: [], salinity: [], turbidity: [] }));
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - 6);
-    weekStart.setHours(0, 0, 0, 0);
+    params.forEach((param) => {
+      datasets[param] = buckets.map((bucket) => {
+        const metric = bucket[param];
+        if (!metric || !metric.totalWeight) return null;
+        const average = metric.sum / metric.totalWeight;
+        return Number.isFinite(average) ? parseFloat(average.toFixed(2)) : null;
+      });
+    });
+  } else if (normalizedRange === "weekly") {
+    const start = new Date(bounds.start);
+    const end = new Date(bounds.end);
+    const dayMs = 24 * 60 * 60 * 1000;
 
-    readings.forEach(r => {
-      const recordDate = new Date(r.datetime);
-      if (recordDate >= weekStart) {
-        const dayIndex = 6 - Math.floor((now - recordDate) / (1000 * 60 * 60 * 24));
-        if (dayIndex >= 0 && dayIndex < 7) {
-          if (r.pH != null) weeklyData[dayIndex].pH.push(r.pH);
-          if (r.temperature != null) weeklyData[dayIndex].temperature.push(r.temperature);
-          if (r.salinity != null) weeklyData[dayIndex].salinity.push(r.salinity);
-          if (r.turbidity != null) weeklyData[dayIndex].turbidity.push(r.turbidity);
-        }
-      }
+    const buckets = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      day.setHours(0, 0, 0, 0);
+
+      const bucketStart = new Date(day);
+      const bucketEnd = new Date(day);
+      bucketEnd.setHours(23, 59, 59, 999);
+
+      return {
+        start: bucketStart,
+        end: bucketEnd,
+        label: day.toLocaleDateString(undefined, { weekday: "short" }),
+        metrics: initializeMetricStore(),
+      };
     });
 
-    Object.keys(datasets).forEach(param => {
-      datasets[param] = weeklyData.map(day => {
-        const data = day[param];
-        return data.length > 0 ? data.reduce((a, b) => a + b, 0) / data.length : null;
+    labels = buckets.map((bucket) => bucket.label);
+
+    filteredReadings.forEach((reading) => {
+      if (reading.datetime < start || reading.datetime > end) {
+        return;
+      }
+
+      const dayIndex = Math.floor(
+        (reading.datetime.getTime() - start.getTime()) / dayMs
+      );
+
+      if (dayIndex < 0 || dayIndex >= buckets.length) {
+        return;
+      }
+
+      const bucket = buckets[dayIndex];
+
+      params.forEach((param) => {
+        const value = reading[param];
+        if (value === null || value === undefined) {
+          return;
+        }
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) {
+          return;
+        }
+        const weight = extractWeight(reading, param, numericValue);
+        if (weight <= 0) {
+          return;
+        }
+
+        updateMetric(bucket.metrics[param], numericValue, weight);
+        updateMetric(periodAccumulator[param], numericValue, weight);
       });
     });
 
-  } else if (timeRange === "monthly") {
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    labels = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
-    const monthlyData = Array(daysInMonth).fill(null).map(() => ({ pH: [], temperature: [], salinity: [], turbidity: [] }));
+    params.forEach((param) => {
+      datasets[param] = buckets.map((bucket) => {
+        const metric = bucket.metrics[param];
+        if (!metric || !metric.totalWeight) return null;
+        const average = metric.sum / metric.totalWeight;
+        return Number.isFinite(average) ? parseFloat(average.toFixed(2)) : null;
+      });
+    });
+  } else if (normalizedRange === "monthly") {
+    const start = new Date(bounds.start);
+    const end = new Date(bounds.end);
+    const daysInMonth = end.getDate();
 
-    readings.forEach(r => {
-      const recordDate = new Date(r.datetime);
-      if (recordDate >= monthStart && recordDate.getMonth() === now.getMonth()) {
-        const dayOfMonth = recordDate.getDate() - 1;
-        if (r.pH != null) monthlyData[dayOfMonth].pH.push(r.pH);
-        if (r.temperature != null) monthlyData[dayOfMonth].temperature.push(r.temperature);
-        if (r.salinity != null) monthlyData[dayOfMonth].salinity.push(r.salinity);
-        if (r.turbidity != null) monthlyData[dayOfMonth].turbidity.push(r.turbidity);
+    labels = Array.from({ length: daysInMonth }, (_, index) =>
+      (index + 1).toString()
+    );
+
+    const buckets = Array.from({ length: daysInMonth }, () => ({
+      metrics: initializeMetricStore(),
+    }));
+
+    filteredReadings.forEach((reading) => {
+      if (reading.datetime < start || reading.datetime > end) {
+        return;
       }
+
+      const dayIndex = reading.datetime.getDate() - 1;
+      if (dayIndex < 0 || dayIndex >= buckets.length) {
+        return;
+      }
+
+      const bucket = buckets[dayIndex];
+
+      params.forEach((param) => {
+        const value = reading[param];
+        if (value === null || value === undefined) {
+          return;
+        }
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) {
+          return;
+        }
+        const weight = extractWeight(reading, param, numericValue);
+        if (weight <= 0) {
+          return;
+        }
+
+        updateMetric(bucket.metrics[param], numericValue, weight);
+        updateMetric(periodAccumulator[param], numericValue, weight);
+      });
     });
 
-    Object.keys(datasets).forEach(param => {
-      datasets[param] = monthlyData.map(day => {
-        const data = day[param];
-        return data.length > 0 ? data.reduce((a, b) => a + b, 0) / data.length : null;
+    params.forEach((param) => {
+      datasets[param] = buckets.map((bucket) => {
+        const metric = bucket.metrics[param];
+        if (!metric || !metric.totalWeight) return null;
+        const average = metric.sum / metric.totalWeight;
+        return Number.isFinite(average) ? parseFloat(average.toFixed(2)) : null;
       });
     });
   }
 
-  return { labels, datasets };
+  const periodStats = params.reduce((acc, param) => {
+    const metric = periodAccumulator[param];
+    const hasData = metric && metric.totalWeight > 0;
+    acc[param] = {
+      average: hasData
+        ? parseFloat((metric.sum / metric.totalWeight).toFixed(2))
+        : null,
+      min:
+        hasData && metric.min !== null
+          ? parseFloat(metric.min.toFixed(2))
+          : null,
+      max:
+        hasData && metric.max !== null
+          ? parseFloat(metric.max.toFixed(2))
+          : null,
+      totalWeight: hasData ? metric.totalWeight : 0,
+      count: metric?.samples ?? 0,
+    };
+    return acc;
+  }, {});
+
+  return { labels, datasets, filteredReadings, latestReadingDate, periodStats };
 };
 
 const formatDateKey = (date, timeRange) => {
@@ -384,6 +808,10 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
   // Aggregate data for the time period
   console.log("Starting data aggregation...");
   const aggregatedData = aggregateData(validReadings, timeRange);
+  const filteredReadingsForStats =
+    aggregatedData?.filteredReadings?.length
+      ? aggregatedData.filteredReadings
+      : validReadings;
 
   // Log the first few aggregated data points
   if (aggregatedData?.labels?.length > 0) {
@@ -448,7 +876,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
         ? aggregatedData.datasets[paramKey]
         : [];
 
-      // Filter out invalid values
+      // Filter out invalid values for chart/trend analysis
       const validValues = values
         .map((v) => {
           const num = parseFloat(v);
@@ -456,57 +884,110 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
         })
         .filter((v) => v !== null);
 
-      console.log(`Processing ${displayName} (key: ${paramKey}):`, {
-        values: validValues,
-        valuesLength: validValues.length,
-        firstFew: validValues.slice(0, 3),
-        hasNaN: validValues.some(isNaN),
-        hasNull: validValues.some((v) => v === null || v === undefined),
-      });
+      // Prefer aggregated period statistics when available
+      const periodStatsForParam =
+        aggregatedData?.periodStats?.[displayName] ||
+        aggregatedData?.periodStats?.[paramKey] ||
+        null;
 
-      // Log detailed info about the first few values
-      if (validValues.length > 0) {
-        console.log(
-          `Detailed values for ${displayName}:`,
-          validValues.slice(0, 5).map((v, i) => ({
-            index: i,
-            value: v,
-            type: typeof v,
-            isNumber: typeof v === "number",
-            isFinite: Number.isFinite(v),
-            isNaN: isNaN(v),
-          }))
-        );
-      }
-
-      const avgValue =
-        validValues.length > 0
-          ? parseFloat(
-              (
-                validValues.reduce((a, b) => a + b, 0) / validValues.length
-              ).toFixed(2)
-            )
+      let avgValue =
+        typeof periodStatsForParam?.average === "number"
+          ? periodStatsForParam.average
+          : null;
+      let minValue =
+        typeof periodStatsForParam?.min === "number"
+          ? periodStatsForParam.min
+          : null;
+      let maxValue =
+        typeof periodStatsForParam?.max === "number"
+          ? periodStatsForParam.max
+          : null;
+      let sampleCount =
+        typeof periodStatsForParam?.count === "number"
+          ? periodStatsForParam.count
           : 0;
+
+      if (avgValue === null || !Number.isFinite(avgValue)) {
+        const fallbackStats = filteredReadingsForStats.reduce(
+          (acc, reading) => {
+            const value = reading?.[param];
+            if (value === null || value === undefined) {
+              return acc;
+            }
+
+            const numericValue = Number(value);
+            if (!Number.isFinite(numericValue)) {
+              return acc;
+            }
+
+            const weightCandidate = reading?.counts?.[param];
+            const weight =
+              typeof weightCandidate === "number" &&
+              Number.isFinite(weightCandidate) &&
+              weightCandidate > 0
+                ? weightCandidate
+                : 1;
+
+            acc.sum += numericValue * weight;
+            acc.count += weight;
+            acc.min =
+              acc.min === null ? numericValue : Math.min(acc.min, numericValue);
+            acc.max =
+              acc.max === null ? numericValue : Math.max(acc.max, numericValue);
+            return acc;
+          },
+          { sum: 0, count: 0, min: null, max: null }
+        );
+
+        if (fallbackStats.count > 0) {
+          avgValue = parseFloat(
+            (fallbackStats.sum / fallbackStats.count).toFixed(2)
+          );
+          minValue =
+            fallbackStats.min !== null
+              ? parseFloat(fallbackStats.min.toFixed(2))
+              : null;
+          maxValue =
+            fallbackStats.max !== null
+              ? parseFloat(fallbackStats.max.toFixed(2))
+              : null;
+          sampleCount = fallbackStats.count;
+        } else {
+          avgValue = null;
+          minValue = null;
+          maxValue = null;
+          sampleCount = 0;
+        }
+      }
 
       console.log(`Calculated average for ${displayName}:`, avgValue);
 
-      const evaluation = evaluateParameter(displayName, avgValue);
+      const evaluation =
+        typeof avgValue === "number"
+          ? evaluateParameter(displayName, avgValue)
+          : {
+              status: "unknown",
+              message: "No data available for this parameter",
+            };
       const trend = analyzeTrend(values, aggregatedData.labels);
 
       // Use the original parameter name as the key in the result
       acc[displayName] = {
         average: avgValue,
+        min: minValue,
+        max: maxValue,
         status: evaluation.status,
         trend: {
           change: trend.change,
           direction: trend.direction,
           message: trend.message,
         },
-      chartData: {
-        labels: aggregatedData.labels,
-        values: values,
-        timeRange: timeRange,
-      },
+        chartData: {
+          labels: aggregatedData.labels,
+          values: values,
+          timeRange: timeRange,
+          sampleCount,
+        },
       };
 
       return acc;
@@ -516,7 +997,10 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
 
   // Determine overall status
   const statuses = Object.values(parameters).map((p) => p.status);
-  let overallStatus = "good";
+  let overallStatus =
+    statuses.length > 0 && statuses.every((status) => status === "unknown")
+      ? "unknown"
+      : "good";
   if (statuses.includes("critical")) {
     overallStatus = "critical";
   } else if (statuses.includes("warning")) {
@@ -526,7 +1010,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
   // Generate recommendations
   const recommendations = [];
 
-  if (parameters.pH.status === "critical") {
+  if (parameters.pH?.status === "critical") {
     recommendations.push(
       parameters.pH.average < 6.5
         ? "Add pH buffer to increase pH level"
@@ -534,7 +1018,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     );
   }
 
-  if (parameters.temperature.status === "critical") {
+  if (parameters.temperature?.status === "critical") {
     recommendations.push(
       parameters.temperature.average < 26
         ? "Consider using a water heater to raise temperature"
@@ -542,7 +1026,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     );
   }
 
-  if (parameters.salinity.status === "critical") {
+  if (parameters.salinity?.status === "critical") {
     recommendations.push(
       parameters.salinity.average < 0
         ? "Add marine salt mix to increase salinity"
@@ -550,7 +1034,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     );
   }
 
-  if (parameters.turbidity.status === "critical") {
+  if (parameters.turbidity?.status === "critical") {
     recommendations.push(
       "Improve filtration and reduce feeding to lower turbidity"
     );
@@ -558,14 +1042,16 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
 
   // Add trend-based recommendations
   if (
-    parameters.pH.trend.direction === "increasing" &&
+    parameters.pH?.trend?.direction === "increasing" &&
+    typeof parameters.pH?.trend?.change === "number" &&
     Math.abs(parameters.pH.trend.change) > 10
   ) {
     recommendations.push("Monitor pH closely as it is rising significantly");
   }
 
   if (
-    parameters.temperature.trend.direction === "increasing" &&
+    parameters.temperature?.trend?.direction === "increasing" &&
+    typeof parameters.temperature?.average === "number" &&
     parameters.temperature.average > 28
   ) {
     recommendations.push(

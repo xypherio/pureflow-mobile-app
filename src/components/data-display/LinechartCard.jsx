@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
 import {
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { colors } from "../../constants/colors";
 import { useData } from "../../contexts/DataContext";
 import { globalStyles } from "../../styles/globalStyles";
 import {
-    CHART_DIMENSIONS,
-    chartYAxisConfig,
-    getDefaultChartConfig,
-    getParameterOptions,
+  CHART_DIMENSIONS,
+  chartYAxisConfig,
+  getDefaultChartConfig,
+  getParameterOptions,
 } from "../../utils/chart-config";
 import SegmentedFilter from "../navigation/SegmentedFilters";
 import ChartTooltip from "../ui/ChartToolTip";
@@ -69,21 +69,30 @@ const LineChartCard = ({
     }
 
     // Process sensor data for chart display
-    const labels = sensorData.map(item => 
-      item.datetime ? new Date(item.datetime).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: false 
+    const labels = sensorData.map(item =>
+      item.datetime ? new Date(item.datetime).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
       }) : 'Unknown'
     );
 
-    const parameters = selectedParameter ? [selectedParameter] : ['pH', 'temperature', 'turbidity', 'salinity'];
-    
+    const parameters = selectedParameter ? [selectedParameter] : ['ph', 'temperature', 'turbidity', 'salinity'];
+
     const datasets = parameters.map(param => ({
       data: sensorData.map(item => {
-        const value = item[param.toLowerCase()];
-        return value !== null && value !== undefined ? Number(value) : 0;
-      }),
+        let value;
+        // Handle case-insensitive parameter access
+        if (item[param] !== undefined) {
+          value = item[param];
+        } else if (item[param.toLowerCase()] !== undefined) {
+          value = item[param.toLowerCase()];
+        } else if (item[param.toUpperCase()] !== undefined) {
+          value = item[param.toUpperCase()];
+        }
+
+        return value !== null && value !== undefined ? Number(value) : null; // Use null instead of 0 for missing data
+      }).filter(val => val !== null), // Filter out null values for cleaner display
       parameter: param,
       name: param,
       color: (opacity = 1) => {
@@ -134,10 +143,24 @@ const LineChartCard = ({
 
   // Handle data point press
   const handleChartDataPointPress = ({ index, x, y, value }) => {
+    // Find which dataset this point belongs to by matching the value
+    let clickedParameter = selectedParameter;
+
+    // If showing multiple parameters, find the matching dataset
+    if (!selectedParameter && datasets.length > 0) {
+      for (const dataset of datasets) {
+        if (dataset.data[index] === value || Math.abs(dataset.data[index] - value) < 0.01) {
+          clickedParameter = dataset.parameter || dataset.name;
+          break;
+        }
+      }
+    }
+
     const pointData = {
       value,
       timestamp: labels[index],
-      parameter: selectedParameter || datasets[0]?.name || "Parameter",
+      parameter: clickedParameter || "Parameter",
+      color: getParameterColor(clickedParameter),
     };
 
     // Adjust tooltip position to appear right above the point
@@ -156,7 +179,7 @@ const LineChartCard = ({
     if (propData && propData.datasets && propData.datasets.length > 0) {
       return propData.datasets.some((d) => d.data.length > 0);
     }
-    return sensorData && sensorData.length > 0 && datasets.length > 0;
+    return sensorData && sensorData.length > 0 && datasets.length > 0 && datasets.some(ds => ds.data.length > 0);
   }, [propData?.datasets, sensorData, datasets]);
 
   // Memoize Y-axis configuration to prevent recreation

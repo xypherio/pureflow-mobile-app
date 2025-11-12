@@ -7,7 +7,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useChartData } from "@hooks/useChartData";
 import SegmentedFilter from "@navigation/SegmentedFilters";
 import { generateInsight } from "@services/ai/geminiAPI";
-import PdfGenerator from "../../src/PdfGenerator";
 import EmptyState from "@ui/EmptyState";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import { generateCsv, prepareExportData, shareFiles } from "@utils/exportUtils"; // Import new functions
@@ -26,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import PdfGenerator from "../../src/PdfGenerator";
 
 const PARAMETER_CONFIG = {
   pH: { unit: "", safeRange: "6.5 - 8.5", displayName: "pH" },
@@ -234,6 +234,11 @@ const ReportScreen = () => {
     ([key, value]) => {
       const config = PARAMETER_CONFIG[key] || {};
 
+      const averageValue =
+        typeof value?.average === "number" && Number.isFinite(value.average)
+          ? value.average
+          : null;
+
       // Only try to prepare chart data if the value has data points
       let chartData = { labels: [], datasets: [{ data: [] }] };
       try {
@@ -245,13 +250,20 @@ const ReportScreen = () => {
 
       return {
         parameter: config.displayName || key,
-        value: (value?.average || 0).toFixed(2),
+        value: averageValue !== null ? averageValue.toFixed(2) : "N/A",
+        averageValue,
         unit: config.unit || "",
         safeRange: config.safeRange || "",
         status: value?.status || "normal",
         analysis: value?.trend?.message || "No trend data available",
-        minValue: value?.min,
-        maxValue: value?.max,
+        minValue:
+          typeof value?.min === "number" && Number.isFinite(value.min)
+            ? value.min
+            : null,
+        maxValue:
+          typeof value?.max === "number" && Number.isFinite(value.max)
+            ? value.max
+            : null,
         chartData: {
           labels: chartData?.labels || [],
           datasets: [
@@ -451,7 +463,11 @@ const ReportScreen = () => {
                   parameters={Object.entries(reportData.parameters || {}).map(
                     ([key, value]) => ({
                       name: key,
-                      value: value.average || 0,
+                      value:
+                        typeof value?.average === "number" &&
+                        Number.isFinite(value.average)
+                          ? value.average
+                          : null,
                       status: value.status || "normal",
                       unit: PARAMETER_CONFIG[key]?.unit || "",
                     })
@@ -461,35 +477,20 @@ const ReportScreen = () => {
 
               <View style={styles.parametersContainer}>
                 <Text style={styles.sectionLabel}>Key Parameters Report</Text>
-                {processedParameters.map((param, index) => {
-                  // Filter chartData to only include the relevant parameter
-                  const parameterKey = param.parameter.toLowerCase();
-                  const sensorData = chartData
-                    ? chartData
-                        .filter(item => item[parameterKey] !== undefined)
-                        .map(item => ({
-                          ...item,
-                          // Ensure the parameter key matches exactly what's expected
-                          [parameterKey]: Number(item[parameterKey]) || 0
-                        }))
-                    : [];
-
-                  return (
-                    <ParameterCard
-                      key={param.parameter}
-                      parameter={param.parameter}
-                      value={param.value}
-                      unit={param.unit}
-                      safeRange={param.safeRange}
-                      status={param.status}
-                      analysis={param.analysis}
-                      chartData={param.chartData}
-                      sensorData={sensorData}
-                      minValue={param.minValue}
-                      maxValue={param.maxValue}
-                    />
-                  );
-                })}
+                {processedParameters.map((param) => (
+                  <ParameterCard
+                    key={param.parameter}
+                    parameter={param.parameter}
+                    value={param.value}
+                    unit={param.unit}
+                    safeRange={param.safeRange}
+                    status={param.status}
+                    analysis={param.analysis}
+                    chartData={param.chartData}
+                    minValue={param.minValue}
+                    maxValue={param.maxValue}
+                  />
+                ))}
               </View>
 
               <View style={styles.insightsContainer}>

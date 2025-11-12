@@ -27,8 +27,9 @@ Built with modern React Native and Expo technologies, PureFlow Mobile delivers a
 
 ### Core Monitoring Features
 -   **Real-time Data Monitoring:** Visualize essential water quality parameters (pH, Temperature, Salinity, Turbidity) through intuitive real-time data cards with live updates
+-   **Water Quality Forecasting:** ML-powered predictions for future water quality parameters with trend analysis and breach detection
 -   **Interactive Charts & Reports:** Generate detailed reports and explore historical water quality data with interactive line charts and comprehensive analytics
--   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events
+-   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events with native push notifications
 -   **Data Export & Sharing:** Easily export comprehensive reports as PDFs and CSVs, share critical water quality information with stakeholders
 
 ### Advanced AI Features
@@ -121,8 +122,9 @@ Once the application is installed and configured, you can run it in development 
 ### Key App Sections
 
 -   **Home Tab:** Real-time water quality monitoring with live data cards and status indicators
+-   **Forecast Tab:** ML-powered water quality predictions with trend analysis and AI insights
 -   **Reports Tab:** Comprehensive reporting with historical data analysis and AI insights
--   **Notifications Tab:** Alert management and notification history
+-   **Notifications Tab:** Alert management and notification history with native push notifications
 -   **Settings:** Configuration options and system preferences
 
 ## Architecture
@@ -147,7 +149,7 @@ PureFlow Mobile is built on a robust and scalable architecture, leveraging Expo 
 ### Technical Stack
 
 -   **Frontend:** React Native + Expo (Cross-platform mobile/web)
--   **Styling:** NativeWind + Tailwind CSS
+-   **Styling:** CSS
 -   **Backend:** Firebase (Firestore + FCM)
 -   **AI Integration:** Google Gemini AI
 -   **Charts:** react-native-chart-kit + Victory Native
@@ -180,21 +182,59 @@ The project follows a modular architecture promoting maintainability and scalabi
 │   │   └── NotificationContext.js # Alert management
 │   ├── hooks/               # Custom React hooks
 │   │   ├── useChartData.js  # Data fetching logic
-│   │   └── useNotifications.js # Notification handling
+│   │   ├── useForecastService.js # Forecast data management
+│   │   ├── useNotifications.js # Notification handling
+│   │   └── useOptimizedChartData.js # Optimized chart data processing
 │   ├── services/            # Business logic and API services
 │   │   ├── ai/              # AI integration services
 │   │   ├── firebase/        # Firebase services
 │   │   ├── data/            # Data processing services
-│   │   └── caching/         # Caching services
+│   │   ├── caching/         # Caching services
+│   │   ├── notifications/   # Notification management services
+│   │   ├── processing/      # Data processing services
+│   │   └── core/            # Core business logic services
 │   └── utils/               # Utility functions
 │       ├── exportUtils.js   # Data export utilities
-│       └── reportUtils.js   # Report generation utilities
+│       ├── reportUtils.js   # Report generation utilities
+│       ├── WaterQualityDataTransformer.js # ML data transformation
+│       └── chart-config.js  # Chart configuration utilities
 ├── android/                 # Android platform files
 ├── ios/                     # iOS platform files
 └── assets/                  # Static assets and resources
 ```
 
 ## Recent Updates
+
+### Version 2.1 - Advanced Forecasting & ML Integration
+
+#### 🔮 **Water Quality Forecasting System**
+- **ML-Powered Predictions:** Advanced machine learning models for water quality parameter forecasting
+- **Data Transformation Engine:** New WaterQualityDataTransformer utility for ML model input preparation
+- **Lag Features & Rolling Statistics:** Historical data analysis with 6-period lag features and 24-hour rolling statistics
+- **Time-Based Features:** Hour, day-of-week, month, weekend/night indicators for enhanced prediction accuracy
+
+#### 📱 **Enhanced User Interface**
+- **Forecast Tab:** Dedicated forecasting screen with real-time predictions and trend analysis
+- **Animated UI Elements:** Enhanced AlertsCard with animated indicator dots for better user experience
+- **Improved PDF Generation:** Better layout and pagination handling for comprehensive reports
+- **Style Consistency:** Refactored component styles for improved visual consistency across the app
+
+#### 🔔 **Advanced Notification System**
+- **Expo Notifications Integration:** Native push notification support with expo-notifications
+- **Notification Processing Services:** Dedicated services for alert processing and notification management
+- **Enhanced Notification Handling:** Improved logging and error management for received notifications
+- **Scheduled Notifications:** Advanced notification scheduling and management system
+
+#### 🏗️ **Architecture Improvements**
+- **Optimized Data Management:** OptimizedDataProvider integration for better data flow management
+- **Service Refactoring:** Improved architecture and maintainability across all service layers
+- **Component Optimization:** Enhanced rendering performance for LinechartCard and RealtimeDataCards
+- **Data Validation:** Comprehensive validation and sanitization throughout the application stack
+
+#### 📄 **Enhanced Export Features**
+- **PDF Export Functionality:** Complete PDF generation and export capabilities
+- **Report Formatting:** Improved report layouts with better pagination and content organization
+- **Data Export Options:** Enhanced CSV and PDF export with comprehensive water quality data
 
 ### Version 2.0 - Production-Ready Enhancements
 

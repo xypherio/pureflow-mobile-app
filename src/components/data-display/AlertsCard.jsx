@@ -1,6 +1,7 @@
 import { globalStyles } from "@styles/globalStyles.js";
+import { getWaterQualityThresholds } from "@constants/thresholds";
 import * as Lucide from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 const parameterIconMap = {
@@ -110,29 +111,189 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function AlertsCard({ alerts = [], interval = 4000 }) {
+export default function AlertsCard({ alerts = [], realtimeData = null, interval = 4000 }) {
   const [current, setCurrent] = useState(0);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const previousAlertTypeRef = useRef('success');
 
-  const hasAlertsWithParameter =
-    Array.isArray(alerts) && alerts.some((a) => a && a.parameter);
+  // Debug logging for incoming alerts
+  useEffect(() => {
+    console.log('🔔 AlertsCard received alerts:', {
+      alertsCount: alerts?.length,
+      alerts: alerts,
+      hasAlertsWithParameter: Array.isArray(alerts) && alerts.some(a => a?.parameter),
+      hasRealtimeData: !!realtimeData
+    });
+  }, [alerts, realtimeData]);
 
   const keyParameters = ["pH", "Temperature", "TDS", "Salinity"];
+  const thresholds = useMemo(() => getWaterQualityThresholds(), []);
 
-  const displayAlerts = hasAlertsWithParameter
-    ? alerts.filter((a) => a && a.parameter)
-    : [
-        {
-          parameter: "",
-          type: "success",
-          title: "All Parameters Normal",
-          message: `All parameters (${keyParameters.join(
-            ", "
-          )}) are within the normal range.`,
-        },
-      ];
+  // Helper function to map severity to type
+  const mapSeverityToType = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'critical':
+      case 'high':
+        return 'error';
+      case 'medium':
+        return 'warning';
+      case 'low':
+        return 'info';
+      default:
+        return 'info';
+    }
+  };
+
+  // Helper function to evaluate parameter value against thresholds
+  const evaluateParameter = useCallback((parameter, value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return null;
+    }
+
+    const paramKey = parameter.toLowerCase();
+    const threshold = thresholds[parameter] || thresholds[paramKey];
+    
+    if (!threshold) {
+      return null;
+    }
+
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+      return null;
+    }
+
+    // Check critical thresholds (if they exist)
+    if (threshold.critical) {
+      if (threshold.critical.min && numValue < threshold.critical.min) {
+        return { type: 'error', level: 'critical' };
+      }
+      if (threshold.critical.max && numValue > threshold.critical.max) {
+        return { type: 'error', level: 'critical' };
+      }
+    }
+
+    // Check normal thresholds
+    if (threshold.min && numValue < threshold.min) {
+      return { type: 'warning', level: 'warning' };
+    }
+    if (threshold.max && numValue > threshold.max) {
+      return { type: 'warning', level: 'warning' };
+    }
+
+    return { type: 'success', level: 'normal' };
+  }, [thresholds]);
+
+  // Generate alerts from realtimeData if alerts prop is empty
+  const generateAlertsFromRealtimeData = useCallback((realtimeData) => {
+    if (!realtimeData) return [];
+
+    const generatedAlerts = [];
+    let actualSensorData = realtimeData;
+    if (realtimeData.reading) {
+      actualSensorData = realtimeData.reading;
+    }
+
+    // Check each parameter
+    const parameters = ['pH', 'temperature', 'turbidity', 'salinity'];
+    parameters.forEach(param => {
+      const value = actualSensorData[param] || actualSensorData[param.toLowerCase()];
+      if (value !== null && value !== undefined && !isNaN(value)) {
+        const evaluation = evaluateParameter(param, value);
+        if (evaluation && evaluation.type !== 'success') {
+          const threshold = thresholds[param] || thresholds[param.toLowerCase()];
+          const paramDisplay = param.charAt(0).toUpperCase() + param.slice(1);
+          
+          let message = '';
+          if (evaluation.type === 'error') {
+            message = `${paramDisplay} is critically ${value < (threshold?.min || 0) ? 'low' : 'high'} (${Number(value).toFixed(2)})`;
+          } else {
+            message = `${paramDisplay} is ${value < (threshold?.min || 0) ? 'low' : 'high'} (${Number(value).toFixed(2)})`;
+          }
+
+          generatedAlerts.push({
+            parameter: paramDisplay,
+            type: evaluation.type,
+            severity: evaluation.level === 'critical' ? 'high' : 'medium',
+            title: `${paramDisplay} Alert`,
+            message: message,
+            value: value
+          });
+        }
+      }
+    });
+
+    return generatedAlerts;
+  }, [evaluateParameter, thresholds]);
+
+  // Process and normalize alerts
+  const processAlerts = useCallback((alerts) => {
+    if (!Array.isArray(alerts)) {
+      console.warn('⚠️ Alerts is not an array, defaulting to empty array');
+      return [];
+    }
+
+    return alerts
+      .filter(alert => {
+        // Filter out invalid alerts
+        const isValid = alert && 
+          (alert.parameter || alert.title) && 
+          (alert.message || alert.description || alert.displayMessage);
+        
+        if (!isValid) {
+          console.warn('⚠️ Invalid alert format:', alert);
+        }
+        return isValid;
+      })
+      .map(alert => {
+        // Map severity to type if type is not present
+        const alertType = alert.type || mapSeverityToType(alert.severity);
+        
+        return {
+          // Normalize alert structure
+          ...alert,
+          title: alert.title || `${alert.parameter || 'Unknown'} Alert`,
+          message: alert.message || alert.description || alert.displayMessage || 'No message provided',
+          type: alertType,
+          parameter: alert.parameter || ''
+        };
+      });
+  }, []);
+
+  const displayAlerts = useMemo(() => {
+    // First, try to use alerts from props
+    let processedAlerts = processAlerts(alerts);
+    
+    // If no alerts from props but we have realtimeData, generate alerts from it
+    if (processedAlerts.length === 0 && realtimeData) {
+      const generatedAlerts = generateAlertsFromRealtimeData(realtimeData);
+      processedAlerts = processAlerts(generatedAlerts);
+    }
+    
+    if (processedAlerts.length > 0) {
+      return processedAlerts;
+    }
+
+    // Default alert when no active alerts
+    return [{
+      parameter: "",
+      type: "success",
+      title: "All Parameters Normal",
+      message: `All parameters (${keyParameters.join(", ")}) are within the normal range.`,
+      isDefault: true
+    }];
+  }, [alerts, realtimeData, processAlerts, generateAlertsFromRealtimeData]);
+
+  // Debug processed alerts
+  useEffect(() => {
+    if (displayAlerts.length > 0) {
+      console.log('📋 Displaying alerts:', {
+        count: displayAlerts.length,
+        alerts: displayAlerts,
+        currentIndex: current
+      });
+    }
+  }, [displayAlerts, current]);
 
   // Sound effects disabled due to expo-av compatibility issues
   // TODO: Re-enable when expo-av is properly configured in the project

@@ -417,9 +417,7 @@ export const useChartData = (type, timeFilter = 'daily', selectedParameter = nul
             });
 
             console.log('📊 [useChartData] Data filtering statistics:', {
-              originalCount: todayData.length,
               filteredCount: data.length,
-              filteredPercentage: (data.length / todayData.length) * 100
             });
 
             // If we got data, break out of retry loop

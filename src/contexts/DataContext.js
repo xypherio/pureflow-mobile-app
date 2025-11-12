@@ -25,6 +25,7 @@ export function DataProvider({ children, initialData = null }) {
   const [alertStats, setAlertStats] = useState(null);
   
   const intervalRef = useRef(null);
+  const realtimeIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
   const syncIntervalRef = useRef(null);
   const isRefreshing = useRef(false);
@@ -408,12 +409,100 @@ export function DataProvider({ children, initialData = null }) {
       performUnifiedRefresh(true);
     }, POLLING_INTERVAL);
 
+    // Set up real-time data refresh interval (every 30 seconds) - bypasses rate limiting
+    const REALTIME_REFRESH_INTERVAL = 30 * 1000; // 30 seconds
+    console.log(`🔄 Setting up real-time data refresh interval: ${REALTIME_REFRESH_INTERVAL/1000}s`);
+    
+    realtimeIntervalRef.current = setInterval(async () => {
+      if (!isMountedRef.current) return;
+      
+      console.log('🔄 30s real-time data refresh triggered');
+      try {
+        // Fetch fresh real-time data (bypass cache for real-time updates)
+        const freshRealtimeData = await realtimeDataService.getMostRecentData({ useCache: false });
+        
+        if (!freshRealtimeData || !freshRealtimeData.timestamp) {
+          console.log('⚠️ No real-time data available in 30s refresh');
+          return;
+        }
+
+        // Check if data has actually changed
+        const newTimestamp = new Date(freshRealtimeData.timestamp).getTime();
+        const currentTimestamp = realtimeData ? new Date(realtimeData.timestamp).getTime() : 0;
+        
+        if (newTimestamp <= currentTimestamp) {
+          console.log('⚠️ No new real-time data since last update');
+          return;
+        }
+
+        // Update realtimeData state
+        setRealtimeData(freshRealtimeData);
+        setLastUpdate(Date.now());
+
+        // Check if we have valid sensor data
+        const hasValidData = (
+          (freshRealtimeData.pH !== null && freshRealtimeData.pH !== undefined && !isNaN(freshRealtimeData.pH)) ||
+          (freshRealtimeData.temperature !== null && freshRealtimeData.temperature !== undefined && !isNaN(freshRealtimeData.temperature)) ||
+          (freshRealtimeData.turbidity !== null && freshRealtimeData.turbidity !== undefined && !isNaN(freshRealtimeData.turbidity)) ||
+          (freshRealtimeData.salinity !== null && freshRealtimeData.salinity !== undefined && !isNaN(freshRealtimeData.salinity))
+        );
+
+        if (hasValidData) {
+          // Extract actual sensor data
+          let actualSensorData = freshRealtimeData;
+          if (freshRealtimeData.reading) {
+            actualSensorData = freshRealtimeData.reading;
+          }
+
+          // Generate data signature to check for changes
+          const currentDataSignature = generateDataSignature(actualSensorData);
+          const hasDataChanged = currentDataSignature !== lastProcessedDataSignature.current;
+
+          if (hasDataChanged) {
+            // Process alerts from new real-time data
+            const sensorDataForAlerts = [{
+              ...actualSensorData,
+              datetime: actualSensorData.timestamp || freshRealtimeData.timestamp,
+            }];
+            
+            const alertResult = await getAlertFacade().processSensorData(sensorDataForAlerts);
+            lastProcessedDataSignature.current = currentDataSignature;
+
+            if (alertResult.newAlerts.length > 0) {
+              console.log(`🚨 ${alertResult.newAlerts.length} new alerts from 30s real-time refresh`);
+            }
+
+            // Update alerts state
+            const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+            const stats = {
+              total: allAlerts.length,
+              high: allAlerts.filter(alert => alert.severity === 'high').length,
+              medium: allAlerts.filter(alert => alert.severity === 'medium').length,
+              low: allAlerts.filter(alert => alert.severity === 'low').length,
+            };
+
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                setAlerts(alertResult.processedAlerts);
+                setAlertStats(stats);
+              }
+            }, 0);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in 30s real-time refresh:', error);
+      }
+    }, REALTIME_REFRESH_INTERVAL);
+
     // Cleanup function
     return () => {
       isMountedRef.current = false;
       isRefreshing.current = false;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+      }
+      if (realtimeIntervalRef.current) {
+        clearInterval(realtimeIntervalRef.current);
       }
     };
   }, [initialData]); // Only depend on initialData, not the functions
