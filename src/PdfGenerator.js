@@ -316,27 +316,6 @@ const PdfGenerator = async (reportData) => {
     });
   }
 
-  startY -= rowHeight * 0.5;
-  checkPageSpace(rowHeight * 2);
-
-  // Forecast section
-  page.drawText('Forecast:', {
-    x: startX,
-    y: startY,
-    font: fontBold,
-    size: headingFontSize,
-    color: headerColor,
-  });
-  startY -= rowHeight * 0.8;
-  
-  const forecast = insightsData.forecast || reportData.forecast || 'No forecast available';
-  const wrappedForecast = wrapText(forecast, font, fontSize, 500);
-  for (const line of wrappedForecast) {
-    page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
-    startY -= font.heightAtSize(fontSize) + 2;
-    checkPageSpace();
-  }
-
   // Save and share/print
   const pdfBytes = await pdfDoc.saveAsBase64();
   const pdfUri = FileSystem.cacheDirectory + 'pureflow_report.pdf';

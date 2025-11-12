@@ -108,54 +108,156 @@ const generateCsv = async (exportData) => {
 
     let csvContent = '';
 
-    // Report Header
+    // Helper function to escape CSV values
+    const escapeCsv = (value) => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    // Helper function to format numeric values
+    const formatNumeric = (value) => {
+      if (value === null || value === undefined) return 'N/A';
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value.toFixed(2);
+      }
+      if (typeof value === 'string' && value === 'N/A') return 'N/A';
+      return String(value);
+    };
+
+    // ============================================
+    // SECTION 1: REPORT HEADER
+    // ============================================
     csvContent += `${metadata.title}\n`;
-    csvContent += `Generated On: ${new Date(metadata.generatedAt).toLocaleString()}\n`;
-    csvContent += `Time Period: ${metadata.timePeriod}\n`;
-    csvContent += `Overall Status: ${metadata.overallStatus}\n`;
-    csvContent += `Water Quality Index: ${metadata.wqi.value} (${metadata.wqi.status})\n\n`;
+    csvContent += `Generated On,${new Date(metadata.generatedAt).toLocaleString()}\n`;
+    csvContent += `Time Period,${metadata.timePeriod}\n`;
+    csvContent += `Overall Status,${metadata.overallStatus}\n`;
+    csvContent += `Water Quality Index,${metadata.wqi.value} (${metadata.wqi.status})\n`;
+    csvContent += `\n`;
 
-    // Overall Insights
-    csvContent += `Overall Insights\n`;
-    csvContent += `"${insights.overall.replace(/"/g, '""')}"\n\n`;
-
-    // Parameter Summary
-    csvContent += `Parameter Summary\n`;
-    csvContent += `Parameter,Value,Unit,Status,Safe Range,Min,Max,Details\n`;
+    // ============================================
+    // SECTION 2: OVERALL WATER QUALITY REPORT
+    // ============================================
+    csvContent += `OVERALL WATER QUALITY REPORT\n`;
+    csvContent += `Parameter,Average,Status,Details\n`;
     
-    Object.values(parameters).forEach(param => {
-      csvContent += `"${param.displayName}",${param.value},${param.unit},${param.status},"${param.safeRange}",${param.min},${param.max},"${param.details.replace(/"/g, '""')}"\n`;
+    // Get parameter order matching PDF (pH, Temperature, Turbidity, Salinity)
+    const parameterOrder = ['ph', 'temperature', 'turbidity', 'salinity'];
+    parameterOrder.forEach(paramKey => {
+      const param = parameters[paramKey];
+      if (param) {
+        const avgDisplay = formatNumeric(param.average);
+        const status = param.status || 'unknown';
+        const details = param.details || (param.trend?.message || 'No details available');
+        csvContent += `${escapeCsv(param.displayName)},${escapeCsv(avgDisplay + param.unit)},${escapeCsv(status)},${escapeCsv(details)}\n`;
+      }
     });
     
     csvContent += `\n`;
 
-    // AI Recommendations
-    if (insights.recommendations.length > 0) {
-      csvContent += `AI Recommendations\n`;
+    // ============================================
+    // SECTION 3: DETAILED REPORT FOR EACH PARAMETER
+    // ============================================
+    csvContent += `DETAILED REPORT FOR EACH PARAMETER\n`;
+    csvContent += `\n`;
+
+    parameterOrder.forEach(paramKey => {
+      const param = parameters[paramKey];
+      if (!param) return;
+
+      // Parameter header
+      csvContent += `${param.displayName}\n`;
+      csvContent += `Label,Value,Unit,Details / AI Insights\n`;
+
+      // Get AI insights for this parameter
+      const recommendations = insights.recommendations || [];
+      const paramInsight = recommendations.find(rec => 
+        rec.parameter && rec.parameter.toLowerCase() === param.displayName.toLowerCase()
+      );
+      const aiInsightText = paramInsight 
+        ? (paramInsight.recommendation || paramInsight.details || 'No AI insights') 
+        : 'No AI insights available';
+
+      // Parameter details rows
+      const detailsValue = param.details || (param.trend?.message || 'No details available');
+      
+      // Get current value - use param.value if available, otherwise use average
+      const currentValue = param.value && param.value !== 'N/A' 
+        ? (typeof param.value === 'string' ? param.value : formatNumeric(param.value))
+        : formatNumeric(param.average);
+      
+      csvContent += `Average,${escapeCsv(formatNumeric(param.average))},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
+      csvContent += `Current,${escapeCsv(currentValue)},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
+      csvContent += `Min,${escapeCsv(formatNumeric(param.min))},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
+      csvContent += `Max,${escapeCsv(formatNumeric(param.max))},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
+      csvContent += `Status,${escapeCsv(param.status || 'unknown')},,${escapeCsv('')}\n`;
+      csvContent += `Details,,,${escapeCsv(detailsValue)}\n`;
+      csvContent += `AI Insights,,,${escapeCsv(aiInsightText)}\n`;
+      
+      csvContent += `\n`;
+    });
+
+    // ============================================
+    // SECTION 4: OVERALL INSIGHTS & RECOMMENDATIONS
+    // ============================================
+    csvContent += `OVERALL INSIGHTS & RECOMMENDATIONS\n`;
+    csvContent += `\n`;
+    
+    // Overall Insights
+    csvContent += `Overall Insights\n`;
+    csvContent += `${escapeCsv(insights.overall || 'No AI insights available')}\n`;
+    csvContent += `\n`;
+
+    // Recommendations
+    if (insights.recommendations && insights.recommendations.length > 0) {
+      csvContent += `Recommendations\n`;
       insights.recommendations.forEach((rec, index) => {
-        csvContent += `${index + 1}. ${rec.recommendation || rec.details || 'No recommendation'}\n`;
+        const recText = rec.recommendation || rec.details || 'No recommendation';
+        csvContent += `${index + 1}. ${escapeCsv(recText)}\n`;
       });
+      csvContent += `\n`;
+    } else {
+      csvContent += `Recommendations\n`;
+      csvContent += `No recommendations available\n`;
       csvContent += `\n`;
     }
 
-    // Raw Data
-    if (rawData.length > 0) {
-      csvContent += `Raw Sensor Data\n`;
-      const headers = Object.keys(rawData[0] || {});
-      csvContent += headers.join(',') + '\n';
+    // ============================================
+    // SECTION 5: RAW SENSOR DATA (Optional)
+    // ============================================
+    if (rawData && rawData.length > 0) {
+      csvContent += `RAW SENSOR DATA\n`;
+      csvContent += `\n`;
       
+      // Get all unique headers from all data points
+      const allHeaders = new Set();
       rawData.forEach(item => {
-        const row = headers.map(header => {
-          let value = item[header];
-          if (value === null || value === undefined) return '';
-          if (typeof value === 'object') return JSON.stringify(value).replace(/"/g, '""');
-          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-            return `"${value.replace(/"/g, '""')}"`;
-          }
-          return value;
-        });
-        csvContent += row.join(',') + '\n';
+        if (item && typeof item === 'object') {
+          Object.keys(item).forEach(key => allHeaders.add(key));
+        }
       });
+      
+      const headers = Array.from(allHeaders);
+      if (headers.length > 0) {
+        csvContent += headers.map(h => escapeCsv(h)).join(',') + '\n';
+        
+        rawData.forEach(item => {
+          if (item && typeof item === 'object') {
+            const row = headers.map(header => {
+              let value = item[header];
+              if (value === null || value === undefined) return '';
+              if (typeof value === 'object') {
+                return escapeCsv(JSON.stringify(value));
+              }
+              return escapeCsv(value);
+            });
+            csvContent += row.join(',') + '\n';
+          }
+        });
+      }
     }
 
     // Write file
