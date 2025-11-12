@@ -308,23 +308,34 @@ const formatParameterData = (paramData, displayName, unit, safeRange) => {
       safeRange,
       status: "unknown",
       details: "No data available",
-      average: 0,
-      min: 0,
-      max: 0,
+      average: null,
+      min: null,
+      max: null,
       trend: { message: "No trend data" }
     };
   }
   
+  // Handle average value - preserve null if data is missing, otherwise format
+  const averageValue = typeof paramData.average === 'number' && Number.isFinite(paramData.average) 
+    ? paramData.average 
+    : null;
+  const minValue = typeof paramData.min === 'number' && Number.isFinite(paramData.min) 
+    ? paramData.min 
+    : null;
+  const maxValue = typeof paramData.max === 'number' && Number.isFinite(paramData.max) 
+    ? paramData.max 
+    : null;
+  
   return {
     displayName,
-    value: paramData.average?.toFixed(2) || "0",
+    value: averageValue !== null ? averageValue.toFixed(2) : "N/A",
     unit,
     safeRange,
     status: paramData.status || "normal",
     details: paramData.trend?.message || "No details available",
-    average: paramData.average || 0,
-    min: paramData.min || 0,
-    max: paramData.max || 0,
+    average: averageValue !== null ? averageValue : 0, // Use 0 for PDF compatibility
+    min: minValue !== null ? minValue : 0, // Use 0 for PDF compatibility
+    max: maxValue !== null ? maxValue : 0, // Use 0 for PDF compatibility
     trend: paramData.trend || { message: "No trend data" }
   };
 };

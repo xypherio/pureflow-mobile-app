@@ -89,22 +89,46 @@ const PdfGenerator = async (reportData) => {
   });
   startY -= rowHeight * 0.5; // More space between line and first row
 
-  // Parameters for table
+  // Extract parameters from nested structure (from prepareExportData)
+  // Support both nested structure (new) and flat structure (legacy)
+  const parametersData = reportData.parameters || {};
   const parameters = [
-    { name: 'pH', data: reportData.ph, unit: '' },
-    { name: 'Temperature', data: reportData.temperature, unit: '°C' },
-    { name: 'Turbidity', data: reportData.turbidity, unit: ' NTU' },
-    { name: 'Salinity', data: reportData.salinity, unit: ' PSU' },
+    { name: 'pH', data: parametersData.ph || reportData.ph, unit: '' },
+    { name: 'Temperature', data: parametersData.temperature || reportData.temperature, unit: '°C' },
+    { name: 'Turbidity', data: parametersData.turbidity || reportData.turbidity, unit: ' NTU' },
+    { name: 'Salinity', data: parametersData.salinity || reportData.salinity, unit: ' PSU' },
   ];
 
   for (const param of parameters) {
     checkPageSpace();
-    const average = param.data && param.data.average !== undefined ? param.data.average : 0;
-    const status = param.data && param.data.status ? param.data.status : '0';
-    const detailsText = param.data && param.data.details ? param.data.details : '0';
+    // Handle both nested structure and flat structure
+    let average = 0;
+    let averageDisplay = '0';
+    if (param.data) {
+      if (typeof param.data.average === 'number' && Number.isFinite(param.data.average)) {
+        average = param.data.average;
+        averageDisplay = average.toFixed(2);
+      } else if (typeof param.data.value === 'string' && param.data.value !== 'N/A') {
+        const parsed = parseFloat(param.data.value);
+        if (!isNaN(parsed)) {
+          average = parsed;
+          averageDisplay = average.toFixed(2);
+        } else {
+          averageDisplay = 'N/A';
+        }
+      } else if (param.data.value === 'N/A' || param.data.status === 'unknown') {
+        averageDisplay = 'N/A';
+      }
+    } else {
+      averageDisplay = 'N/A';
+    }
+    
+    const status = param.data && param.data.status ? param.data.status : 'unknown';
+    const detailsText = param.data && param.data.details ? param.data.details : 
+                        (param.data && param.data.trend && param.data.trend.message ? param.data.trend.message : 'No details available');
 
     page.drawText(param.name, { x: startX, y: startY, font, size: fontSize, color: textColor });
-    page.drawText(`${average}${param.unit}`, { x: startX + columnWidths[0], y: startY, font, size: fontSize, color: textColor });
+    page.drawText(`${averageDisplay}${param.unit}`, { x: startX + columnWidths[0], y: startY, font, size: fontSize, color: textColor });
     page.drawText(status, { x: startX + columnWidths[0] + columnWidths[1], y: startY, font, size: fontSize, color: textColor });
 
     // Wrap details
@@ -167,21 +191,51 @@ const PdfGenerator = async (reportData) => {
     });
     startY -= rowHeight * 0.5; // More space between line and first row
 
-    // Values for the parameter
+    // Values for the parameter - handle both nested and flat structures
+    // Helper to safely get numeric value or return null
+    const getNumericValue = (val, fallback = null) => {
+      if (typeof val === 'number' && Number.isFinite(val)) return val;
+      if (typeof val === 'string' && val !== 'N/A') {
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed)) return parsed;
+      }
+      return fallback;
+    };
+    
+    const avgValue = getNumericValue(param.data?.average, null);
+    const currentValue = getNumericValue(param.data?.value, avgValue);
+    const minValue = getNumericValue(param.data?.min, null);
+    const maxValue = getNumericValue(param.data?.max, null);
+    const statusValue = param.data?.status || 'unknown';
+    const detailsValue = param.data?.details || 
+                         (param.data?.trend && param.data.trend.message ? param.data.trend.message : 'No details available');
+    
+    // Format values for display - show "N/A" if null/undefined
+    const formatValue = (val) => val !== null && val !== undefined ? val.toFixed(2) : 'N/A';
+    
+    // Get AI insights for this parameter from recommendations
+    const insightsData = reportData.insights || {};
+    const recommendations = insightsData.recommendations || [];
+    const paramInsight = recommendations.find(rec => 
+      rec.parameter && rec.parameter.toLowerCase() === param.name.toLowerCase()
+    );
+    const aiInsightText = paramInsight ? (paramInsight.recommendation || paramInsight.details || 'No AI insights') : 'No AI insights available';
+    
     const values = [
-      { label: 'Average', value: param.data?.average ?? 0, unit: param.unit, details: '' },
-      { label: 'Current', value: param.data?.value ?? 0, unit: param.unit, details: '' },
-      { label: 'Min', value: param.data?.min ?? 0, unit: param.unit, details: '' },
-      { label: 'Max', value: param.data?.max ?? 0, unit: param.unit, details: '' },
-      { label: 'Status', value: param.data?.status ?? '0', unit: '', details: '' },
-      { label: 'Details', value: '', unit: '', details: param.data?.details ?? '0' },
-      { label: 'AI Insights', value: '', unit: '', details: param.data?.aiInsights ?? '0' },
+      { label: 'Average', value: formatValue(avgValue), unit: param.unit, details: '' },
+      { label: 'Current', value: formatValue(currentValue), unit: param.unit, details: '' },
+      { label: 'Min', value: formatValue(minValue), unit: param.unit, details: '' },
+      { label: 'Max', value: formatValue(maxValue), unit: param.unit, details: '' },
+      { label: 'Status', value: statusValue, unit: '', details: '' },
+      { label: 'Details', value: '', unit: '', details: detailsValue },
+      { label: 'AI Insights', value: '', unit: '', details: aiInsightText },
     ];
 
     for (const v of values) {
       checkPageSpace(rowHeight);
       page.drawText(v.label, { x: startX, y: startY, font, size: fontSize, color: textColor });
-      page.drawText(`${v.value}`, { x: startX + detailColWidths[0], y: startY, font, size: fontSize, color: textColor });
+      // v.value is already formatted as string (either number with .toFixed(2) or "N/A")
+      page.drawText(String(v.value), { x: startX + detailColWidths[0], y: startY, font, size: fontSize, color: textColor });
       page.drawText(v.unit, { x: startX + detailColWidths[0] + detailColWidths[1], y: startY, font, size: fontSize, color: textColor });
 
       // Wrap details/insights if present
@@ -223,7 +277,10 @@ const PdfGenerator = async (reportData) => {
   });
   startY -= rowHeight * 1.5; // Increased spacing after section title
 
-  const overallInsights = reportData.aiInsights ?? '0';
+  // Extract insights from nested structure (from prepareExportData)
+  // Support both nested structure (new) and flat structure (legacy)
+  const insightsData = reportData.insights || {};
+  const overallInsights = insightsData.overall || reportData.aiInsights || 'No AI insights available';
   const wrappedInsights = wrapText(overallInsights, font, fontSize, 500);
   for (const line of wrappedInsights) {
     page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
@@ -231,19 +288,48 @@ const PdfGenerator = async (reportData) => {
     checkPageSpace();
   }
 
+  // Add recommendations if available
+  const recommendations = insightsData.recommendations || [];
+  if (recommendations.length > 0) {
+    startY -= rowHeight * 0.5;
+    checkPageSpace(rowHeight * 2);
+    
+    page.drawText('Recommendations:', {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: headingFontSize,
+      color: headerColor,
+    });
+    startY -= rowHeight * 0.8;
+    
+    recommendations.forEach((rec, index) => {
+      checkPageSpace(rowHeight * 2);
+      const recText = `${index + 1}. ${rec.recommendation || rec.details || 'No recommendation'}`;
+      const wrappedRec = wrapText(recText, font, fontSize, 500);
+      for (const line of wrappedRec) {
+        page.drawText(line, { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
+        startY -= font.heightAtSize(fontSize) + 2;
+        checkPageSpace();
+      }
+      startY -= rowHeight * 0.3;
+    });
+  }
+
   startY -= rowHeight * 0.5;
   checkPageSpace(rowHeight * 2);
 
-  page.drawText('Forecast', {
+  // Forecast section
+  page.drawText('Forecast:', {
     x: startX,
     y: startY,
     font: fontBold,
     size: headingFontSize,
     color: headerColor,
   });
-  startY -= rowHeight * 1.2; // More space after forecast title
-
-  const forecast = reportData.forecast ?? '0';
+  startY -= rowHeight * 0.8;
+  
+  const forecast = insightsData.forecast || reportData.forecast || 'No forecast available';
   const wrappedForecast = wrapText(forecast, font, fontSize, 500);
   for (const line of wrappedForecast) {
     page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });

@@ -16,6 +16,8 @@ const useForecastService = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [predictionError, setPredictionError] = useState(null);
   const [lastSuccessfulPrediction, setLastSuccessfulPrediction] = useState(null);
+  const [hasEverFetchedOnce, setHasEverFetchedOnce] = useState(false);
+  const [forecastDataAvailable, setForecastDataAvailable] = useState(false);
 
   /**
    * Loads historical sensor data using the ForecastService
@@ -57,12 +59,14 @@ const useForecastService = () => {
         // Update state with successful prediction
         setForecastPredicted(result.data);
         setLastSuccessfulPrediction(result.data);
-        
+        setHasEverFetchedOnce(true);
+        setForecastDataAvailable(true);
+
         // Update historical data if new sensor data was saved
         if (result.sensorData) {
           await loadHistoricalData();
         }
-        
+
         console.log("✅ Prediction completed successfully!");
       } else {
         // Handle prediction failure
@@ -70,19 +74,24 @@ const useForecastService = () => {
       }
     } catch (error) {
       console.error("❌ Prediction error:", error);
-      
+
       // Set error message
       setPredictionError(error.message);
+
+      // Set data availability flag to false for better error handling
+      setForecastDataAvailable(false);
 
       // Fallback to maintain app functionality
       if (lastSuccessfulPrediction) {
         console.log("🔄 Using last successful prediction as fallback");
         setForecastPredicted(lastSuccessfulPrediction);
+        setForecastDataAvailable(true); // Fallback data is available
       } else {
         console.log("🔄 Using default values as fallback");
         const defaultPredictions = ForecastService.getDefaultPredictions();
         setForecastPredicted(defaultPredictions);
         setLastSuccessfulPrediction(defaultPredictions);
+        // Keep forecastDataAvailable as false - no real data available
       }
     } finally {
       setIsLoading(false);
@@ -143,6 +152,8 @@ const useForecastService = () => {
     currentData,
     historicalData,
     lastSuccessfulPrediction,
+    hasEverFetchedOnce,
+    forecastDataAvailable,
 
     // Methods
     initializePrediction,

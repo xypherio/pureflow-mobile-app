@@ -35,27 +35,8 @@ export default function RealTimeData({ data = [] }) {
     });
   }, [realtimeData, loading, lastUpdate]);
 
-  // Set up 30-second refresh interval
-  const refreshIntervalRef = useRef(null);
-
-  useEffect(() => {
-    // Set up 30-second refresh interval
-    const setupRefreshInterval = () => {
-      refreshIntervalRef.current = setInterval(() => {
-        console.log('🔄 30s refresh triggered for RealtimeDataCards');
-        refreshData();
-      }, 30000); // 30 seconds
-    };
-
-    setupRefreshInterval();
-
-    // Cleanup interval on unmount
-    return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
-    };
-  }, [refreshData]);
+  // Note: Real-time data refresh is now handled automatically by DataContext every 30 seconds
+  // No need for manual refresh interval here - DataContext will update realtimeData automatically
 
   // Calculate data age - handle both timestamp formats
   const dataAge = useMemo(() => {
@@ -126,7 +107,7 @@ export default function RealTimeData({ data = [] }) {
     return [
       {
         label: "pH Level",
-        value: pH !== null && pH !== undefined ? String(Number(pH).toFixed(1)) : "--",
+        value: pH !== null && pH !== undefined ? String(Number(pH)) : "--",
         unit: "PH",
         icon: <Gauge size={30} color="#007bff" />,
         color: "#007bff",
@@ -135,7 +116,7 @@ export default function RealTimeData({ data = [] }) {
       },
       {
         label: "Temperature",
-        value: temperature !== null && temperature !== undefined ? String(Number(temperature).toFixed(1)) : "--",
+        value: temperature !== null && temperature !== undefined ? String(Number(temperature)) : "--",
         unit: "°C",
         icon: <Thermometer size={30} color="#e83e8c" />,
         color: "#e83e8c",
@@ -144,7 +125,7 @@ export default function RealTimeData({ data = [] }) {
       },
       {
         label: "Turbidity",
-        value: turbidity !== null && turbidity !== undefined ? String(Number(turbidity).toFixed(1)) : "--",
+        value: turbidity !== null && turbidity !== undefined ? String(Number(turbidity)) : "--",
         unit: "NTU",
         icon: <Waves size={30} color="#28a745" />,
         color: "#28a745",
@@ -153,7 +134,7 @@ export default function RealTimeData({ data = [] }) {
       },
       {
         label: "Salinity",
-        value: salinity !== null && salinity !== undefined ? String(Number(salinity).toFixed(1)) : "--",
+        value: salinity !== null && salinity !== undefined ? String(Number(salinity)) : "--",
         unit: "PPT",
         icon: <Droplet size={30} color="#8b5cf6" />,
         color: "#8b5cf6",
@@ -185,10 +166,6 @@ export default function RealTimeData({ data = [] }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Real-Time Parameters</Text>
-        <Text style={styles.lastRefreshText}>Updated: {dataAge}</Text>
-      </View>
       <View style={styles.parametersContainer}>
         {parameters.length > 0 ? (
           parameters.map((param, index) => (

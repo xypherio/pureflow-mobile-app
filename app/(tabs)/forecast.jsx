@@ -32,6 +32,8 @@ export default function HomeScreen() {
     forecastPredicted,
     isLoading,
     predictionError,
+    hasEverFetchedOnce,
+    forecastDataAvailable,
     initializePrediction,
   } = useForecastService();
 
@@ -124,13 +126,22 @@ export default function HomeScreen() {
         </View>
 
         {/* Error Message Display */}
-        {predictionError && (
+        {predictionError && hasEverFetchedOnce && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
               <Text style={{ fontWeight: "bold" }}>
-                Failed to retrieve latest forecast:
+                Unable to update forecast:
               </Text>{" "}
-              {predictionError}. Displaying last available data.
+              {predictionError}. Showing last available forecast data.
+            </Text>
+          </View>
+        )}
+
+        {/* No Data Available Message */}
+        {predictionError && !hasEverFetchedOnce && (
+          <View style={styles.noDataContainer}>
+            <Text style={styles.noDataText}>
+              Please come back later when the forecast is available.
             </Text>
           </View>
         )}
@@ -216,9 +227,11 @@ export default function HomeScreen() {
               ))}
             </>
           ) : (
-            <Text>
-              Failed to load forecast insights. Please check your Gemini API
-              quota or try again later.
+            <Text style={styles.noDataText}>
+              {forecastDataAvailable
+                ? "Failed to load forecast insights. Please check your Gemini API quota or try again later."
+                : "No forecast available yet."
+              }
             </Text>
           )}
         </View>
@@ -245,6 +258,19 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#A94442",
     fontSize: 12,
+  },
+  noDataContainer: {
+    backgroundColor: "#FFF3CD",
+    padding: 12,
+    borderRadius: 5,
+    marginVertical: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#FFC107",
+  },
+  noDataText: {
+    color: "#856404",
+    fontSize: 12,
+    textAlign: "center",
   },
   forecastParametersContainer: {
     marginBottom: 10,

@@ -6,12 +6,10 @@ const ChartTooltip = ({ data, visible, position, onHide }) => {
   useEffect(() => {
     let timeoutId;
     if (visible) {
-      // Set timeout to hide tooltip after 5 seconds
       timeoutId = setTimeout(() => {
         onHide?.();
       }, 3000);
     }
-    // Cleanup timeout when component unmounts or visibility changes
     return () => {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -36,7 +34,9 @@ const ChartTooltip = ({ data, visible, position, onHide }) => {
         <Text style={styles.value}>
           {typeof data.value === 'number' ? data.value.toFixed(1) : data.value}
         </Text>
-        <Text style={styles.parameter}>{data.parameter}</Text>
+        <Text style={[styles.parameter, { color: data.color || colors.textSecondary }]}>
+          {data.parameter}
+        </Text>
         <Text style={styles.timestamp}>{data.timestamp}</Text>
       </View>
       <View style={styles.arrow} />
