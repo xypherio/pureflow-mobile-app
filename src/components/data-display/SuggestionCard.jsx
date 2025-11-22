@@ -7,6 +7,16 @@ const statusColor = {
   critical: '#e74c3c', // Red
 };
 
+const SuggestionCard = ({ suggestion }) => {
+  return (
+    <View style={styles.card}>
+      <Text style={styles.header}>{suggestion.parameter}</Text>
+      <Text style={styles.recommendationText}>{suggestion.recommendation}</Text>
+      <View style={[styles.status, { backgroundColor: statusColor[suggestion.status] || '#95a5a6' }]} />
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#f0f0f0',
@@ -38,14 +48,5 @@ const styles = StyleSheet.create({
   },
 });
 
-const SuggestionCard = ({ suggestion }) => {
-  return (
-    <View style={styles.card}>
-      <Text style={styles.header}>{suggestion.parameter}</Text>
-      <Text style={styles.recommendationText}>{suggestion.recommendation}</Text>
-      <View style={[styles.status, { backgroundColor: statusColor[suggestion.status] || '#95a5a6' }]} />
-    </View>
-  );
-};
 
 export default SuggestionCard;

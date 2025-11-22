@@ -1,9 +1,12 @@
+import { onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@services/firebase/config';
+
 /**
  * Service for managing real-time sensor data operations.
- * 
+ *
  * This is a facade adapter that delegates to the new dashboard facade architecture
  * while maintaining backward compatibility with legacy code.
- * 
+ *
  * @class RealtimeDataService
  */
 class RealtimeDataService {
@@ -169,6 +172,94 @@ class RealtimeDataService {
    */
   clearExpiredCache() {
     this._clearExpiredCache();
+  }
+
+  /**
+   * Sets up a real-time listener for the most recent sensor data
+   * @param {Function} callback - Callback function to handle new data
+   * @returns {Function} Unsubscribe function to stop listening
+   */
+  subscribeToRealtimeData(callback) {
+    console.log('🔄 Setting up real-time listener for datm_data collection');
+
+    // Query for the most recent document ordered by datetime
+    const collectionRef = collection(db, 'datm_data');
+    const q = query(collectionRef, orderBy('datetime', 'desc'), limit(1));
+
+    // Set up the real-time listener
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      console.log('📡 Real-time data update received');
+
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        const rawData = { id: doc.id, ...doc.data() };
+
+        // Normalize the data
+        const normalizedData = this.normalizeRealtimeData(rawData);
+        callback(normalizedData);
+      } else {
+        console.log('📡 No real-time data available');
+        callback(null);
+      }
+    }, (error) => {
+      console.error('❌ Real-time listener error:', error);
+      callback(null);
+    });
+
+    return unsubscribe;
+  }
+
+  /**
+   * Normalizes real-time sensor data for consistent structure
+   * @param {Object} rawData - Raw data from Firebase
+   * @returns {Object} Normalized data with consistent types
+   */
+  normalizeRealtimeData(rawData) {
+    return {
+      id: rawData.id,
+      datetime: this.normalizeDateTime(rawData.datetime),
+      timestamp: this.normalizeDateTime(rawData.datetime),
+
+      // Water quality parameters - ensure numeric types
+      pH: rawData.pH ? Number(rawData.pH) : null,
+      temperature: rawData.temperature ? Number(rawData.temperature) : null,
+      turbidity: rawData.turbidity ? Number(rawData.turbidity) : null,
+      salinity: rawData.salinity ? Number(rawData.salinity) : null,
+
+      // Environmental data
+      isRaining: Boolean(rawData.isRaining),
+
+      // Metadata
+      lastUpdated: this.normalizeDateTime(rawData.datetime),
+      source: rawData.source || 'realtime'
+    };
+  }
+
+  /**
+   * Normalizes date/time values from different Firebase formats
+   * @param {any} dateValue - Date value from Firebase
+   * @returns {Date} Normalized Date object
+   */
+  normalizeDateTime(dateValue) {
+    if (!dateValue) return new Date();
+
+    // Handle Firestore Timestamp
+    if (dateValue && typeof dateValue.toDate === 'function') {
+      return dateValue.toDate();
+    }
+
+    // Handle string dates
+    if (typeof dateValue === 'string') {
+      return new Date(dateValue);
+    }
+
+    // Handle numeric timestamps
+    if (typeof dateValue === 'number') {
+      return new Date(dateValue);
+    }
+
+    // Fallback
+    return new Date(dateValue);
   }
 
 }

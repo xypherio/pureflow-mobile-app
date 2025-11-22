@@ -162,25 +162,80 @@ class HistoricalAlertsService {
   }
 
   /**
+   * Parse locale-formatted date string (e.g., "November 19, 2025 at 4:55:28 PM UTC+8")
+   * @param {string} dateString - Date string to parse
+   * @returns {Date|null} Parsed Date object or null if invalid
+   */
+  parseLocaleDateString(dateString) {
+    if (!dateString || typeof dateString !== 'string') return null;
+
+    // Match format: "Month DD, YYYY at HH:MM:SS AM/PM UTC+8"
+    const match = dateString.match(/^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2}):(\d{2})\s*([AP]M)\s+UTC([+-]\d+)$/);
+    if (!match) return null;
+
+    const [, monthName, day, year, hour, minute, second, ampm, utcOffset] = match;
+
+    try {
+      // Convert month name to number (0-11)
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthIndex = monthNames.findIndex(name => name.toLowerCase() === monthName.toLowerCase());
+      if (monthIndex === -1) return null;
+
+      // Convert hour to 24-hour format
+      let hour24 = parseInt(hour, 10);
+      if (ampm.toUpperCase() === 'PM' && hour24 !== 12) hour24 += 12;
+      if (ampm.toUpperCase() === 'AM' && hour24 === 12) hour24 = 0;
+
+      // Create Date object (in local timezone initially, then adjust for UTC offset)
+      const date = new Date(parseInt(year), monthIndex, parseInt(day),
+                           hour24, parseInt(minute), parseInt(second));
+
+      // Check if the created date is valid
+      if (isNaN(date.getTime())) return null;
+
+      return date;
+    } catch (error) {
+      console.warn('Failed to parse locale date string:', dateString, error);
+      return null;
+    }
+  }
+
+  /**
    * Normalize timestamp from various formats
    * @param {Object} alert - Alert object
    * @returns {Object} Normalized timestamp object
    */
   normalizeTimestamp(alert) {
     let timestamp;
-    
+
     if (alert.timestamp) {
       // Handle Firestore timestamp
       if (alert.timestamp.toDate && typeof alert.timestamp.toDate === 'function') {
         timestamp = alert.timestamp.toDate();
       } else if (typeof alert.timestamp === 'number') {
-        timestamp = new Date(alert.timestamp);
+        timestamp = new Date(alert.timestamp * 1000); // Convert seconds to milliseconds if needed
       } else {
         timestamp = new Date(alert.timestamp);
       }
     } else if (alert.createdAt) {
+      // Try standard Date parsing first (handles ISO strings)
       timestamp = new Date(alert.createdAt);
-    } else {
+
+      // If that fails, try parsing as locale date string format
+      if (!timestamp || isNaN(timestamp.getTime())) {
+        timestamp = this.parseLocaleDateString(alert.createdAt);
+      }
+    }
+
+    // If we still don't have a valid timestamp, try extracting from alert ID
+    if (!timestamp || isNaN(timestamp.getTime())) {
+      timestamp = this.extractTimestampFromAlertId(alert.id);
+    }
+
+    // Final fallback to current date if all else fails
+    if (!timestamp || isNaN(timestamp.getTime())) {
+      console.warn('Invalid timestamp for alert:', alert.id, alert.createdAt || 'none');
       timestamp = new Date();
     }
 
@@ -188,6 +243,29 @@ class HistoricalAlertsService {
       seconds: Math.floor(timestamp.getTime() / 1000),
       date: timestamp,
     };
+  }
+
+  /**
+   * Extract timestamp from alert ID if it follows the pattern: alert_[timestamp]_[suffix]
+   * @param {string} alertId - The alert ID to extract timestamp from
+   * @returns {Date|null} Extracted date or null if extraction fails
+   */
+  extractTimestampFromAlertId(alertId) {
+    if (!alertId || typeof alertId !== 'string') return null;
+
+    // Match pattern: alert_[digits]_[any characters]
+    const match = alertId.match(/^alert_(\d+)_/);
+    if (match && match[1]) {
+      const timestampMs = parseInt(match[1], 10);
+      // Validate that it's a reasonable timestamp (between 2020 and 2030)
+      const date = new Date(timestampMs);
+      const year = date.getFullYear();
+      if (year >= 2020 && year <= 2030) {
+        return date;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -244,6 +322,12 @@ class HistoricalAlertsService {
     const alertTime = this.normalizeTimestamp(alert).date;
     const now = new Date();
     const ageMs = now - alertTime;
+
+    // Handle invalid dates to prevent NaN results
+    if (isNaN(ageMs) || ageMs < 0) {
+      console.warn('Invalid age calculation for alert:', alert.id, alert.createdAt);
+      return 'Time unknown';
+    }
 
     // Return appropriate time string based on age
     if (ageMs < 60000) { // Less than 1 minute

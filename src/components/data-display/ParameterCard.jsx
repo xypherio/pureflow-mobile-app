@@ -1,8 +1,38 @@
-// src/components/data-display/ParameterCard.jsx
+/**
+ * ParameterCard Component
+ *
+ * An expandable card component that displays water quality parameter data,
+ * trends, and charts. Supports collapsible sections for different levels of detail.
+ *
+ * Features:
+ * - Expandable/collapsible interface with smooth animations
+ * - Water quality parameter visualization with status indicators
+ * - Interactive bar charts with tooltips for detailed data points
+ * - AI insights display (when available and card is expanded)
+ * - Color-coded status system for quick visual assessment
+ * - Parameter-specific icons and colors
+ * - Min/Max value display when expanded
+ * - Dynamic chart scaling based on data points
+ *
+ * @param {Object} props
+ * @param {string} props.parameter - Parameter name (e.g., 'pH', 'temperature')
+ * @param {string|number} props.value - Current parameter value
+ * @param {string} props.unit - Unit of measurement (e.g., '°C', 'ppt')
+ * @param {string} props.safeRange - Safe range description
+ * @param {'normal'|'caution'|'critical'} props.status - Quality status
+ * @param {string} props.analysis - Trend analysis text
+ * @param {Array} props.chartData - Chart data points with labels and datasets
+ * @param {number} props.minValue - Minimum value encountered
+ * @param {number} props.maxValue - Maximum value encountered
+ * @param {string} props.insight - AI-generated insight text (optional)
+ */
+
 import { ChevronDown, ChevronUp, Droplet, Gauge, Minus, Plus, Thermometer, Waves } from 'lucide-react-native';
+import { WaterQualityCalculator } from '../../services/core/WaterQualityCalculator';
 import React, { useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+import ChartTooltip from '../ui/ChartToolTip';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -72,35 +102,61 @@ const ParameterCard = ({
   chartData,
   minValue,
   maxValue,
+  insight,
   style
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [tooltipData, setTooltipData] = useState(null);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
-  const statusColors = {
-    normal: {
-      borderColor: '#10B981',
-      shadowColor: '#10B981',
-      bgColor: '#ECFDF5',
-      iconColor: '#059669',
-      gradientColors: ['#D1FAE5', '#A7F3D0']
-    },
-    caution: {
-      borderColor: '#F59E0B',
-      shadowColor: '#F59E0B',
-      bgColor: '#FFFBEB',
-      iconColor: '#D97706',
-      gradientColors: ['#FEF3C7', '#FDE68A']
-    },
-    critical: {
-      borderColor: '#EF4444',
-      shadowColor: '#EF4444',
-      bgColor: '#FEF2F2',
-      iconColor: '#DC2626',
-      gradientColors: ['#FEE2E2', '#FECACA']
-    }
-  };
+  // Calculate parameter score and determine threshold-based status
+  const calculatedStatus = useMemo(() => {
+    if (!value || !parameter) return 'normal';
 
-  const statusConfig = statusColors[status] || statusColors.normal;
+    const calculator = new WaterQualityCalculator();
+    const score = calculator.calculateParameterScore(parameter, value);
+
+    // Normal: score >= 80, Approaching: score < 80
+    return score >= 80 ? 'normal' : 'approaching';
+  }, [value, parameter]);
+
+/**
+ * STATUS-BASED STYLING CONFIGURATION
+ * Color schemes for different water quality statuses with consistent theming
+ */
+const statusColors = {
+  normal: {
+    borderColor: '#10B981', // Green for good quality
+    shadowColor: '#10B981',
+    bgColor: '#ECFDF5',     // Light green background
+    iconColor: '#059669',
+    gradientColors: ['#D1FAE5', '#A7F3D0']
+  },
+  approaching: {
+    borderColor: '#DC2626', // Red for approaching threshold
+    shadowColor: '#DC2626',
+    bgColor: '#FEF2F2',     // Light red background
+    iconColor: '#DC2626',
+    gradientColors: ['#FEE2E2', '#FECACA']
+  },
+  caution: {
+    borderColor: '#F59E0B', // Yellow/orange for caution
+    shadowColor: '#F59E0B',
+    bgColor: '#FFFBEB',     // Light yellow background
+    iconColor: '#D97706',
+    gradientColors: ['#FEF3C7', '#FDE68A']
+  },
+  critical: {
+    borderColor: '#EF4444', // Red for critical issues
+    shadowColor: '#EF4444',
+    bgColor: '#FEF2F2',     // Light red background
+    iconColor: '#DC2626',
+    gradientColors: ['#FEE2E2', '#FECACA']
+  }
+};
+
+  const statusConfig = statusColors[calculatedStatus] || statusColors.normal;
 
   const backgroundIcon = getParameterIcon(parameter);
   const parameterColor = PARAMETER_COLORS[parameter] || '#007bff';
@@ -164,6 +220,29 @@ const ParameterCard = ({
   const chartTimeRange = aggregatedChartData?.timeRange || chartData?.timeRange || 'daily';
   const intervalLabel = intervalLabelMap[chartTimeRange] || 'period';
   const overallLabel = overallLabelMap[chartTimeRange] || 'selected period';
+
+  // Handle chart data point press
+  const handleBarDataPointPress = ({ index, x, y, value }) => {
+    const pointData = {
+      value,
+      timestamp: aggregatedChartData.labels[index],
+      parameter: parameter,
+      color: parameterColor,
+    };
+
+    // Adjust tooltip position to appear above the bar
+    const tooltipX = x - 50; // Center tooltip
+    const tooltipY = y - 60; // Position above the bar
+
+    setTooltipData(pointData);
+    setTooltipPosition({ x: tooltipX, y: tooltipY });
+    setTooltipVisible(true);
+  };
+
+  // Handle tooltip hide
+  const handleTooltipHide = () => {
+    setTooltipVisible(false);
+  };
 
   return (
     <View style={[
@@ -234,6 +313,7 @@ const ParameterCard = ({
             </View>
           </View>
         )}
+
         <Text style={styles.analysis} numberOfLines={expanded ? undefined : 1}>
           {analysis}
         </Text>
@@ -245,9 +325,14 @@ const ParameterCard = ({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chartScrollContent}
             >
-              <BarChart
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={handleTooltipHide}
+                style={[styles.chart, { width: screenWidth - 40 }]}
+              >
+                <BarChart
                 data={aggregatedChartData}
-                width={Math.max(screenWidth - 120, aggregatedChartData.labels.length * 32)}
+                width={screenWidth - 40}
                 height={220}
                 chartConfig={{
                   backgroundColor: '#ffffff',
@@ -255,7 +340,7 @@ const ParameterCard = ({
                   backgroundGradientTo: '#ffffff',
                   decimalPlaces: 2,
                   color: (opacity = 1) => hexToRgba(parameterColor, opacity),
-                  barPercentage: aggregatedChartData.timeRange === 'daily' ? 0.55 : 0.7,
+                  barPercentage: aggregatedChartData.timeRange === 'daily' ? 0.7 : 0.85,
                   style: {
                     borderRadius: 16,
                   },
@@ -291,11 +376,30 @@ const ParameterCard = ({
                   }
                   return value;
                 }}
+                onDataPointClick={handleBarDataPointPress}
               />
+              </TouchableOpacity>
             </ScrollView>
             <Text style={styles.chartNote}>
               {`Showing ${aggregatedChartData.labels.length} aggregated ${intervalLabel} averages. Value above reflects the ${overallLabel} average.`}
             </Text>
+            <ChartTooltip
+              data={tooltipData}
+              visible={tooltipVisible}
+              position={tooltipPosition}
+              onHide={() => setTooltipVisible(false)}
+            />
+
+            {insight && (
+              <View style={[styles.insightContainer, {
+                borderLeftColor: parameterColor,
+              }]}>
+                <Text style={[styles.insightTitle, {
+                  color: parameterColor,
+                }]}>💡 AI Insight</Text>
+                <Text style={styles.insightText}>{insight}</Text>
+              </View>
+            )}
           </View>
         )}
         {expanded && !aggregatedChartData && (
@@ -433,6 +537,26 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'left',
     marginTop: 8,
+  },
+  insightContainer: {
+    marginTop: 8,
+    marginBottom: 4,
+    padding: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6b7280', // Neutral gray as fallback
+  },
+  insightTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280', // Neutral gray as fallback
+    marginBottom: 4,
+  },
+  insightText: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
   },
   iconStyles: {
     position: 'absolute',

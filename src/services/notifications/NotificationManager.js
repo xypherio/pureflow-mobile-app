@@ -70,7 +70,8 @@ class NotificationManager {
         });
 
         return {
-          shouldShowAlert: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
           shouldPlaySound: true,
           shouldSetBadge: true,
         };

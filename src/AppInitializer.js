@@ -10,6 +10,7 @@ import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { optimizedDataManager } from './services/OptimizedDataManager';
 import { scheduledNotificationManager } from './services/notifications/ScheduledNotificationManager';
 import { OptimizedDataProvider } from './contexts/OptimizedDataContext';
+import { notificationManager } from './services/notifications/NotificationManager';
 
 export default function AppInitializer({ children }) {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -24,6 +25,15 @@ export default function AppInitializer({ children }) {
 
         // Initialize notification system first
         await scheduledNotificationManager.initialize();
+
+        // Initialize basic notification manager and request permissions
+        await notificationManager.initialize();
+        const permissionResult = await notificationManager.requestPermissions();
+        if (permissionResult.success) {
+          console.log('✅ Notification permissions granted automatically');
+        } else {
+          console.log('⚠️ Notification permissions not granted (user can grant later)');
+        }
 
         setProgress('Loading initial data...');
         // Initialize the optimized data manager

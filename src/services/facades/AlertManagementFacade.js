@@ -104,22 +104,22 @@ export class AlertManagementFacade {
           if (results.errors.length > 0) {
             console.warn(`⚠️ Encountered ${results.errors.length} processing errors`);
           }
-          results.errors.push(...processingResult.errors);
-  
+          results.errors.push(...processorResults.errors);
+
           // Step 3: Save new alerts
-          if (processingResult.processed.length > 0) {
+          if (processorResults.processed.length > 0) {
             try {
-              await this.alertRepository.saveAlerts(processingResult.processed);
-              results.newAlerts = processingResult.processed;
-              console.log(`✅ Saved ${processingResult.processed.length} new alerts`);
+              await this.alertRepository.saveAlerts(processorResults.processed);
+              results.newAlerts = processorResults.processed;
+              console.log(`✅ Saved ${processorResults.processed.length} new alerts`);
             } catch (error) {
               console.error('❌ Error saving alerts:', error);
               results.errors.push({ type: 'save_error', message: error.message });
             }
           }
-  
+
           // Step 4: Send notifications for high-priority alerts
-          const highPriorityAlerts = processingResult.processed.filter(alert => 
+          const highPriorityAlerts = processorResults.processed.filter(alert =>
             alert.severity === 'high' || alert.alertLevel === 'critical'
           );
   
@@ -274,6 +274,49 @@ export class AlertManagementFacade {
       }
     }
   
+    /**
+     * Generate a data signature for detecting changes in sensor data
+     */
+    generateDataSignature(sensorData) {
+      if (!sensorData) return null;
+
+      // Create a simple hash of the sensor data values
+      let dataString = '';
+      if (Array.isArray(sensorData)) {
+        // Handle array of sensor readings
+        sensorData.forEach(reading => {
+          if (reading && typeof reading === 'object') {
+            Object.keys(reading)
+              .sort()
+              .forEach(key => {
+                if (key !== 'timestamp' && key !== 'datetime') {
+                  dataString += `${key}:${reading[key]};`;
+                }
+              });
+          }
+        });
+      } else if (typeof sensorData === 'object') {
+        // Handle single sensor reading object
+        Object.keys(sensorData)
+          .sort()
+          .forEach(key => {
+            if (key !== 'timestamp' && key !== 'datetime') {
+              dataString += `${key}:${sensorData[key]};`;
+            }
+          });
+      }
+
+      // Simple hash function
+      let hash = 0;
+      for (let i = 0; i < dataString.length; i++) {
+        const char = dataString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+
+      return hash.toString(36);
+    }
+
     // Helper methods
     generateDisplayMessage(alert) {
       const paramName = alert.parameter.charAt(0).toUpperCase() + alert.parameter.slice(1);

@@ -1,4 +1,5 @@
 import { getDashboardFacade } from '@services/ServiceContainer';
+import { historicalAlertsService } from '@services/historicalAlertsService';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Animated, Dimensions, Image, StyleSheet, Text, View } from 'react-native';
@@ -47,17 +48,23 @@ export default function SplashScreen({ onDataLoaded, servicesReady }) {
       setLoadingText('Processing alerts...');
       setProgress(50);
 
+      // Fetch historical alerts with limit of 50
+      const historicalAlerts = await historicalAlertsService.getHistoricalAlerts({
+        limitCount: 50,
+        useCache: true
+      });
+
+      setLoadingText('Finalizing...');
+      setProgress(75);
+
       // The data structure is different, so update accordingly
       const data = {
         sensorData: dashboardData.today.data,
         alerts: dashboardData.alerts.active,
         dailyReport: dashboardData.current,
-        historicalAlerts: { sections: [], totalCount: 0 }, // If needed, fetch separately
+        historicalAlerts: historicalAlerts, // Now includes fetched historical alerts
         fromCache: dashboardData.metadata.fromCache
       };
-
-      setLoadingText('Finalizing...');
-      setProgress(75);
 
       // Call the callback to indicate data is loaded
       if (onDataLoaded) {

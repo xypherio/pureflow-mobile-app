@@ -10,77 +10,31 @@ import { weatherService } from "../../services/weatherService";
 
 // Weather Icon Component
 const WeatherIcon = ({ condition, size = 50 }) => {
-  const iconStyle = {
-    width: size,
-    height: size,
-    justifyContent: "center",
-    alignItems: "center",
-  };
+  const diameterStyle = { width: size, height: size, borderRadius: size / 2 };
 
-  const getIconComponent = () => {
-    switch (condition) {
-      case "sunny":
-      case "clear":
-        return (
-          <View
-            style={[
-              iconStyle,
-              { backgroundColor: "#FFD700", borderRadius: size / 2 },
-            ]}
-          >
-            <Text style={{ fontSize: size * 0.6, color: "#FFA500" }}>☀️</Text>
-          </View>
-        );
-      case "partly":
-      case "clouds":
-        return (
-          <View
-            style={[
-              iconStyle,
-              { backgroundColor: "#E6E6FA", borderRadius: size / 2 },
-            ]}
-          >
-            <Text style={{ fontSize: size * 0.6, color: "#708090" }}>⛅</Text>
-          </View>
-        );
-      case "rain":
-      case "drizzle":
-        return (
-          <View
-            style={[
-              iconStyle,
-              { backgroundColor: "#B0C4DE", borderRadius: size / 2 },
-            ]}
-          >
-            <Text style={{ fontSize: size * 0.6, color: "#4169E1" }}>🌧️</Text>
-          </View>
-        );
-      case "thunderstorm":
-        return (
-          <View
-            style={[
-              iconStyle,
-              { backgroundColor: "#2F4F4F", borderRadius: size / 2 },
-            ]}
-          >
-            <Text style={{ fontSize: size * 0.6, color: "#FFD700" }}>⛈️</Text>
-          </View>
-        );
-      default:
-        return (
-          <View
-            style={[
-              iconStyle,
-              { backgroundColor: "#E6E6FA", borderRadius: size / 2 },
-            ]}
-          >
-            <Text style={{ fontSize: size * 0.6, color: "#708090" }}>🌤️</Text>
-          </View>
-        );
-    }
-  };
+  const renderIcon = (emoji, containerVariant, textVariant) => (
+    <View style={[styles.iconBase, styles[containerVariant], diameterStyle]}>
+      <Text style={[styles.iconText, styles[textVariant], { fontSize: size * 0.6 }]}>
+        {emoji}
+      </Text>
+    </View>
+  );
 
-  return getIconComponent();
+  switch ((condition || "").toLowerCase()) {
+    case "sunny":
+    case "clear":
+      return renderIcon("☀️", "iconSunny", "iconSunnyText");
+    case "partly":
+    case "clouds":
+      return renderIcon("⛅", "iconClouds", "iconCloudsText");
+    case "rain":
+    case "drizzle":
+      return renderIcon("🌧️", "iconRain", "iconRainText");
+    case "thunderstorm":
+      return renderIcon("⛈️", "iconThunder", "iconThunderText");
+    default:
+      return renderIcon("🌤️", "iconDefault", "iconDefaultText");
+  }
 };
 
 const formatWindSpeed = (speed) => {
@@ -441,5 +395,43 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginTop: 4,
     opacity: 0.8,
+  },
+  iconBase: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconText: {
+    // fontSize is set dynamically based on size prop
+    textAlign: "center",
+  },
+  iconSunny: {
+    backgroundColor: "#FFD700",
+  },
+  iconSunnyText: {
+    color: "#FFA500",
+  },
+  iconClouds: {
+    backgroundColor: "#E6E6FA",
+  },
+  iconCloudsText: {
+    color: "#708090",
+  },
+  iconRain: {
+    backgroundColor: "#B0C4DE",
+  },
+  iconRainText: {
+    color: "#4169E1",
+  },
+  iconThunder: {
+    backgroundColor: "#2F4F4F",
+  },
+  iconThunderText: {
+    color: "#FFD700",
+  },
+  iconDefault: {
+    backgroundColor: "#E6E6FA",
+  },
+  iconDefaultText: {
+    color: "#708090",
   },
 });

@@ -21,8 +21,72 @@ export class SensorDataRepository {
     // Bind methods to ensure 'this' context is preserved
     this.normalizeSensorData = this.normalizeSensorData.bind(this);
     this.parseDateTime = this.parseDateTime.bind(this);
+    this.parseDateString = this.parseDateString.bind(this);
     this.parseNumericValue = this.parseNumericValue.bind(this);
     this.assessDataQuality = this.assessDataQuality.bind(this);
+  }
+
+  /**
+   * Parses custom date strings from Firebase in format:
+   * "Month DD, YYYY at HH:MM:SS AM/PM UTC+X"
+   * Example: "November 10, 2025 at 7:01:05 PM UTC+8"
+   *
+   * @param {string} dateStr - The date string to parse
+   * @returns {Date|null} Parsed Date object or null if invalid
+   */
+  parseDateString(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') {
+      return null;
+    }
+
+    try {
+      // Handle the custom format: "Month DD, YYYY at HH:MM:SS AM/PM UTC+X"
+      const matches = dateStr.match(/^(\w+)\s+(\d+),\s+(\d{4})\s+at\s+(\d{1,2}):(\d{2}):(\d{2})\s+([AP]M)\s+UTC([+-]\d+)$/);
+
+      if (!matches) {
+        console.warn('Date string does not match expected format:', dateStr);
+        // Fallback to regular Date parsing
+        return new Date(dateStr);
+      }
+
+      const [, monthStr, dayStr, yearStr, hourStr, minuteStr, secondStr, ampm, utcOffsetStr] = matches;
+
+      // Convert month name to number
+      const months = {
+        'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+        'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+      };
+
+      const month = months[monthStr];
+      const day = parseInt(dayStr, 10);
+      const year = parseInt(yearStr, 10);
+      let hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
+      const second = parseInt(secondStr, 10);
+      const utcOffset = parseInt(utcOffsetStr, 10); // +8 or -5, etc.
+
+      // Convert to 24-hour format
+      if (ampm === 'PM' && hour !== 12) {
+        hour += 12;
+      } else if (ampm === 'AM' && hour === 12) {
+        hour = 0;
+      }
+
+      // Create UTC time first (adjust for timezone)
+      const utcHour = hour - utcOffset; // If UTC+8 and hour is 15, utcHour is 7
+      const utcDate = new Date(year, month, day, utcHour, minute, second, 0);
+
+      // Verify the date is valid
+      if (isNaN(utcDate.getTime())) {
+        console.warn('Parsed date is invalid:', dateStr, '->', utcDate);
+        return null;
+      }
+
+      return utcDate;
+    } catch (error) {
+      console.error('Error parsing date string:', dateStr, error);
+      return null;
+    }
   }
 
   async getMostRecent(limit = 1) {
@@ -82,8 +146,99 @@ export class SensorDataRepository {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    console.log(`🔍 Fetching current day data with limit: ${limit}`);
-    return this.getByDateRange(today, tomorrow, limit);
+    console.log(`🔍 Fetching current day data with limit: ${limit}, date range: ${today.toISOString()} to ${tomorrow.toISOString()}`);
+
+    try {
+      // DEBUG: First try to get recent data without date filters
+      console.log(`🔍 DEBUG: Checking if Firebase collection '${this.collectionName}' has any data...`);
+      const allRecentData = await fetchAllDocuments(this.collectionName, {
+        useCache: false,
+        limitCount: Math.max(limit, 20), // Get at least 20 records to debug
+        orderByField: 'datetime',
+        orderDirection: 'desc',  // Get most recent first
+      });
+
+      console.log(`🔍 DEBUG: Raw Firebase query returned ${allRecentData.length} records:`, {
+        firstFewRecords: allRecentData.slice(0, 3).map(record => ({
+          id: record.id,
+          datetime: record.datetime,
+          datetimeType: typeof record.datetime,
+          hasDatetime: !!record.datetime,
+          pH: record.pH,
+          temperature: record.temperature,
+          turbidity: record.turbidity,
+          salinity: record.salinity,
+          // Show raw datetime for debugging
+          rawDatetime: record.datetime instanceof Date ? record.datetime.toISOString() : record.datetime
+        }))
+      });
+
+      // If no data at all, return empty array
+      if (allRecentData.length === 0) {
+        console.log(`⚠️  No data found in Firebase collection '${this.collectionName}'. Check collection name and data existence.`);
+        return [];
+      }
+
+      // Client-side filtering for today's date range (workaround for Firebase limitations)
+      const filteredData = allRecentData.filter(item => {
+        if (!item.datetime) {
+          console.log(`⚠️  Record missing datetime field:`, item);
+          return false;
+        }
+
+        let itemDate;
+        if (item.datetime instanceof Date) {
+          itemDate = item.datetime;
+        } else if (typeof item.datetime === 'string') {
+          // Try custom parsing for Firebase format first
+          itemDate = this.parseDateString(item.datetime);
+          // If custom parsing fails, try native Date parsing
+          if (!itemDate) {
+            itemDate = new Date(item.datetime);
+          }
+        } else if (typeof item.datetime === 'number') {
+          itemDate = new Date(item.datetime); // Unix timestamp
+        } else if (item.datetime && item.datetime.toDate) {
+          itemDate = item.datetime.toDate(); // Firestore Timestamp
+        } else {
+          console.log(`⚠️  Invalid datetime format:`, {
+            datetime: item.datetime,
+            type: typeof item.datetime
+          });
+          return false;
+        }
+
+        // Ensure we have a valid date
+        if (!itemDate || isNaN(itemDate.getTime())) {
+          console.log(`⚠️  Could not parse datetime:`, item.datetime);
+          return false;
+        }
+
+        const isToday = itemDate >= today && itemDate < tomorrow;
+        if (isToday && limit < 5) { // Only log if we have limited data
+          console.log(`📅 Record ${item.id} is within today range: ${itemDate.toISOString()}`);
+        }
+        return isToday;
+      });
+
+      console.log(`📊 Retrieved ${filteredData.length} records for today (${limit} limit, client-filtered from ${allRecentData.length} potential records)`);
+
+      // If still no today's data, but we have recent data, use the most recent few records
+      if (filteredData.length === 0 && allRecentData.length > 0) {
+        console.log(`📊 No today's data found. Using ${Math.min(5, allRecentData.length)} most recent records for chart display.`);
+        return allRecentData.slice(0, 5).map(this.normalizeSensorData);
+      }
+
+      return filteredData.map(this.normalizeSensorData);
+    } catch (error) {
+      console.error('❌ Error getting current day data:', error);
+      console.error('Query details:', {
+        collection: this.collectionName,
+        startAfter: today.toISOString(),
+        limit,
+      });
+      return [];
+    }
   }
 
   async getAll(options = {}) {
@@ -306,11 +461,19 @@ export class SensorDataRepository {
 
   parseDateTime(datetime) {
     if (!datetime) return new Date();
-    
+
     if (datetime.toDate && typeof datetime.toDate === 'function') {
       return datetime.toDate();
     }
-    
+
+    // Try custom parsing for our Firebase string format first
+    if (typeof datetime === 'string') {
+      const customParsed = this.parseDateString(datetime);
+      if (customParsed) {
+        return customParsed;
+      }
+    }
+
     return new Date(datetime);
   }
 

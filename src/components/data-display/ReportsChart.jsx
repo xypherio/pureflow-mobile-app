@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../../constants/colors';
-import ChartTooltip from '../ui/ChartTooltip';
 import LinearChart from './LinearChart';
 
 export default ReportsChart = ({ title = 'Water Quality Reports', height = 350 }) => {

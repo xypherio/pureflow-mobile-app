@@ -2,11 +2,11 @@ import { Droplet, Gauge, Thermometer, Waves } from 'lucide-react-native';
 import { colors } from '../constants/colors';
 
 export const chartYAxisConfig = {
-  ph: { min: 0, max: 14, interval: 2 },
-  temperature: { min: -10, max: 100, interval: 10 },
-  turbidity: { min: 0, max: 100, interval: 10 },
+  pH: { min: 0, max: 14, interval: 2 },
+  temperature: { min: 5, max: 70, interval: 10 },
+  turbidity: { min: 0, max: 70, interval: 10 },
   salinity: { min: 0, max: 35, interval: 5 },
-  default: { min: 0, max: 100, interval: 10 },
+  default: { min: 0, max: 80, interval: 20 },
 };
 
 export const getDefaultChartConfig = (parameter) => {
@@ -54,5 +54,5 @@ export const CHART_PARAMETERS = ["pH", "temperature", "turbidity", "salinity"];
 export const CHART_DIMENSIONS = {
   height: 230,
   widthOffset: 0,
-  containerWidth: 50,
+  containerWidth: 25,
 };

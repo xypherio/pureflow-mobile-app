@@ -1,11 +1,12 @@
-import { 
-  addDoc, 
-  collection, 
-  query as firestoreQuery, 
-  getDocs, 
-  limit, 
-  orderBy, 
-  where, 
+  import {
+  addDoc,
+  collection,
+  query as firestoreQuery,
+  getDocs,
+  limit,
+  orderBy,
+  where,
+  onSnapshot,  // Add onSnapshot import for real-time listeners
   enableIndexedDbPersistence,
   Timestamp
 } from "firebase/firestore";
@@ -191,6 +192,29 @@ export const addAlertToFirestore = async (alerts) => {
     }
   } catch (e) {
     console.error("Error adding alert(s): ", e);
+    throw e;
+  }
+};
+
+export const addForecastToFirestore = async (forecastData) => {
+  try {
+    if (!forecastData || typeof forecastData !== 'object') {
+      throw new Error('Invalid forecast data provided');
+    }
+
+    // Prepare forecast document with metadata
+    const forecastDocument = {
+      ...sanitizeObject(forecastData),
+      timestamp: Timestamp.now(),
+      type: 'water_quality_forecast',
+      version: '1.0'
+    };
+
+    const docRef = await addDoc(collection(db, "forecasts"), forecastDocument);
+    console.log("Forecast data added with ID: ", docRef.id);
+    return docRef.id;
+  } catch (e) {
+    console.error("Error adding forecast data: ", e);
     throw e;
   }
 };
