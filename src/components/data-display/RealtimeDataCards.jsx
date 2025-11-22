@@ -1,42 +1,22 @@
 import { getWaterQualityThresholds } from "@constants/thresholds";
 import { useData } from "@contexts/DataContext";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { WaterQualityCalculator } from "../../services/core/WaterQualityCalculator";
 
 const thresholds = getWaterQualityThresholds();
 
-export default function RealTimeData({ data = [] }) {
-  const { 
-    realtimeData, 
-    loading, 
-    refreshData,
-    lastUpdate
-  } = useData();
+// Parameter configuration
+const PARAMETER_CONFIGS = [
+  { key: 'pH', label: 'pH Level', unit: 'PH', icon: Gauge, color: '#007bff' },
+  { key: 'temperature', label: 'Temperature', unit: '°C', icon: Thermometer, color: '#e83e8c' },
+  { key: 'turbidity', label: 'Turbidity', unit: 'NTU', icon: Waves, color: '#28a745' },
+  { key: 'salinity', label: 'Salinity', unit: 'PPT', icon: Droplet, color: '#8b5cf6' },
+];
 
-  // Debug logging to understand what data we're receiving
-  useEffect(() => {
-    console.log('🔍 RealtimeDataCards Debug Info:', {
-      realtimeData,
-      loading,
-      lastUpdate,
-      hasRealtimeData: !!realtimeData,
-      realtimeDataType: typeof realtimeData,
-      realtimeDataKeys: realtimeData ? Object.keys(realtimeData) : [],
-      realtimeDataStructure: realtimeData ? {
-        pH: realtimeData.pH || realtimeData.reading?.pH,
-        temperature: realtimeData.temperature || realtimeData.reading?.temperature,
-        turbidity: realtimeData.turbidity || realtimeData.reading?.turbidity,
-        salinity: realtimeData.salinity || realtimeData.reading?.salinity,
-        timestamp: realtimeData.timestamp || realtimeData.reading?.timestamp,
-        datetime: realtimeData.datetime || realtimeData.reading?.datetime,
-        hasReadingProperty: !!realtimeData.reading
-      } : null
-    });
-  }, [realtimeData, loading, lastUpdate]);
-
-  // Note: Real-time data refresh is now handled automatically by DataContext every 30 seconds
-  // No need for manual refresh interval here - DataContext will update realtimeData automatically
+export default function RealTimeData() {
+  const { realtimeData, loading } = useData();
 
   // Calculate data age - handle both timestamp formats
   const dataAge = useMemo(() => {
@@ -64,84 +44,44 @@ export default function RealTimeData({ data = [] }) {
     return `${Math.floor(ageSeconds / 3600)}h ago`;
   }, [realtimeData]);
 
-  // Check if we have valid data - handle different data structures
+  // Check if we have valid data with any sensor readings
   const hasData = realtimeData && (
-    realtimeData.timestamp || 
-    realtimeData.datetime || 
-    realtimeData.reading?.timestamp || 
-    realtimeData.reading?.datetime ||
-    // Fallback: if we have any sensor data, consider it valid
-    (realtimeData.pH !== undefined || realtimeData.temperature !== undefined || 
-     realtimeData.turbidity !== undefined || realtimeData.salinity !== undefined) ||
-    (realtimeData.reading?.pH !== undefined || realtimeData.reading?.temperature !== undefined || 
-     realtimeData.reading?.turbidity !== undefined || realtimeData.reading?.salinity !== undefined)
+    realtimeData.pH !== undefined || realtimeData.temperature !== undefined ||
+    realtimeData.turbidity !== undefined || realtimeData.salinity !== undefined ||
+    realtimeData.reading?.pH !== undefined || realtimeData.reading?.temperature !== undefined ||
+    realtimeData.reading?.turbidity !== undefined || realtimeData.reading?.salinity !== undefined
   );
-  const isInitialized = true; // DataContext is always initialized
 
   // Memoized parameters to prevent unnecessary re-renders
   const parameters = useMemo(() => {
-    if (!hasData || !realtimeData) {
-      return [];
-    }
+    if (!hasData || !realtimeData) return [];
 
     // Handle different data structures - some might have nested 'reading' property
-    let sensorData = realtimeData;
-    if (realtimeData.reading) {
-      sensorData = realtimeData.reading;
-      console.log('📊 Using nested reading data from realtimeData.reading');
-    } else {
-      console.log('📊 Using direct realtimeData');
-    }
+    const sensorData = realtimeData.reading || realtimeData;
 
-    // Extract parameters directly from sensor data
-    const { pH, temperature, turbidity, salinity } = sensorData;
+    return PARAMETER_CONFIGS.map(({ key, label, unit, icon: Icon, color }) => {
+      const value = sensorData[key];
+      const hasValidValue = value != null && !isNaN(value);
 
-    console.log('🔍 Processing sensor data:', {
-      pH, temperature, turbidity, salinity,
-      pHValid: pH !== null && pH !== undefined && !isNaN(pH),
-      temperatureValid: temperature !== null && temperature !== undefined && !isNaN(temperature),
-      turbidityValid: turbidity !== null && turbidity !== undefined && !isNaN(turbidity),
-      salinityValid: salinity !== null && salinity !== undefined && !isNaN(salinity)
+      // Calculate threshold status using WaterQualityCalculator
+      let thresholdStatus = 'normal';
+      if (hasValidValue) {
+        const calculator = new WaterQualityCalculator();
+        const score = calculator.calculateParameterScore(key, value);
+        thresholdStatus = score >= 80 ? 'normal' : 'approaching';
+      }
+
+      return {
+        label,
+        value: hasValidValue ? Number(value).toFixed(1) : "--",
+        unit,
+        icon: <Icon size={30} color={color} />,
+        color,
+        threshold: thresholds[key],
+        hasData: hasValidValue,
+        thresholdStatus, // Add threshold status for styling
+      };
     });
-
-    return [
-      {
-        label: "pH Level",
-        value: pH !== null && pH !== undefined ? String(Number(pH)) : "--",
-        unit: "PH",
-        icon: <Gauge size={30} color="#007bff" />,
-        color: "#007bff",
-        threshold: thresholds["pH"],
-        hasData: pH !== null && pH !== undefined && !isNaN(pH),
-      },
-      {
-        label: "Temperature",
-        value: temperature !== null && temperature !== undefined ? String(Number(temperature)) : "--",
-        unit: "°C",
-        icon: <Thermometer size={30} color="#e83e8c" />,
-        color: "#e83e8c",
-        threshold: thresholds["temperature"],
-        hasData: temperature !== null && temperature !== undefined && !isNaN(temperature),
-      },
-      {
-        label: "Turbidity",
-        value: turbidity !== null && turbidity !== undefined ? String(Number(turbidity)) : "--",
-        unit: "NTU",
-        icon: <Waves size={30} color="#28a745" />,
-        color: "#28a745",
-        threshold: thresholds["turbidity"],
-        hasData: turbidity !== null && turbidity !== undefined && !isNaN(turbidity),
-      },
-      {
-        label: "Salinity",
-        value: salinity !== null && salinity !== undefined ? String(Number(salinity)) : "--",
-        unit: "PPT",
-        icon: <Droplet size={30} color="#8b5cf6" />,
-        color: "#8b5cf6",
-        threshold: thresholds["salinity"],
-        hasData: salinity !== null && salinity !== undefined && !isNaN(salinity),
-      },
-    ];
   }, [hasData, realtimeData]);
 
   // Show loading state only if actively loading
@@ -183,7 +123,10 @@ export default function RealTimeData({ data = [] }) {
 
 // Memoized parameter card component for better performance
 const ParameterCard = React.memo(({ param }) => (
-  <View style={styles.parameterCard}>
+  <View style={[
+    styles.parameterCard,
+    param.thresholdStatus === 'approaching' && styles.parameterCardApproaching
+  ]}>
     <View>
       {param.icon}
       <View style={styles.iconValueContainer}>
@@ -221,19 +164,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginBottom: 10,
   },
-  header: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#ffffff",
-    marginBottom: 4,
-  },
-  lastRefreshText: {
-    fontSize: 12,
-    color: "rgba(255, 255, 255, 0.8)",
-  },
   loadingContainer: {
     alignItems: "center",
     padding: 20,
@@ -263,6 +193,10 @@ const styles = StyleSheet.create({
     flexBasis: "48%",
     flexShrink: 0,
     justifyContent: "space-between",
+  },
+  parameterCardApproaching: {
+    backgroundColor: "#ffdddd",
+    borderRadius: 12
   },
   iconValueContainer: {
     flexDirection: "row",
@@ -297,7 +231,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   thresholdText: {
-    color: "rgb(36, 85, 169, 0.2)",
+    color: "rgb(36, 85, 169, 0.1)",
     fontSize: 10,
     marginTop: 2,
     fontStyle: "italic",

@@ -26,6 +26,7 @@ export function DataProvider({ children, initialData = null }) {
   
   const intervalRef = useRef(null);
   const realtimeIntervalRef = useRef(null);
+  const realtimeUnsubscriberRef = useRef(null); // Real-time Firebase listener
   const isMountedRef = useRef(true);
   const syncIntervalRef = useRef(null);
   const isRefreshing = useRef(false);
@@ -33,22 +34,27 @@ export function DataProvider({ children, initialData = null }) {
   const lastProcessedDataSignature = useRef(null);
 
   /**
-   * Generates a signature for sensor data to detect changes
+   * Generates a signature for sensor data to detect changes in actual values
+   * Only considers actual sensor parameter values, not timestamps
    * @param {Object} sensorData - Sensor data object
-   * @returns {string} Data signature
+   * @returns {string} Data signature based on values only
    */
   const generateDataSignature = useCallback((sensorData) => {
     if (!sensorData) return null;
-    
-    // Extract key sensor values for signature
-    const signature = {
-      pH: sensorData.pH,
-      temperature: sensorData.temperature,
-      turbidity: sensorData.turbidity,
-      salinity: sensorData.salinity,
-      timestamp: sensorData.timestamp || sensorData.datetime
+
+    // Extract and normalize sensor values for signature (round to 2 decimal places to reduce false changes)
+    const normalizeValue = (value) => {
+      if (value === null || value === undefined || isNaN(value)) return null;
+      return Math.round(value * 100) / 100; // Round to 2 decimal places
     };
-    
+
+    const signature = {
+      pH: normalizeValue(sensorData.pH),
+      temperature: normalizeValue(sensorData.temperature),
+      turbidity: normalizeValue(sensorData.turbidity),
+      salinity: normalizeValue(sensorData.salinity)
+    };
+
     return JSON.stringify(signature);
   }, []);
 
@@ -234,22 +240,26 @@ export function DataProvider({ children, initialData = null }) {
                 console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
               }
 
-              // Batch state updates to prevent useInsertionEffect errors
-              const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
-              const stats = {
-                total: allAlerts.length,
-                high: allAlerts.filter(alert => alert.severity === 'high').length,
-                medium: allAlerts.filter(alert => alert.severity === 'medium').length,
-                low: allAlerts.filter(alert => alert.severity === 'low').length,
-              };
+              // Update state immediately and synchronously
+              if (isMountedRef.current) {
+                setAlerts(alertResult.processedAlerts);
 
-              // Use setTimeout to defer state updates and prevent render-time updates
-              setTimeout(() => {
-                if (isMountedRef.current) {
-                  setAlerts(alertResult.processedAlerts);
-                  setAlertStats(stats);
-                }
-              }, 0);
+                // Update alert statistics for dashboard display
+                const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+                const stats = {
+                  total: allAlerts.length,
+                  high: allAlerts.filter(alert => alert.severity === 'high').length,
+                  medium: allAlerts.filter(alert => alert.severity === 'medium').length,
+                  low: allAlerts.filter(alert => alert.severity === 'low').length,
+                  recent: allAlerts.filter(alert => {
+                    const ageHours = (Date.now() - new Date(alert.timestamp)) / (1000 * 60 * 60);
+                    return ageHours < 24;
+                  }).length
+                };
+                setAlertStats(stats);
+
+                console.log(`✅ Alert state updated: ${alertResult.processedAlerts.length} alerts, saving to Firebase completed`);
+              }
             } else {
               console.log('🚨 Skipping alert processing - data has not changed since last processing');
             }
@@ -260,12 +270,11 @@ export function DataProvider({ children, initialData = null }) {
         } else {
           console.log('ℹ️ Skipping alert processing: no valid sensor data in real-time response');
           // Clear alerts if we have no valid data
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              setAlerts([]);
-              setAlertStats({ total: 0, high: 0, medium: 0, low: 0, recent: 0 });
-            }
-          }, 0);
+          if (isMountedRef.current) {
+            setAlerts([]);
+            setAlertStats({ total: 0, high: 0, medium: 0, low: 0, recent: 0 });
+            console.log('✅ Cleared alert state due to no valid sensor data');
+          }
         }
       } else {
         console.log('ℹ️ No real-time data for alert processing');
@@ -400,99 +409,97 @@ export function DataProvider({ children, initialData = null }) {
 
     initializeData();
 
-    // Set up unified polling interval (every 5 minutes)
+    // Set up unified polling interval (every 5 minutes) - for historical data only
     const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
     console.log(`🔄 Setting up data refresh interval: ${POLLING_INTERVAL/1000}s`);
-    
+
     intervalRef.current = setInterval(() => {
       console.log('🔄 Scheduled data refresh triggered');
       performUnifiedRefresh(true);
     }, POLLING_INTERVAL);
 
-    // Set up real-time data refresh interval (every 30 seconds) - bypasses rate limiting
-    const REALTIME_REFRESH_INTERVAL = 30 * 1000; // 30 seconds
-    console.log(`🔄 Setting up real-time data refresh interval: ${REALTIME_REFRESH_INTERVAL/1000}s`);
-    
-    realtimeIntervalRef.current = setInterval(async () => {
-      if (!isMountedRef.current) return;
-      
-      console.log('🔄 30s real-time data refresh triggered');
-      try {
-        // Fetch fresh real-time data (bypass cache for real-time updates)
-        const freshRealtimeData = await realtimeDataService.getMostRecentData({ useCache: false });
-        
-        if (!freshRealtimeData || !freshRealtimeData.timestamp) {
-          console.log('⚠️ No real-time data available in 30s refresh');
-          return;
-        }
+    // Set up real-time Firebase listener for immediate sensor data updates
+    console.log('🔄 Setting up real-time Firebase listener for sensor data');
+    realtimeUnsubscriberRef.current = realtimeDataService.subscribeToRealtimeData((newRealtimeData) => {
+      if (isMountedRef.current && newRealtimeData) {
+        console.log('🔄 Real-time data received from Firebase:', newRealtimeData);
 
-        // Check if data has actually changed
-        const newTimestamp = new Date(freshRealtimeData.timestamp).getTime();
-        const currentTimestamp = realtimeData ? new Date(realtimeData.timestamp).getTime() : 0;
-        
-        if (newTimestamp <= currentTimestamp) {
-          console.log('⚠️ No new real-time data since last update');
-          return;
-        }
-
-        // Update realtimeData state
-        setRealtimeData(freshRealtimeData);
+        // Update realtimeData state immediately
+        setRealtimeData(newRealtimeData);
         setLastUpdate(Date.now());
 
-        // Check if we have valid sensor data
+        // Check if we have valid sensor data for alert processing
         const hasValidData = (
-          (freshRealtimeData.pH !== null && freshRealtimeData.pH !== undefined && !isNaN(freshRealtimeData.pH)) ||
-          (freshRealtimeData.temperature !== null && freshRealtimeData.temperature !== undefined && !isNaN(freshRealtimeData.temperature)) ||
-          (freshRealtimeData.turbidity !== null && freshRealtimeData.turbidity !== undefined && !isNaN(freshRealtimeData.turbidity)) ||
-          (freshRealtimeData.salinity !== null && freshRealtimeData.salinity !== undefined && !isNaN(freshRealtimeData.salinity))
+          (newRealtimeData.pH !== null && newRealtimeData.pH !== undefined && !isNaN(newRealtimeData.pH)) ||
+          (newRealtimeData.temperature !== null && newRealtimeData.temperature !== undefined && !isNaN(newRealtimeData.temperature)) ||
+          (newRealtimeData.turbidity !== null && newRealtimeData.turbidity !== undefined && !isNaN(newRealtimeData.turbidity)) ||
+          (newRealtimeData.salinity !== null && newRealtimeData.salinity !== undefined && !isNaN(newRealtimeData.salinity))
         );
 
         if (hasValidData) {
           // Extract actual sensor data
-          let actualSensorData = freshRealtimeData;
-          if (freshRealtimeData.reading) {
-            actualSensorData = freshRealtimeData.reading;
-          }
+          let actualSensorData = newRealtimeData;
 
           // Generate data signature to check for changes
           const currentDataSignature = generateDataSignature(actualSensorData);
           const hasDataChanged = currentDataSignature !== lastProcessedDataSignature.current;
 
           if (hasDataChanged) {
-            // Process alerts from new real-time data
-            const sensorDataForAlerts = [{
-              ...actualSensorData,
-              datetime: actualSensorData.timestamp || freshRealtimeData.timestamp,
-            }];
-            
-            const alertResult = await getAlertFacade().processSensorData(sensorDataForAlerts);
-            lastProcessedDataSignature.current = currentDataSignature;
+            // Process alerts from new real-time data asynchronously
+            (async () => {
+              try {
+                const sensorDataForAlerts = [{
+                  ...actualSensorData,
+                  datetime: actualSensorData.timestamp || newRealtimeData.timestamp,
+                }];
 
-            if (alertResult.newAlerts.length > 0) {
-              console.log(`🚨 ${alertResult.newAlerts.length} new alerts from 30s real-time refresh`);
-            }
+                const alertResult = await getAlertFacade().processSensorData(sensorDataForAlerts);
+                lastProcessedDataSignature.current = currentDataSignature;
 
-            // Update alerts state
-            const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
-            const stats = {
-              total: allAlerts.length,
-              high: allAlerts.filter(alert => alert.severity === 'high').length,
-              medium: allAlerts.filter(alert => alert.severity === 'medium').length,
-              low: allAlerts.filter(alert => alert.severity === 'low').length,
-            };
+                if (alertResult.newAlerts.length > 0) {
+                  console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time Firebase update`);
+                }
 
-            setTimeout(() => {
-              if (isMountedRef.current) {
-                setAlerts(alertResult.processedAlerts);
-                setAlertStats(stats);
+                if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
+                  console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
+                }
+
+                // Update alerts state asynchronously
+                if (isMountedRef.current) {
+                  setAlerts(alertResult.processedAlerts);
+
+                  // Update alert statistics
+                  const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+                  const stats = {
+                    total: allAlerts.length,
+                    high: allAlerts.filter(alert => alert.severity === 'high').length,
+                    medium: allAlerts.filter(alert => alert.severity === 'medium').length,
+                    low: allAlerts.filter(alert => alert.severity === 'low').length,
+                    recent: allAlerts.filter(alert => {
+                      const ageHours = (Date.now() - new Date(alert.timestamp)) / (1000 * 60 * 60);
+                      return ageHours < 24;
+                    }).length
+                  };
+                  setAlertStats(stats);
+
+                  console.log(`✅ Real-time Firebase update: Alert state updated with ${alertResult.processedAlerts.length} alerts`);
+                }
+              } catch (error) {
+                console.error('❌ Error processing alerts from real-time data:', error);
               }
-            }, 0);
+            })();
+          } else {
+            console.log('🚨 Skipping alert processing - data has not changed since last real-time update');
+          }
+        } else {
+          console.log('ℹ️ Real-time data received but no valid sensor parameters - clearing alerts');
+          if (isMountedRef.current) {
+            setAlerts([]);
+            setAlertStats({ total: 0, high: 0, medium: 0, low: 0, recent: 0 });
           }
         }
-      } catch (error) {
-        console.error('❌ Error in 30s real-time refresh:', error);
       }
-    }, REALTIME_REFRESH_INTERVAL);
+    });
 
     // Cleanup function
     return () => {
@@ -503,6 +510,11 @@ export function DataProvider({ children, initialData = null }) {
       }
       if (realtimeIntervalRef.current) {
         clearInterval(realtimeIntervalRef.current);
+      }
+      if (realtimeUnsubscriberRef.current) {
+        console.log('🔌 Unsubscribing from real-time Firebase listener');
+        realtimeUnsubscriberRef.current();
+        realtimeUnsubscriberRef.current = null;
       }
     };
   }, [initialData]); // Only depend on initialData, not the functions
@@ -637,6 +649,59 @@ export function DataProvider({ children, initialData = null }) {
   }, [lastUpdate, sensorData, alerts, realtimeData]);
 
   /**
+   * Test function to verify alert processing and storage
+   * @returns {Promise<Object>} Test results
+   */
+  const testAlertProcessing = useCallback(async () => {
+    console.log('🧪 Testing alert processing and storage...');
+
+    try {
+      const testData = [{
+        pH: 9.5,
+        temperature: 36,
+        turbidity: 75,
+        salinity: 2.5,
+        datetime: new Date(),
+        timestamp: new Date().toISOString()
+      }];
+
+      console.log('📊 Test data:', testData[0]);
+
+      const alertResult = await getAlertFacade().processSensorData(testData);
+      console.log('🚨 Test alert processing result:', {
+        newAlerts: alertResult.newAlerts.length,
+        processedAlerts: alertResult.processedAlerts.length,
+        errors: alertResult.errors?.length || 0,
+        hasNotifications: alertResult.notifications?.length > 0
+      });
+
+      // Verify alerts were saved by fetching them back
+      const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 50 });
+      const recentTestAlerts = allAlerts.filter(alert =>
+        alert.parameter === 'pH' && Math.abs(alert.value - 9.5) < 0.1
+      );
+
+      console.log('🔍 Verification: Found', recentTestAlerts.length, 'matching alerts in Firebase');
+
+      return {
+        success: true,
+        alertsProcessed: alertResult.processedAlerts.length,
+        alertsSaved: recentTestAlerts.length,
+        hasErrors: (alertResult.errors?.length || 0) > 0,
+        errorDetails: alertResult.errors
+      };
+
+    } catch (error) {
+      console.error('❌ Test alert processing failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        stack: error.stack
+      };
+    }
+  }, []);
+
+  /**
    * Memoized context value to optimize performance by preventing
    * unnecessary re-renders of consuming components
    */
@@ -662,6 +727,9 @@ export function DataProvider({ children, initialData = null }) {
     // Performance monitoring
     getPerformanceMetrics, // Get performance metrics for optimization tracking
 
+    // Testing and debugging
+    testAlertProcessing, // Test function for alert processing and storage
+
     // Legacy compatibility
     allAlerts: alerts,   // Alias for backward compatibility
   }), [
@@ -669,7 +737,7 @@ export function DataProvider({ children, initialData = null }) {
     alerts, sensorData, dailyReport, realtimeData, loading,
     error, lastUpdate, refreshData, alertStats,
     getHomepageAlerts, getNotificationAlerts, getAlertStatistics,
-    getPerformanceMetrics
+    getPerformanceMetrics, testAlertProcessing
   ]);
 
   return (

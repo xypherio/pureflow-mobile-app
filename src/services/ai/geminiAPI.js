@@ -1,6 +1,6 @@
+import { GEMINI_API_KEY } from "@env";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GEMINI_API_KEY } from "@env";
 
 const API_KEY = GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
@@ -174,29 +174,29 @@ const generateInsightFromAPI = async (sensorData) => {
     Please return a JSON object with the following structure:
     {
       "insights": {
-        "overallInsight": "A brief, 2 sentence summary of the water quality with specific observations.",
+        "overallInsight": "A brief, 1 sentence summary of the water quality with specific observations.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai"
       },
       "suggestions": [
         {
           "parameter": "pH",
-          "recommendation": "Detailed 20 words recommendation for pH based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for pH based on current readings in bullet points.",
           "status": "normal|warning|critical"
         },
         {
           "parameter": "temperature",
-          "recommendation": "Detailed 20 words recommendation for temperature based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for temperature based on current readings in bullet points.",
           "status": "normal|warning|critical"
         },
         {
           "parameter": "salinity",
-          "recommendation": "Detailed 20 words recommendation for salinity based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for salinity based on current readings in bullet points.",
           "status": "normal|warning|critical"
         },
         {
           "parameter": "turbidity",
-          "recommendation": "Detailed 20 words recommendation for turbidity based on current readings.",
+          "recommendation": "Detailed 20 words recommendation for turbidity based on current readings in bullet points.",
           "status": "normal|warning|critical"
         }
       ]

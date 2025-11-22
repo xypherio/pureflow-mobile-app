@@ -28,6 +28,7 @@ import { ReportsDataFacade } from './facades/ReportsDataFacade';
 
 // Legacy imports (for backward compatibility during migration)
 import { notificationManager } from './notifications/NotificationManager';
+import { scheduledNotificationManager } from './notifications/ScheduledNotificationManager';
 import { performanceMonitor } from './PerformanceMonitor';
 import { historicalDataService } from './historicalDataService';
 import { realtimeDataService } from './realtimeDataService';
@@ -172,7 +173,7 @@ class ServiceContainer {
       const NotificationServiceModule = await import('./notifications/NotificationService');
       const NotificationTemplatesModule = await import('./notifications/NotificationTemplates');
       const WaterQualityNotifierModule = await import('./notifications/WaterQualityNotifier');
-      
+
       // Handle both default and named exports
       const NotificationService = NotificationServiceModule.default || NotificationServiceModule.NotificationService;
       const NotificationTemplates = NotificationTemplatesModule.default || NotificationTemplatesModule.NotificationTemplates;
@@ -180,9 +181,17 @@ class ServiceContainer {
 
       // Core notification service
       const notificationService = new NotificationService();
-      
+
       // Register notification providers
       notificationService.registerProvider('local', {
+        send: async (notification) => {
+          // Integrate with your existing notification manager
+          return await notificationManager.sendLocalNotification(notification);
+        }
+      });
+
+      // Register default provider for backward compatibility
+      notificationService.registerProvider('default', {
         send: async (notification) => {
           // Integrate with your existing notification manager
           return await notificationManager.sendLocalNotification(notification);
@@ -209,7 +218,8 @@ class ServiceContainer {
     // Alert processor
     const alertRepository = this.get('alertRepository');
     const dataCacheService = this.get('dataCacheService');
-    const alertProcessor = new AlertProcessor(alertRepository, dataCacheService);
+    const thresholdManager = this.get('thresholdManager');
+    const alertProcessor = new AlertProcessor(alertRepository, dataCacheService, thresholdManager);
     this.register('alertProcessor', alertProcessor);
 
     // Data processor
@@ -411,7 +421,8 @@ class ServiceContainer {
         this.get('alertManagementFacade'),
         this.get('waterQualityNotifier'),
         this.get('thresholdManager'),
-        this.get('notificationService')
+        this.get('notificationService'),
+        scheduledNotificationManager // Pass the singleton instance
       );
     }
 

@@ -1,5 +1,3 @@
-// src/components/data-display/ConclusionCard.jsx
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, globalStyles } from '../../styles/globalStyles';
@@ -21,66 +19,6 @@ const statusIcons = {
   caution: { name: 'alert-circle', color: '#d97706', icon: AlertTriangle },
   critical: { name: 'alert-octagon', color: '#dc2626', icon: AlertCircle }
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  header: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#5499C7', // Neutral blue
-  },
-  insightText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  conclusion: {
-    fontSize: 16,
-    color: '#333',
-  },
-  recommendations: {
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingTop: 12,
-  },
-  recommendationsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  recommendationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  bulletIcon: {
-    marginRight: 8,
-  },
-  recommendationText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 18,
-  },
-});
 
 const ConclusionCard = ({
   overallStatus = 'normal',
@@ -163,7 +101,7 @@ const stylesheet = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#5499C7', // Neutral blue
+    color: '#5499C7',
   },
   insightText: {
     fontSize: 16,

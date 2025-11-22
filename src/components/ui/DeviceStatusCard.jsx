@@ -1,6 +1,6 @@
 import {
-  BatteryFull,
-  BatteryLow,
+  CloudDrizzle,
+  CloudRain,
   Sun,
   Timer,
   Wifi,
@@ -10,29 +10,23 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function StatusCard({
-  status = "Active",
-  battery = "Normal",
-  solarPowered = true // true = solar power, false = backup battery
+  isDatmActive = true,
+  isRaining = 0
 }) {
-  const isActive = status === "Active";
-  const isBatteryLow = battery === "Low";
 
   const [countdown, setCountdown] = useState(30);
 
   useEffect(() => {
     const syncCountdown = () => {
-      // Sync countdown with 30-second backend fetch interval
       const now = Date.now();
-      const remainder = now % 30000; // 30 seconds in milliseconds
+      const remainder = now % 30000;
       const remainingSeconds = Math.ceil((30000 - remainder) / 1000);
 
       setCountdown(remainingSeconds === 0 ? 30 : remainingSeconds);
     };
 
-    // Initial sync
     syncCountdown();
 
-    // Update every second
     const interval = setInterval(() => {
       setCountdown((prev) => (prev <= 1 ? 30 : prev - 1));
     }, 1000);
@@ -52,22 +46,26 @@ export default function StatusCard({
         </View>
 
         {/* DATM Status Pill */}
-        <View style={[styles.pill, { backgroundColor: isActive ? "#d4f8e8" : "#fce3e3" }]}>
-          {isActive ? (
+        <View style={[styles.pill, { backgroundColor: isDatmActive ? "#d4f8e8" : "#fce3e3" }]}>
+          {isDatmActive ? (
             <Wifi size={18} color="#28a745" style={styles.icon} />
           ) : (
             <WifiOff size={18} color="#e53935" style={styles.icon} />
           )}
         </View>
 
-        {/* Unified Power Status Pill */}
-        <View style={[styles.pill, { backgroundColor: solarPowered ? "#fff3cd" : (isBatteryLow ? "#f9d2d4" : "#d4f8e8") }]}>
-          {solarPowered ? (
+        {/* Weather Status Pill */}
+        <View style={[styles.pill, { backgroundColor:
+          isRaining === 0 ? "#fff3cd" : // Yellow for sunny/not raining
+          isRaining === 1 ? "#cce4ff" : // Light blue for light rain
+          "#99cfff" // Medium blue for heavy rain
+        }]}>
+          {isRaining === 0 ? (
             <Sun size={18} color="#ffc107" style={styles.icon} />
-          ) : isBatteryLow ? (
-            <BatteryLow size={18} color="#c42d46" style={styles.icon} />
+          ) : isRaining === 1 ? (
+            <CloudDrizzle size={18} color="#1565c0" style={styles.icon} />
           ) : (
-            <BatteryFull size={18} color="#28a745" style={styles.icon} />
+            <CloudRain size={18} color="#0d47a1" style={styles.icon} />
           )}
         </View>
       </View>

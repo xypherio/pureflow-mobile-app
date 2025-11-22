@@ -2,17 +2,18 @@ class NotificationTemplates {
   static waterQualityAlert(parameter, value, status) {
     const severity = status === 'critical' ? 'Critical' : 'Warning';
     const emoji = status === 'critical' ? '🚨' : '⚠️';
-    
+
     return {
       title: `${emoji} Water Quality Alert`,
-      body: `${severity}: ${parameter} level is ${value}`,
+      body: `${severity}: ${parameter} level is ${value}. Tap to view details and monitor water quality.`,
       data: {
         type: 'water_quality_alert',
         parameter: parameter.toLowerCase(),
         value,
         status,
         timestamp: new Date().toISOString(),
-        category: 'alerts'
+        category: 'alerts',
+        deepLink: `pureflow://parameters/${parameter.toLowerCase()}`
       },
       categoryId: 'alerts',
       priority: status === 'critical' ? 'high' : 'normal',
@@ -69,8 +70,32 @@ class NotificationTemplates {
   }
 
   static maintenanceReminder(task, dueDate) {
-    const dueDateStr = new Date(dueDate).toLocaleDateString();
-    
+    // Parse date more robustly to handle different formats (MM/DD/YYYY, ISO, etc.)
+    let parsedDate;
+    let dueDateStr = dueDate; // Default to original string
+
+    try {
+      // Handle MM/DD/YYYY format like "11/19/2025"
+      if (typeof dueDate === 'string' && dueDate.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+        const [month, day, year] = dueDate.split('/');
+        parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        // Handle other formats (ISO, etc.)
+        parsedDate = new Date(dueDate);
+      }
+
+      // Check if date is valid
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
+        dueDateStr = parsedDate.toLocaleDateString();
+      } else {
+        console.warn('⚠️ Invalid date format received:', dueDate);
+        dueDateStr = dueDate; // Fall back to original string
+      }
+    } catch (error) {
+      console.warn('⚠️ Error parsing date:', dueDate, error);
+      dueDateStr = dueDate; // Fall back to original string
+    }
+
     return {
       title: '🔧 Maintenance Reminder',
       body: `${task} is due on ${dueDateStr}`,
@@ -300,4 +325,23 @@ class NotificationTemplates {
       priority: 'normal'
     };
   }
+
+  static calibrationNeeded(parameter, lastCalibrated) {
+    return {
+      title: '🔧 Calibration Required',
+      body: `${parameter} sensor was last calibrated ${lastCalibrated}. Maintenance recommended.`,
+      data: {
+        type: 'calibration_reminder',
+        parameter,
+        lastCalibrated,
+        timestamp: new Date().toISOString(),
+        category: 'maintenance'
+      },
+      categoryId: 'maintenance',
+      priority: 'normal'
+    };
+  }
 }
+
+export { NotificationTemplates };
+export default NotificationTemplates;

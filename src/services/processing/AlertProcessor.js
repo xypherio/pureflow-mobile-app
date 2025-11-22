@@ -1,8 +1,9 @@
 // src/services/processing/AlertProcessor.js
 export class AlertProcessor {
-    constructor(alertRepository, cacheService) {
+    constructor(alertRepository, cacheService, thresholdManager = null) {
       this.alertRepository = alertRepository;
       this.cacheService = cacheService;
+      this.thresholdManager = thresholdManager;
       this.processors = [];
       this.deduplicationWindow = 5 * 60 * 1000; // 5 minutes
       this.alertSignatures = new Map(); // For deduplication
@@ -231,29 +232,270 @@ export class AlertProcessor {
     }
   
     async getRecommendations(alert) {
-      const recommendations = {
-        ph: {
-          critical: ['Immediate pH adjustment required', 'Check dosing systems'],
-          warning: ['Monitor pH levels closely', 'Consider buffer adjustment']
-        },
-        temperature: {
-          critical: ['Check cooling/heating systems', 'Reduce system load'],
-          warning: ['Monitor temperature trends', 'Check environmental factors']
-        },
-        turbidity: {
-          critical: ['Backwash filters immediately', 'Check coagulation process'],
-          warning: ['Schedule filter maintenance', 'Monitor upstream conditions']
-        },
-        salinity: {
-          critical: ['Check dilution systems', 'Verify source water quality'],
-          warning: ['Monitor evaporation rates', 'Check water sources']
-        }
+      // Get threshold information to determine direction
+      const threshold = alert.threshold || this.thresholdManager?.getThreshold(alert.parameter);
+      const direction = this.determineRecommendationDirection(alert.value, threshold);
+      const deviation = this.calculateDeviation(alert.value, threshold, direction);
+
+      return this.generateContextualRecommendations(alert.parameter, alert.alertLevel, direction, deviation, alert.value);
+    }
+
+    determineRecommendationDirection(value, threshold) {
+      if (!threshold) return 'unknown';
+
+      if (value > threshold.max) return 'high';
+      if (value < threshold.min) return 'low';
+
+      return 'unknown';
+    }
+
+    calculateDeviation(value, threshold, direction) {
+      if (!threshold || direction === 'unknown') return 0;
+
+      if (direction === 'high') {
+        return ((value - threshold.max) / threshold.max) * 100; // Percentage above max
+      } else if (direction === 'low') {
+        return ((threshold.min - value) / threshold.min) * 100; // Percentage below min
+      }
+
+      return 0;
+    }
+
+    generateContextualRecommendations(parameter, alertLevel, direction, deviation, value) {
+      const paramLower = parameter.toLowerCase();
+      const isCritical = alertLevel === 'critical';
+      const isWarning = alertLevel === 'warning';
+
+      const recommendationMap = {
+        ph: this.getPHRecommendations(isCritical, direction, deviation, value),
+        temperature: this.getTemperatureRecommendations(isCritical, direction, deviation, value),
+        turbidity: this.getTurbidityRecommendations(isCritical, direction, deviation, value),
+        salinity: this.getSalinityRecommendations(isCritical, direction, deviation, value),
+        tds: this.getTDSRecommendations(isCritical, direction, deviation, value)
       };
-  
-      const paramRecs = recommendations[alert.parameter.toLowerCase()];
-      if (!paramRecs) return ['Monitor parameter closely'];
-  
-      return paramRecs[alert.alertLevel] || ['Monitor parameter closely'];
+
+      return recommendationMap[paramLower] || this.getDefaultRecommendations(parameter, alertLevel);
+    }
+
+    getPHRecommendations(isCritical, direction, deviation, value) {
+      if (direction === 'high') {
+        if (isCritical) {
+          if (deviation > 20) {
+            return [
+              'URGENT: Add pH reducer immediately (sodium bisulfate or CO2)',
+              'Stop all feeding and reduce aeration temporarily',
+              'Test total alkalinity - may need to reduce carbonate hardness',
+              'Monitor for fish stress and prepare emergency water change'
+            ];
+          } else if (deviation > 10) {
+            return [
+              'Add pH reducer (sodium bisulfate) gradually over 1-2 hours',
+              'Reduce feeding by 50% and monitor fish behavior',
+              'Check CO2 injection system if using pressurized CO2',
+              'Test alkalinity levels and adjust buffer if needed'
+            ];
+          } else {
+            return [
+              'Add pH reducer (sodium bisulfate) slowly',
+              'Verify CO2 injection system is functioning properly',
+              'Monitor rate of pH change - avoid rapid drops'
+            ];
+          }
+        } else {
+          return [
+            'Add pH reducer (sodium bisulfate) gradually',
+            'Check CO2 injection and diffuser for proper aeration',
+            'Monitor pH trend over next 4-6 hours',
+            'Consider water change to stabilize alkalinity'
+          ];
+        }
+      } else if (direction === 'low') {
+        if (isCritical) {
+          if (deviation > 20) {
+            return [
+              'URGENT: Add pH increaser immediately (baking soda or crushed coral)',
+              'Increase aeration to release CO2 from water',
+              'Test for ammonia or nitrite toxicity',
+              'Prepare emergency water change with buffered water'
+            ];
+          } else if (deviation > 10) {
+            return [
+              'Add pH increaser (baking soda) gradually over 1-2 hours',
+              'Increase surface agitation and air flow',
+              'Test alkalinity - add buffer if low',
+              'Monitor for rapid pH swings indicating system instability'
+            ];
+          } else {
+            return [
+              'Add pH increaser (baking soda) slowly',
+              'Increase aeration and water movement',
+              'Test total alkalinity and adjust if below 100ppm'
+            ];
+          }
+        } else {
+          return [
+            'Add pH increaser (baking soda) gradually',
+            'Check for excessive CO2 or low alkalinity',
+            'Monitor pH stability over several hours',
+            'Consider adding crushed coral or aragonite to substrate'
+          ];
+        }
+      }
+      return ['Monitor pH levels and maintain stability'];
+    }
+
+    getTemperatureRecommendations(isCritical, direction, deviation, value) {
+      if (direction === 'high') {
+        if (isCritical) {
+          return [
+            'Activate cooling system immediately (chillers/fans)',
+            'Increase aeration to improve oxygen levels',
+            'Reduce feeding by 50-70% to lower metabolic heat',
+            'Test dissolved oxygen levels - add oxygen if low',
+            'Prepare cooler water for gradual mixing if needed'
+          ];
+        } else {
+          return [
+            'Check cooling equipment and water flow',
+            'Increase water circulation and surface agitation',
+            'Reduce feeding schedule temporarily',
+            'Monitor temperature trend over next few hours',
+            'Ensure adequate shade/lighting control'
+          ];
+        }
+      } else if (direction === 'low') {
+        if (isCritical) {
+          return [
+            'Activate heating system immediately',
+            'Check heater functionality and thermostat settings',
+            'Insulate tank to prevent heat loss',
+            'Monitor fish for signs of temperature stress',
+            'Gradually warm water using heater or warm water additions'
+          ];
+        } else {
+          return [
+            'Check and adjust heater settings',
+            'Improve tank insulation and reduce drafts',
+            'Monitor temperature stability over time',
+            'Consider backup heating source if temperature fluctuates'
+          ];
+        }
+      }
+      return ['Maintain stable temperature conditions'];
+    }
+
+    getTurbidityRecommendations(isCritical, direction, deviation, value) {
+      if (direction === 'high') {
+        if (isCritical || deviation > 50) {
+          return [
+            'Backwash or clean filters immediately',
+            'Check coagulation/flocculation processes',
+            'Inspect for sediment sources or recent disturbances',
+            'Reduce water flow to allow settling if appropriate',
+            'Test filter pressure and media condition'
+          ];
+        } else if (isWarning || deviation > 10) {
+          return [
+            'Schedule filter cleaning within 24 hours',
+            'Monitor turbidity trend and particulate sources',
+            'Check coagulation chemical dosing',
+            'Inspect intake screens and pre-filters',
+            'Consider sedimentation basin cleaning'
+          ];
+        } else {
+          return [
+            'Monitor turbidity levels closely',
+            'Check for seasonal or weather-related causes',
+            'Verify filtration system performance',
+            'Schedule routine maintenance if trends continue'
+          ];
+        }
+      } else if (direction === 'low') {
+        // Low turbidity is generally not a problem, but check for issues
+        return [
+          'Low turbidity noted - generally beneficial',
+          'Monitor for system changes that might affect water clarity',
+          'Ensure adequate disinfection if water becomes too clear'
+        ];
+      }
+      return ['Monitor water clarity and filtration performance'];
+    }
+
+    getSalinityRecommendations(isCritical, direction, deviation, value) {
+      if (direction === 'high') {
+        if (isCritical) {
+          return [
+            'Add fresh water gradually to reduce salinity',
+            'Check evaporation rates and top-off procedures',
+            'Verify salt dosing pumps and concentration',
+            'Monitor for osmotic stress in aquatic life',
+            'Test specific gravity and TDS correlation'
+          ];
+        } else {
+          return [
+            'Reduce salt additions or increase water changes',
+            'Monitor evaporation rates vs. makeup water',
+            'Check for brine concentration in dosing system',
+            'Verify salinity meter calibration'
+          ];
+        }
+      } else if (direction === 'low') {
+        if (isCritical) {
+          return [
+            'Add salt or brine solution to increase salinity',
+            'Check for excessive freshwater dilution',
+            'Verify salt storage and mixing procedures',
+            'Monitor for osmotic stress during adjustment'
+          ];
+        } else {
+          return [
+            'Adjust salt dosing to maintain target salinity',
+            'Check for leaks or excessive water changes',
+            'Monitor specific gravity trends',
+            'Verify salt quality and purity'
+          ];
+        }
+      }
+      return ['Monitor salinity levels and maintain stability'];
+    }
+
+    getTDSRecommendations(isCritical, direction, deviation, value) {
+      if (direction === 'high') {
+        if (isCritical) {
+          return [
+            'Perform water change to reduce total dissolved solids',
+            'Check for ion buildup from evaporation',
+            'Verify reverse osmosis or filtration performance',
+            'Monitor membrane or filter element condition'
+          ];
+        } else {
+          return [
+            'Increase water change frequency',
+            'Monitor TDS trend and identify source of buildup',
+            'Check reverse osmosis system performance',
+            'Verify pre-filter and membrane condition'
+          ];
+        }
+      } else if (direction === 'low') {
+        return [
+          'Low TDS noted - may indicate excessive dilution',
+          'Monitor for system leaks or excessive water changes',
+          'Verify source water quality if using RO water'
+        ];
+      }
+      return ['Monitor TDS levels and water quality parameters'];
+    }
+
+    getDefaultRecommendations(parameter, alertLevel) {
+      const paramName = parameter.charAt(0).toUpperCase() + parameter.slice(1);
+      const levelText = alertLevel.charAt(0).toUpperCase() + alertLevel.slice(1);
+
+      return [
+        `${levelText} ${paramName} levels detected`,
+        `Monitor ${paramName.toLowerCase()} levels closely`,
+        `Check equipment and processes related to ${paramName.toLowerCase()}`,
+        'Document readings and trends for analysis'
+      ];
     }
   
     async categorizeAlerts(alerts) {

@@ -10,7 +10,7 @@ const parameterFilters = [
 
 const severityFilters = [
   { label: "All Alerts", value: "all" },
-  { label: "Red Alerts", value: "error" },
+  { label: "Critical", value: "critical" },
   { label: "Warning", value: "warning" },
   { label: "Info", value: "info" },
   { label: "Normal", value: "normal" },

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { Activity } from "lucide-react-native";
+import React, { useMemo, useState } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -9,26 +10,65 @@ import {
 import { LineChart } from "react-native-chart-kit";
 import { colors } from "../../constants/colors";
 import { useData } from "../../contexts/DataContext";
-import { globalStyles } from "../../styles/globalStyles";
 import {
   CHART_DIMENSIONS,
   chartYAxisConfig,
-  getDefaultChartConfig,
-  getParameterOptions,
+  getParameterOptions
 } from "../../utils/chart-config";
 import SegmentedFilter from "../navigation/SegmentedFilters";
 import ChartTooltip from "../ui/ChartToolTip";
 
 const { width: screenWidth } = Dimensions.get("window");
 
+/**
+ * LineChartCard Component
+ *
+ * Displays interactive line charts for water quality parameter trends over time.
+ * Supports filtering by individual parameters and shows realtime data integration.
+ * Features include interactive tooltips, parameter selection, and responsive design.
+ */
 const getParameterColor = (parameter) => {
   const parameterColors = {
-    ph: colors.phColor,
+    pH: colors.phColor,
     temperature: colors.tempColor,
     turbidity: colors.turbidityColor,
     salinity: colors.salinityColor,
   };
-  return parameterColors[parameter?.toLowerCase()] || colors.primary;
+  return parameterColors[parameter] || colors.primary;
+};
+
+// Status colors matching ParameterCard design
+const STATUS_COLORS = {
+  normal: {
+    borderColor: '#10B981',
+    shadowColor: '#10B981',
+    bgColor: '#ECFDF5',
+    gradientColors: ['#D1FAE5', '#A7F3D0']
+  },
+  caution: {
+    borderColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+    bgColor: '#FFFBEB',
+    gradientColors: ['#FEF3C7', '#FDE68A']
+  },
+  current: {
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    bgColor: '#EEF2FF',
+    gradientColors: ['#E0E7FF', '#C7D2FE']
+  }
+};
+
+// Background icon for chart representation
+const getChartBackgroundIcon = () => {
+  const iconSize = 160;
+  return (
+    <Activity
+      size={iconSize}
+      color="rgba(99, 102, 241, 0.06)"
+      style={styles.iconStyles}
+    />
+  );
 };
 
 const LineChartCard = ({
@@ -43,6 +83,9 @@ const LineChartCard = ({
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
+  // Status configuration for styling (matches ParameterCard design)
+  const statusConfig = STATUS_COLORS.current;
+
   // Parameter options for the segmented filter
   const parameterOptions = getParameterOptions();
 
@@ -51,48 +94,111 @@ const LineChartCard = ({
     sensorData,
     realtimeData,
     loading: contextLoading,
-    lastUpdate
+    lastUpdate,
   } = useData();
 
   const loading = propLoading !== undefined ? propLoading : contextLoading;
   const error = propError !== undefined ? propError : null;
-  const lastUpdated = propLastUpdated !== undefined ? propLastUpdated : (lastUpdate ? new Date(lastUpdate) : null);
+  const lastUpdated =
+    propLastUpdated !== undefined
+      ? propLastUpdated
+      : lastUpdate
+        ? new Date(lastUpdate)
+        : null;
 
-  // Process chart data from DataContext
+  // Process chart data from DataContext - prioritize realtime data that matches realtime cards
   const { datasets, labels } = useMemo(() => {
     if (propData) {
       return propData; // Use passed data directly
     }
 
-    if (!sensorData || sensorData.length === 0) {
+    // Start with historical sensorData
+    let combinedData = [...(sensorData || [])];
+
+    // Always add current realtime data if available to match what realtime cards display
+    // This ensures the line chart reflects realtime data regardless of recency
+    if (realtimeData && (
+        realtimeData.reading ||
+        (realtimeData.pH !== undefined && realtimeData.temperature !== undefined)
+      )) { // Include if has sensor data in "reading" property or direct properties
+      // Use datetime from various possible locations, fallback to current time
+      let datetimeValue = realtimeData.datetime || realtimeData.reading?.datetime;
+
+      // If still no datetime, check if it's a nested property in reading
+      if (!datetimeValue && realtimeData.reading?.timestamp) {
+        datetimeValue = realtimeData.reading.timestamp;
+      }
+
+      datetimeValue = datetimeValue || new Date().toISOString();
+      const realtimeTimestamp = new Date(datetimeValue).getTime();
+
+      // Extract sensor values from realtime data (handle both direct and nested structures)
+      let sensorValues = realtimeData;
+      if (realtimeData.reading) {
+        sensorValues = realtimeData.reading;
+      }
+
+      // Create a data point for the current realtime values
+      const currentDataPoint = {
+        datetime: datetimeValue, // Use datetime field or fallback to current time
+        pH: sensorValues.pH,
+        temperature: sensorValues.temperature,
+        turbidity: sensorValues.turbidity,
+        salinity: sensorValues.salinity,
+      };
+
+      // Add to combined data (avoid duplicates based on timestamp)
+      const existingIndex = combinedData.findIndex(item => {
+        const itemTime = new Date(item.datetime).getTime();
+        return Math.abs(itemTime - realtimeTimestamp) < 60000; // Within 1 minute
+      });
+
+      if (existingIndex === -1) {
+        combinedData.push(currentDataPoint);
+      } else {
+        // Update existing entry with realtime data
+        combinedData[existingIndex] = { ...combinedData[existingIndex], ...currentDataPoint };
+      }
+    }
+
+    if (!combinedData || combinedData.length === 0) {
       return { datasets: [], labels: [] };
     }
 
-    // Process sensor data for chart display
-    const labels = sensorData.map(item =>
-      item.datetime ? new Date(item.datetime).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      }) : 'Unknown'
+    // Sort by datetime to ensure chronological order
+    combinedData.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    // Process combined data for chart display
+    const labels = combinedData.map((item) =>
+      item.datetime
+        ? new Date(item.datetime).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        : "Unknown"
     );
 
-    const parameters = selectedParameter ? [selectedParameter] : ['ph', 'temperature', 'turbidity', 'salinity'];
+    const parameters = selectedParameter
+      ? [selectedParameter]
+      : ["pH", "temperature", "turbidity", "salinity"];
 
-    const datasets = parameters.map(param => ({
-      data: sensorData.map(item => {
-        let value;
-        // Handle case-insensitive parameter access
-        if (item[param] !== undefined) {
-          value = item[param];
-        } else if (item[param.toLowerCase()] !== undefined) {
-          value = item[param.toLowerCase()];
-        } else if (item[param.toUpperCase()] !== undefined) {
-          value = item[param.toUpperCase()];
-        }
+    const datasets = parameters.map((param) => ({
+      data: combinedData
+        .map((item) => {
+          let value;
+          // Handle case-insensitive parameter access
+          if (item[param] !== undefined) {
+            value = item[param];
+          } else if (item[param.toLowerCase()] !== undefined) {
+            value = item[param.toLowerCase()];
+          } else if (item[param.toUpperCase()] !== undefined) {
+            value = item[param.toUpperCase()];
+          }
 
-        return value !== null && value !== undefined ? Number(value) : null; // Use null instead of 0 for missing data
-      }).filter(val => val !== null), // Filter out null values for cleaner display
+          return value !== null && value !== undefined ? Number(value) : null; // Use null instead of 0 for missing data
+        })
+        .filter((val) => val !== null), // Filter out null values for cleaner display
       parameter: param,
       name: param,
       color: (opacity = 1) => {
@@ -108,32 +214,18 @@ const LineChartCard = ({
     }));
 
     return { datasets, labels };
-  }, [propData, sensorData, selectedParameter]);
+  }, [propData, sensorData, realtimeData, selectedParameter]);
 
   // Handle parameter selection change
   const handleParameterChange = (value) => {
-    setSelectedParameter(value);
+    // If clicking the currently selected parameter, deselect it (show all)
+    if (selectedParameter === value) {
+      setSelectedParameter(null);
+    } else {
+      setSelectedParameter(value);
+    }
     // Hide tooltip when changing parameters
     setTooltipVisible(false);
-  };
-
-  // Handle refresh button click
-  const handleRefresh = () => {
-    setSelectedParameter(null); // Reset to show all parameters
-    setTooltipVisible(false);
-    // You can add additional refresh logic here if needed
-  };
-
-  // Handle data point press from chart
-  const handleDataPointPress = (tooltipInfo, pointIndex) => {
-    setTooltipData(tooltipInfo);
-    setTooltipVisible(true);
-
-    // Position tooltip above the chart
-    setTooltipPosition({
-      x: 20,
-      y: 20,
-    });
   };
 
   // Hide tooltip when tapping outside
@@ -149,7 +241,10 @@ const LineChartCard = ({
     // If showing multiple parameters, find the matching dataset
     if (!selectedParameter && datasets.length > 0) {
       for (const dataset of datasets) {
-        if (dataset.data[index] === value || Math.abs(dataset.data[index] - value) < 0.01) {
+        if (
+          dataset.data[index] === value ||
+          Math.abs(dataset.data[index] - value) < 0.01
+        ) {
           clickedParameter = dataset.parameter || dataset.name;
           break;
         }
@@ -172,20 +267,35 @@ const LineChartCard = ({
     setTooltipVisible(true);
   };
 
-  // Memoize chart configuration to prevent recreation on every render
-  const chartConfig = useMemo(() => getDefaultChartConfig(), []);
-
   const hasDataToShow = useMemo(() => {
-    if (propData && propData.datasets && propData.datasets.length > 0) {
-      return propData.datasets.some((d) => d.data.length > 0);
-    }
-    return sensorData && sensorData.length > 0 && datasets.length > 0 && datasets.some(ds => ds.data.length > 0);
+    const result = (() => {
+      // If explicit prop data is passed in, use it
+      if (propData && propData.datasets && propData.datasets.length > 0) {
+        return propData.datasets.some((d) => d.data.length > 0);
+      }
+
+      // Show chart if we have datasets with actual data points
+      // This covers both historical data only, realtime data only, or combined data
+      if (datasets && datasets.length > 0) {
+        return datasets.some((ds) => ds.data && ds.data.length > 0);
+      }
+
+      // Legacy fallback check (historical data without datasets processing)
+      return (
+        sensorData &&
+        sensorData.length > 0
+      );
+    })();
+
+
+
+    return result;
   }, [propData?.datasets, sensorData, datasets]);
 
   // Memoize Y-axis configuration to prevent recreation
   const yAxisConfig = useMemo(() => {
     const config = selectedParameter
-      ? chartYAxisConfig[selectedParameter.toLowerCase()]
+      ? chartYAxisConfig[selectedParameter]
       : chartYAxisConfig.default;
 
     return {
@@ -198,7 +308,25 @@ const LineChartCard = ({
   }, [selectedParameter]);
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      {
+        shadowColor: statusConfig.shadowColor,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: statusConfig.borderColor + '80',
+        overflow: 'hidden',
+      }
+    ]}>
+      {getChartBackgroundIcon() && (
+        <View style={styles.backgroundIconContainer}>
+          {getChartBackgroundIcon()}
+        </View>
+      )}
+      <View style={[styles.gradientOverlay, {
+        backgroundColor: statusConfig.borderColor + '30',
+        opacity: 0.3
+      }]} />
       {/* Parameter Filter */}
       <View style={styles.filterContainer}>
         <SegmentedFilter
@@ -223,23 +351,41 @@ const LineChartCard = ({
                   labels,
                   datasets,
                 }}
-                width={screenWidth - CHART_DIMENSIONS.widthOffset}
+                width={screenWidth - CHART_DIMENSIONS.containerWidth}
                 height={CHART_DIMENSIONS.height}
                 chartConfig={{
-                  backgroundGradientFrom: colors.background,
-                  backgroundGradientTo: colors.background,
-                  decimalPlaces: 0,
+                  backgroundGradientFrom: '#fff',
+                  backgroundGradientTo: '#fff',
+                  decimalPlaces: 2,
                   color: (opacity = 1) => colors.primary,
                   labelColor: (opacity = 1) => colors.text,
                   // Y-axis specific configuration
                   yAxisMin: yAxisConfig.min,
                   yAxisMax: yAxisConfig.max,
+                  formatYLabel: (value) => {
+                    const units = {
+                      temperature: '°C',
+                      turbidity: 'NTU',
+                      salinity: 'ppt',
+                      pH: 'pH'
+                    };
+
+                    if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                    const formatted = parseFloat(value).toFixed(2);
+                    const unit = selectedParameter ? ` ${units[selectedParameter] || ''}` : '';
+                    return `${formatted}${unit}`;
+                  },
+                  // Subtle background grid lines
+                  propsForBackgroundLines: {
+                    strokeWidth: 0.5,
+                    stroke: '#e2e8f0',
+                  },
                   // Other configurations
                   propsForDots: {
-                    r: "4",
-                    strokeWidth: "2",
+                    r: "5",
+                    strokeWidth: "3",
                     fill: "#FFF",
-                    stroke: colors.primary,
+                    stroke: getParameterColor(selectedParameter),
                   },
                   // Style configurations
                   strokeWidth: 2,
@@ -275,17 +421,19 @@ const LineChartCard = ({
               {error
                 ? `Error: ${error}`
                 : loading
-                ? "Loading chart data..."
-                : "No data available for now"}
+                  ? "Loading chart data..."
+                  : "No data available for now"}
             </Text>
             {error && (
               <Text style={styles.errorText}>
-                Chart data: {datasets?.length ? 'Available' : 'None'}, Labels: {labels?.length || 0}
+                Chart data: {datasets?.length ? "Available" : "None"}, Labels:{" "}
+                {labels?.length || 0}
               </Text>
             )}
             {!loading && !error && (!datasets || datasets.length === 0) && (
               <Text style={styles.errorText}>
-                Data points: {sensorData?.length || 0}, Datasets: {datasets?.length || 0}
+                Data points: {sensorData?.length || 0}, Datasets:{" "}
+                {datasets?.length || 0}
               </Text>
             )}
           </View>
@@ -295,7 +443,10 @@ const LineChartCard = ({
       {/* Last Updated */}
       {lastUpdated && (
         <Text style={styles.lastUpdated}>
-          Last updated: {lastUpdated instanceof Date ? lastUpdated.toLocaleTimeString() : new Date(lastUpdated).toLocaleTimeString()}
+          Last updated:{" "}
+          {lastUpdated instanceof Date
+            ? lastUpdated.toLocaleTimeString()
+            : new Date(lastUpdated).toLocaleTimeString()}
         </Text>
       )}
 
@@ -316,36 +467,36 @@ const LineChartCard = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f6fafd",
-    borderRadius: 18,
-    padding: 12,
-    marginTop: 20,
-    marginBottom: 10,
-    justifyContent: "flex-start",
-    ...globalStyles.boxShadow,
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 20,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
+  backgroundIconContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: colors.text,
+  gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    opacity: 0.3,
   },
-  refreshButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
+  iconStyles: {
+    position: 'absolute',
+    bottom: 0,
+    right: -40,
   },
-  refreshText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: "500",
-  },
+
   filterContainer: {
     marginBottom: 16,
   },
@@ -364,28 +515,7 @@ const styles = StyleSheet.create({
   chart: {
     borderRadius: 16,
   },
-  legendContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    marginTop: 16,
-    gap: 16,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  legendText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.text,
-  },
+
   lastUpdated: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -396,14 +526,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  loadingState: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
+  emptyStateText: {
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: "center",
+  },
+  errorText: {
+    fontSize: 10,
+    color: colors.textTertiary,
+    textAlign: "center",
+    marginTop: 8,
   },
   infoContainer: {
     alignItems: "center",

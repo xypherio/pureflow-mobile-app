@@ -1,5 +1,5 @@
-import { globalStyles } from "@styles/globalStyles.js";
 import { getWaterQualityThresholds } from "@constants/thresholds";
+import { globalStyles } from "@styles/globalStyles.js";
 import * as Lucide from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
@@ -205,10 +205,61 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
           const paramDisplay = param.charAt(0).toUpperCase() + param.slice(1);
           
           let message = '';
+          const unit = param === 'pH' ? '' : param === 'temperature' ? '°C' : param === 'salinity' ? 'ppt' : 'ppm';
+          const displayValue = `${Number(value).toFixed(2)}${unit}`;
+
           if (evaluation.type === 'error') {
-            message = `${paramDisplay} is critically ${value < (threshold?.min || 0) ? 'low' : 'high'} (${Number(value).toFixed(2)})`;
+            // Critical alerts - brief but informative
+            switch (param.toLowerCase()) {
+              case 'ph':
+                message = value < (threshold?.min || 0)
+                  ? `pH critically low (${displayValue}). Add baking soda to balance.`
+                  : `pH critically high (${displayValue}). Add vinegar to balance.`;
+                break;
+              case 'temperature':
+                message = value < (threshold?.min || 0)
+                  ? `Temperature critically low (${displayValue}). May stress aquatic life.`
+                  : `Temperature critically high (${displayValue}). May promote bacterial growth.`;
+                break;
+              case 'tds':
+                message = value < (threshold?.min || 0)
+                  ? `TDS critically low (${displayValue}). Check for dilution issues.`
+                  : `TDS critically high (${displayValue}). Consider reverse osmosis.`;
+                break;
+              case 'salinity':
+                message = value < (threshold?.min || 0)
+                  ? `Salinity critically low (${displayValue}). May affect marine life.`
+                  : `Salinity critically high (${displayValue}). May harm freshwater organisms.`;
+                break;
+              default:
+                message = `${paramDisplay} critically ${value < (threshold?.min || 0) ? 'low' : 'high'} (${displayValue})`;
+            }
           } else {
-            message = `${paramDisplay} is ${value < (threshold?.min || 0) ? 'low' : 'high'} (${Number(value).toFixed(2)})`;
+            // Warning alerts - brief guidance
+            switch (param.toLowerCase()) {
+              case 'ph':
+                message = value < (threshold?.min || 0)
+                  ? `pH below optimal (${displayValue}). Monitor for corrosion.`
+                  : `pH above optimal (${displayValue}). Monitor for scaling.`;
+                break;
+              case 'temperature':
+                message = value < (threshold?.min || 0)
+                  ? `Temperature low (${displayValue}). May reduce treatment effectiveness.`
+                  : `Temperature elevated (${displayValue}). May accelerate reactions.`;
+                break;
+              case 'tds':
+                message = value < (threshold?.min || 0)
+                  ? `TDS below normal (${displayValue}). May indicate dilution.`
+                  : `TDS elevated (${displayValue}). May affect taste and appliances.`;
+                break;
+              case 'salinity':
+                message = value < (threshold?.min || 0)
+                  ? `Salinity below normal (${displayValue}). Check for freshwater intrusion.`
+                  : `Salinity elevated (${displayValue}). Monitor ecosystem impact.`;
+                break;
+              default:
+                message = `${paramDisplay} ${value < (threshold?.min || 0) ? 'low' : 'high'} (${displayValue})`;
+            }
           }
 
           generatedAlerts.push({
@@ -435,11 +486,11 @@ const stylesheet = StyleSheet.create({
   cardContainer: {
     borderRadius: 18,
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    minHeight: 70,
+    minHeight: 80,
     height: 75,
     ...globalStyles.boxShadow,
     position: "relative",

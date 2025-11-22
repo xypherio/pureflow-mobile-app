@@ -107,15 +107,28 @@ export class AlertRepository {
 
   parseTimestamp(timestamp) {
     if (!timestamp) return new Date();
-    
+
     if (timestamp.toDate && typeof timestamp.toDate === 'function') {
       return timestamp.toDate();
     }
-    
+
     if (typeof timestamp === 'object' && timestamp.seconds) {
       return new Date(timestamp.seconds * 1000);
     }
-    
-    return new Date(timestamp);
+
+    if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      const date = new Date(timestamp);
+      // Only return the date if it's valid and reasonable (not before 2020 or after 2030)
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        if (year >= 2020 && year <= 2030) {
+          return date;
+        }
+      }
+    }
+
+    // Fallback to current time for invalid timestamps
+    console.warn('⚠️ Using current timestamp for invalid alert timestamp:', timestamp);
+    return new Date();
   }
 }

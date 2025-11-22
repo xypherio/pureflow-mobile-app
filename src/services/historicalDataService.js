@@ -856,38 +856,48 @@ class HistoricalDataService {
         break;
         
       case 'weekly':
-        // For weekly, get current week (Monday to Sunday)
+        // For weekly, get current week from Monday to now (excluding future dates)
         const today = createLocalDate(year, month, date);
         const dayOfWeek = today.getDay();
         // Get the most recent Monday (if today is Sunday, go back 6 days)
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         const monday = new Date(today);
         monday.setDate(today.getDate() - daysToSubtract);
-        
+
         startDate = createLocalDate(
-          monday.getFullYear(), 
-          monday.getMonth(), 
-          monday.getDate(), 
+          monday.getFullYear(),
+          monday.getMonth(),
+          monday.getDate(),
           0, 0, 0, 0
         );
-        
-        // End date is Sunday (6 days after Monday)
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
+
+        // End date is current time (not the end of Sunday)
+        const now = new Date();
         endDate = createLocalDate(
-          sunday.getFullYear(),
-          sunday.getMonth(),
-          sunday.getDate(),
-          23, 59, 59, 999
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          now.getHours(),
+          now.getMinutes(),
+          now.getSeconds(),
+          now.getMilliseconds()
         );
         break;
-        
+
       case 'monthly':
-        // For monthly, get current month
+        // For monthly, get current month from 1st to now (excluding future dates)
         startDate = createLocalDate(year, month, 1, 0, 0, 0, 0);
-        // Last day of current month
-        const lastDay = new Date(year, month + 1, 0).getDate();
-        endDate = createLocalDate(year, month, lastDay, 23, 59, 59, 999);
+        // End date is current time (not the end of month)
+        const nowMonthly = new Date();
+        endDate = createLocalDate(
+          nowMonthly.getFullYear(),
+          nowMonthly.getMonth(),
+          nowMonthly.getDate(),
+          nowMonthly.getHours(),
+          nowMonthly.getMinutes(),
+          nowMonthly.getSeconds(),
+          nowMonthly.getMilliseconds()
+        );
         break;
         
       case 'annually':

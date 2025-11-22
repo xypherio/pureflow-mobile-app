@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "owner": "xy_pher",
     "orientation": "portrait",
-    "icon": "./assets/images/adaptive-icon.png",
+  "icon": "./assets/logo/logo-emblem.png",
     "scheme": "pureflow",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -15,7 +15,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/logo/logo-emblem.png",
         "backgroundColor": "#002d66"
       },
       "googleServicesFile": "./google-services.json",
@@ -23,7 +23,7 @@
       "package": "com.xypher.pureflowmobile"
     },
     "notification": {
-      "icon": "./assets/notification-icon.png",
+      "icon": "./assets/logo/logo-emblem.png",
       "color": "#ffffff"
     },
 
@@ -36,9 +36,9 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/logo-emblem.png",
+          "icon": "./assets/logo/logo-emblem.png",
           "color": "#ffffff",
-          "sounds": ["./assets/notification-sound.wav"]
+          "sounds": ["./assets/water-alert.mp3"]
         }
       ],
       "expo-router",

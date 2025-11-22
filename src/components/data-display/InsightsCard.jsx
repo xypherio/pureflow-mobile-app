@@ -66,6 +66,14 @@ const INSIGHT_TYPES = {
     borderColor: '#3B82F6',
     gradientColors: ['#DBEAFE', '#BFDBFE'],
     shadowColor: '#3B82F6'
+  },
+  empty: {
+    icon: Info,
+    bgColor: '#F9FAFB',
+    iconColor: '#6B7280',
+    borderColor: '#E5E7EB',
+    gradientColors: ['#F9FAFB', '#F3F4F6'],
+    shadowColor: '#6B7280'
   }
 };
 
@@ -150,6 +158,12 @@ export default function InsightsCard({
     return 'Static content';
   };
 
+  // Check if we should show empty state
+  const isEmpty = !loading && !error && (!currentInsight || currentInsight === "No data available");
+
+  // Determine which config to use - empty state if no data
+  const displayConfig = isEmpty ? INSIGHT_TYPES.empty : config;
+
   // User-friendly error message
   const getErrorMessage = () => {
     if (!error) return null;
@@ -168,42 +182,49 @@ export default function InsightsCard({
     return 'Unable to generate insight at this time.';
   };
 
+  // Prepare content based on state
+  const renderContent = () => {
+    if (loading) {
+      return <Text style={styles.loadingText}>Generating AI insight...</Text>;
+    }
+
+    if (error) {
+      return <Text style={[styles.loadingText, { color: '#EF4444' }]}>{getErrorMessage()}</Text>;
+    }
+
+    if (isEmpty) {
+      return <Text style={styles.description}>"Insights will be available once your water quality sensors start collecting data and our AI analyzes the trends."</Text>;
+    }
+
+    return <Text style={styles.description}>{safeString(currentInsight)}</Text>;
+  };
+
   return (
     <View style={[styles.container, {
-      borderColor: config.borderColor,
+      borderColor: displayConfig.borderColor,
     }]}>
       {/* Gradient overlay */}
       <View style={[styles.gradientOverlay, {
-        backgroundColor: config.borderColor,
+        backgroundColor: displayConfig.borderColor,
       }]} />
-      
+
       <View style={styles.contentContainer}>
         <View style={[styles.iconContainer, {
-          backgroundColor: config.bgColor,
-          shadowColor: config.iconColor,
+          backgroundColor: displayConfig.bgColor,
+          shadowColor: displayConfig.iconColor,
         }]}>
           <IconComponent
-            size={24}
-            color={config.iconColor}
+            size={isEmpty ? 20 : 24}
+            color={displayConfig.iconColor}
           />
         </View>
-        
+
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>
-            {safeString(title)}
+            {isEmpty ? "Waiting for Sensor Data" : safeString(title)}
           </Text>
-          
-          <Text style={styles.description}>
-            {loading ? (
-              <Text style={styles.loadingText}>Generating AI insight...</Text>
-            ) : error ? (
-              <Text style={[styles.loadingText, { color: '#EF4444' }]}>
-                {getErrorMessage()}
-              </Text>
-            ) : (
-              safeString(currentInsight)
-            )}
-          </Text>
+
+          {renderContent()}
 
           {/* Status indicator */}
           <View style={styles.statusIndicator}>

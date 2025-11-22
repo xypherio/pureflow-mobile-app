@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   weatherContainer: {
     flexDirection: "row",
     alignItems: "center",
-    maxWidth: 130, // Prevent overflow
+    maxWidth: 100,
   },
   weatherTextContainer: {
     marginLeft: 8,

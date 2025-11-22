@@ -1,0 +1,61 @@
+import React from "react";
+import { StyleSheet, View, Text } from "react-native";
+import AlertsCard from "@dataDisplay/AlertsCard";
+import LineChartCard from "@dataDisplay/LinechartCard";
+import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
+
+/**
+ * Main dashboard section with alerts, real-time data, and historical trends
+ * @param {Object} props - Component props
+ * @param {Array} props.alerts - Active alerts data
+ * @param {Object} props.realtimeData - Real-time sensor data
+ * @param {Object} props.sensorData - Historical sensor data
+ */
+const DashboardSection = ({ alerts, realtimeData, sensorData }) => {
+  return (
+    <View style={styles.container}>
+      {/* Critical Alerts Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Active Alerts</Text>
+        <AlertsCard
+          alerts={alerts}
+          realtimeData={realtimeData}
+          interval={2500}
+        />
+      </View>
+
+      {/* Real-Time Data Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Real-Time Parameters</Text>
+        <RealtimeDataCards data={sensorData} />
+      </View>
+
+      {/* Historical Trends Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabelNoMargin}>Daily Trends</Text>
+        <LineChartCard />
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    // Container styles
+  },
+  section: {
+    marginBottom: 12,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: "#1a2d51",
+    marginBottom: 10,
+  },
+  sectionLabelNoMargin: {
+    fontSize: 12,
+    color: "#1a2d51",
+    marginBottom: -10,
+  },
+});
+
+export default React.memo(DashboardSection);

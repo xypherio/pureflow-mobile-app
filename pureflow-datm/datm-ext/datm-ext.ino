@@ -78,6 +78,7 @@ void solarTracker() {
 }
 
 void loop() {
+  
   solarTracker();
 
   if (Serial2.available()) {

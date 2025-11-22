@@ -1,12 +1,12 @@
 import ForecastCard from "@dataDisplay/ForecastCard";
 import InsightsCard from "@dataDisplay/InsightsCard";
-import ForecastDetailModal from "@ui/ForecastDetailModal";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
 import WeatherBanner from "@ui/WeatherBanner";
 
 import useForecastService from "@hooks/useForecastService";
 import { generateInsight } from "@services/ai/geminiAPI";
+import { addForecastToFirestore } from "@services/firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -16,10 +16,8 @@ import {
   View,
 } from "react-native";
 
-
 export default function HomeScreen() {
   // UI State Management (Single Responsibility: Handle modal and navigation state)
-  const [isModalVisible, setIsModalVisible] = React.useState(false);
   const [selectedParam, setSelectedParam] = React.useState(null);
   const [forecastDetails, setForecastDetails] = React.useState(null);
 
@@ -68,6 +66,17 @@ export default function HomeScreen() {
         }
       };
       getForecastInsight();
+
+      // Send forecast data to Firebase
+      const sendForecastToFirebase = async () => {
+        try {
+          await addForecastToFirestore(forecastPredicted);
+          console.log("Forecast data successfully sent to Firebase");
+        } catch (error) {
+          console.error("Error sending forecast data to Firebase:", error);
+        }
+      };
+      sendForecastToFirebase();
     } else {
       setGeminiResponse(null);
     }
@@ -86,12 +95,7 @@ export default function HomeScreen() {
     setIsModalVisible(true);
   }
 
-  /**
-   * Closes the forecast detail modal
-   */
-  function closeDetails() {
-    setIsModalVisible(false);
-  }
+
 
   /**
    * Formats parameter values for display with appropriate units
@@ -205,9 +209,9 @@ export default function HomeScreen() {
                 title="Overall Forecast Insight"
                 description={geminiResponse?.insights?.overallInsight || ""}
                 timestamp={geminiResponse?.insights?.timestamp}
-                componentId="forecast-overall-insight" // Unique componentId
-                autoRefresh={true} // Allow auto-refresh for forecast insights
-                sensorData={forecastPredicted} // Pass the entire forecastPredicted for overall insights
+                componentId="forecast-overall-insight" 
+                autoRefresh={true} 
+                sensorData={forecastPredicted} 
               />
               {/* Individual Parameter Forecast Insight Cards */}
               {geminiResponse?.suggestions?.map((suggestion, index) => (
@@ -217,12 +221,12 @@ export default function HomeScreen() {
                   title={`${suggestion.parameter} Forecast Insight`}
                   description={suggestion.recommendation}
                   timestamp={geminiResponse?.insights?.timestamp}
-                  componentId={`forecast-param-insight-${suggestion.parameter}`} // Unique componentId
-                  autoRefresh={true} // Allow auto-refresh for forecast insights
+                  componentId={`forecast-param-insight-${suggestion.parameter}`} 
+                  autoRefresh={true} 
                   sensorData={{
                     [suggestion.parameter.toLowerCase()]:
                       forecastPredicted?.[suggestion.parameter],
-                  }} // Pass individual parameter data
+                  }} 
                 />
               ))}
             </>
@@ -230,17 +234,10 @@ export default function HomeScreen() {
             <Text style={styles.noDataText}>
               {forecastDataAvailable
                 ? "Failed to load forecast insights. Please check your Gemini API quota or try again later."
-                : "No forecast available yet."
-              }
+                : "No forecast available yet."}
             </Text>
           )}
         </View>
-
-        <ForecastDetailModal
-          visible={isModalVisible}
-          onClose={closeDetails}
-          param={selectedParam}
-        />
       </GlobalWrapper>
     </>
   );

@@ -31,17 +31,25 @@ export class AlertEngine {
 
       for (const [parameter, value] of Object.entries(latestReading)) {
         console.log(`🚨 AlertEngine: Checking parameter ${parameter} = ${value}`);
-        
+
         if (this.isWaterQualityParameter(parameter) && value !== null && value !== undefined) {
           console.log(`🚨 AlertEngine: Parameter ${parameter} is valid water quality parameter`);
-          
-          const alertLevel = this.thresholdManager.evaluateValue(parameter, value);
-          console.log(`🚨 AlertEngine: Parameter ${parameter} alert level: ${alertLevel}`);
-          
-          if (alertLevel !== 'normal') {
-            const alert = this.createAlert(parameter, value, alertLevel, latestReading);
+
+          if (parameter.toLowerCase() === 'israining') {
+            // Rain sensor: Always generate alert for rain status
+            const alert = this.createRainAlert(parameter, value, latestReading);
             alerts.push(alert);
-            console.log(`🚨 AlertEngine: Created alert for ${parameter}:`, alert);
+            console.log(`🚨 AlertEngine: Created rain alert for ${parameter}:`, alert);
+          } else {
+            // Traditional water quality parameters
+            const alertLevel = this.thresholdManager.evaluateValue(parameter, value);
+            console.log(`🚨 AlertEngine: Parameter ${parameter} alert level: ${alertLevel}`);
+
+            if (alertLevel !== 'normal') {
+              const alert = this.createAlert(parameter, value, alertLevel, latestReading);
+              alerts.push(alert);
+              console.log(`🚨 AlertEngine: Created alert for ${parameter}:`, alert);
+            }
           }
         } else {
           console.log(`🚨 AlertEngine: Parameter ${parameter} is NOT a valid water quality parameter or has invalid value`);
@@ -51,7 +59,25 @@ export class AlertEngine {
       console.log(`🚨 AlertEngine: Generated ${alerts.length} alerts total`);
       return alerts;
     }
-  
+
+    createRainAlert(parameter, value, reading) {
+      const rainStatus = this.getRainStatusText(value);
+      const alertLevel = value === 2 ? 'warning' : 'info'; // Heavy rain is warning, others are info
+
+      return {
+        id: this.generateAlertId(),
+        parameter: parameter.toLowerCase(),
+        value: parseFloat(value),
+        alertLevel,
+        type: alertLevel === 'warning' ? 'warning' : 'info',
+        title: this.generateRainAlertTitle(value),
+        message: this.generateRainAlertMessage(value),
+        timestamp: reading.datetime || reading.timestamp || new Date(),
+        severity: alertLevel === 'warning' ? 'medium' : 'low',
+        threshold: null
+      };
+    }
+
     createAlert(parameter, value, alertLevel, reading) {
       const threshold = this.thresholdManager.getThreshold(parameter);
       
@@ -74,9 +100,88 @@ export class AlertEngine {
     }
   
     generateAlertTitle(parameter, value, alertLevel) {
+      const threshold = this.thresholdManager.getThreshold(parameter);
+      const direction = this.determineValueDirection(value, threshold);
+      const flag = alertLevel === 'critical' ? '🚨' : '⚠️';
+
+      return this.getActionableTitle(parameter, value, alertLevel, direction, flag);
+    }
+
+    determineValueDirection(value, threshold) {
+      if (!threshold) return 'unknown';
+
+      if (value > threshold.max) return 'high';
+      if (value < threshold.min) return 'low';
+
+      return 'within_range'; // This shouldn't happen for alerts, but fallback
+    }
+
+    getActionableTitle(parameter, value, alertLevel, direction, flag) {
+      const paramLower = parameter.toLowerCase();
+      const valueFormatted = this.formatParameterValue(parameter, value);
+
+      const titles = {
+        ph: {
+          high: {
+            critical: `${flag} pH Too High - ${valueFormatted}`,
+            warning: `${flag} pH Rising - ${valueFormatted}`
+          },
+          low: {
+            critical: `${flag} pH Too Low - ${valueFormatted}`,
+            warning: `${flag} pH Falling - ${valueFormatted}`
+          }
+        },
+        temperature: {
+          high: {
+            critical: `${flag} Temperature Critical - ${valueFormatted}`,
+            warning: `${flag} Temperature High - ${valueFormatted}`
+          },
+          low: {
+            critical: `${flag} Temperature Too Low - ${valueFormatted}`,
+            warning: `${flag} Temperature Low - ${valueFormatted}`
+          }
+        },
+        turbidity: {
+          high: {
+            critical: `${flag} Turbidity Critical - ${valueFormatted}`,
+            warning: `${flag} Water Cloudy - ${valueFormatted}`
+          },
+          low: {
+            critical: `${flag} Turbidity Too Low - ${valueFormatted}`,
+            warning: `${flag} Turbidity Low - ${valueFormatted}`
+          }
+        },
+        salinity: {
+          high: {
+            critical: `${flag} Salinity Too High - ${valueFormatted}`,
+            warning: `${flag} Salinity Rising - ${valueFormatted}`
+          },
+          low: {
+            critical: `${flag} Salinity Too Low - ${valueFormatted}`,
+            warning: `${flag} Salinity Falling - ${valueFormatted}`
+          }
+        },
+        tds: {
+          high: {
+            critical: `${flag} TDS Too High - ${valueFormatted}`,
+            warning: `${flag} Salinity Rising - ${valueFormatted}`
+          },
+          low: {
+            critical: `${flag} TDS Too Low - ${valueFormatted}`,
+            warning: `${flag} Salinity Falling - ${valueFormatted}`
+          }
+        }
+      };
+
+      // Get parameter titles or fallback
+      const paramTitles = titles[paramLower];
+      if (paramTitles?.[direction]?.[alertLevel]) {
+        return paramTitles[direction][alertLevel];
+      }
+
+      // Fallback to generic but still actionable
       const paramName = parameter.charAt(0).toUpperCase() + parameter.slice(1);
-      const levelText = alertLevel === 'critical' ? 'Critical' : 'Warning';
-      return `${levelText}: ${paramName} ${alertLevel === 'critical' ? 'Critical' : 'Out of Range'}`;
+      return `${flag} ${paramName} ${alertLevel.charAt(0).toUpperCase() + alertLevel.slice(1)} - ${valueFormatted}`;
     }
   
     generateAlertMessage(parameter, value, threshold, alertLevel) {
@@ -110,13 +215,48 @@ export class AlertEngine {
           return `${numValue.toFixed(1)} ppt`;
         case 'tds':
           return `${numValue.toFixed(0)} ppm`;
+        case 'israining':
+          return this.getRainStatusText(numValue);
         default:
           return numValue.toFixed(2);
       }
     }
 
+    getRainStatusText(value) {
+      switch (parseInt(value)) {
+        case 0:
+          return 'No Rain';
+        case 1:
+          return 'Raining';
+        case 2:
+          return 'Heavy Rain';
+        default:
+          return `Unknown (${value})`;
+      }
+    }
+
+    generateRainAlertTitle(value) {
+      const status = this.getRainStatusText(value);
+      return `Weather Status: ${status}`;
+    }
+
+    generateRainAlertMessage(value) {
+      const status = this.getRainStatusText(value);
+
+      switch (parseInt(value)) {
+        case 0:
+          return 'No precipitation detected. Water parameters are stable.';
+        case 1:
+          return 'Light to moderate rain detected. Monitor water parameters for potential changes in turbidity and pH.';
+        case 2:
+          return 'Heavy rain detected. Increased monitoring recommended as runoff may affect water quality parameters.';
+        default:
+          return `Rain sensor status: ${status}. Monitor water parameters closely.`;
+      }
+    }
+
     isWaterQualityParameter(parameter) {
-      const waterQualityParams = ['ph', 'temperature', 'turbidity', 'salinity', 'tds'];
+      const waterQualityParams = ['ph', 'temperature', 'turbidity', 'salinity', 'tds', 'israining'];
       return waterQualityParams.includes(parameter.toLowerCase());
     }
   }
