@@ -172,11 +172,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     marginBottom: 10,
-    shadowColor: "#2569d0",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   insightsErrorHeader: {
     flexDirection: "row",
@@ -230,12 +225,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   noParametersContainer: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   noParametersText: {
     fontSize: 16,

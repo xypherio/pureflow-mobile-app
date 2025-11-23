@@ -1,9 +1,3 @@
-/**
- * Insights Section Component
- *
- * Displays AI-powered insights and recommendations
- */
-
 import React from "react";
 import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
 import InsightsCard from "@dataDisplay/InsightsCard";

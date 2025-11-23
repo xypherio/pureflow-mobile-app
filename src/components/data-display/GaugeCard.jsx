@@ -61,9 +61,9 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
 
   const parameters = [
     { color: "#007bff", icon: Droplet, label: "pH Level", value: paramValues?.pH || 0 },
-    { color: "#e83e8c", icon: Thermometer, label: "Temperature", value: paramValues?.temp || 0 },
-    { color: "#28a745", icon: Gauge, label: "TDS", value: paramValues?.turbidity || 0 },
-    { color: "#8b5cf6", icon: Waves, label: "Salinity", value: paramValues?.salinity || 0 },
+    { color: "#e83e8c", icon: Thermometer, label: "Temperature", value: paramValues?.Temperature || 0 },
+    { color: "#28a745", icon: Gauge, label: "TDS", value: paramValues?.Turbidity || 0 },
+    { color: "#8b5cf6", icon: Waves, label: "Salinity", value: paramValues?.Salinity || 0 },
   ];
 
   const radius = 50;
@@ -81,10 +81,10 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
   };
 
   return (
-    <View style={[stylesheet.container, globalStyles.boxShadow]}>
-      <View style={stylesheet.contentContainer}>
+    <View style={[styles.container, globalStyles.boxShadow]}>
+      <View style={styles.contentContainer}>
         {/* Gauge section (left) */}
-        <View style={stylesheet.gaugeContainer}>
+        <View style={styles.gaugeContainer}>
           <Svg height={center + 10} width={center * 2}>
             {/* Background semi-circle */}
             <Path
@@ -103,32 +103,32 @@ export default function WaterQualityGauge({ percentage, parameters: paramValues 
               fill="none"
             />
           </Svg>
-          <Text style={[stylesheet.percentageText, { color: statusColor }]}>
+          <Text style={[styles.percentageText, { color: statusColor }]}>
             {progress}%
           </Text>
-          <Text style={[stylesheet.statusText, { color: statusColor }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>
             {status}
           </Text>
         </View>
 
         {/* Breakdown section (right) */}
-        <View style={stylesheet.breakdownContainer}>
+        <View style={styles.breakdownContainer}>
           {parameters.map((param, idx) => (
-            <View key={idx} style={stylesheet.parameterRow}>
-              <IconComponent 
-                icon={param.icon} 
-                color={param.color} 
-                size={16} 
+            <View key={idx} style={styles.parameterRow}>
+              <IconComponent
+                icon={param.icon}
+                color={param.color}
+                size={16}
               />
-              <View style={stylesheet.progressBarContainer}>
-                <View 
+              <View style={styles.progressBarContainer}>
+                <View
                   style={[
-                    stylesheet.progressBar, 
-                    { 
+                    styles.progressBar,
+                    {
                       width: `${param.value}%`,
-                      backgroundColor: param.color 
+                      backgroundColor: param.color
                     }
-                  ]} 
+                  ]}
                 />
               </View>
             </View>

@@ -181,22 +181,58 @@ const generateInsightFromAPI = async (sensorData) => {
       "suggestions": [
         {
           "parameter": "pH",
-          "recommendation": "Detailed 20 words recommendation for pH based on current readings in bullet points.",
+          "influencingFactors": [
+            "Factor 1 affecting pH",
+            "Factor 2 affecting pH",
+            "Factor 3 affecting pH"
+          ],
+          "recommendedActions": [
+            "Action 1 for pH management",
+            "Action 2 for pH management",
+            "Action 3 for pH management"
+          ],
           "status": "normal|warning|critical"
         },
         {
           "parameter": "temperature",
-          "recommendation": "Detailed 20 words recommendation for temperature based on current readings in bullet points.",
+          "influencingFactors": [
+            "Factor 1 affecting temperature",
+            "Factor 2 affecting temperature",
+            "Factor 3 affecting temperature"
+          ],
+          "recommendedActions": [
+            "Action 1 for temperature control",
+            "Action 2 for temperature control",
+            "Action 3 for temperature control"
+          ],
           "status": "normal|warning|critical"
         },
         {
           "parameter": "salinity",
-          "recommendation": "Detailed 20 words recommendation for salinity based on current readings in bullet points.",
+          "influencingFactors": [
+            "Factor 1 affecting salinity",
+            "Factor 2 affecting salinity",
+            "Factor 3 affecting salinity"
+          ],
+          "recommendedActions": [
+            "Action 1 for salinity management",
+            "Action 2 for salinity management",
+            "Action 3 for salinity management"
+          ],
           "status": "normal|warning|critical"
         },
         {
           "parameter": "turbidity",
-          "recommendation": "Detailed 20 words recommendation for turbidity based on current readings in bullet points.",
+          "influencingFactors": [
+            "Factor 1 affecting turbidity",
+            "Factor 2 affecting turbidity",
+            "Factor 3 affecting turbidity"
+          ],
+          "recommendedActions": [
+            "Action 1 for turbidity control",
+            "Action 2 for turbidity control",
+            "Action 3 for turbidity control"
+          ],
           "status": "normal|warning|critical"
         }
       ]
@@ -245,22 +281,58 @@ const generateInsightFromAPI = async (sensorData) => {
       suggestions: [
         {
           parameter: "pH",
-          recommendation: "Monitor pH levels regularly. Current readings appear stable.",
+          influencingFactors: [
+            "Rainfall intensity affecting water dilution",
+            "Temperature fluctuations impacting solubility",
+            "Low sunlight reducing photosynthesis"
+          ],
+          recommendedActions: [
+            "Monitor pH levels regularly to maintain balance",
+            "Adjust feeding schedules based on water conditions",
+            "Check ammonia and nitrite levels frequently"
+          ],
           status: "normal"
         },
         {
           parameter: "temperature",
-          recommendation: "Temperature within acceptable range. Continue monitoring.",
+          influencingFactors: [
+            "Ambient air temperature variations",
+            "Direct sunlight exposure",
+            "Water evaporation rates"
+          ],
+          recommendedActions: [
+            "Maintain stable shading in tanks",
+            "Install temperature monitoring systems",
+            "Use heaters or coolers as needed"
+          ],
           status: "normal"
         },
         {
           parameter: "salinity",
-          recommendation: "Salinity levels are optimal for water quality.",
+          influencingFactors: [
+            "Rate of water evaporation",
+            "Freshwater input volumes",
+            "Salt addition scheduling"
+          ],
+          recommendedActions: [
+            "Monitor salinity levels daily",
+            "Gradually adjust salt concentrations",
+            "Balance freshwater replacement"
+          ],
           status: "normal"
         },
         {
           parameter: "turbidity",
-          recommendation: "Turbidity readings are within safe parameters.",
+          influencingFactors: [
+            "Feed particle suspension",
+            "Fish activity and movement",
+            "Bottom substrate disturbance"
+          ],
+          recommendedActions: [
+            "Reduce overfeeding to minimize particles",
+            "Use appropriate filtration systems",
+            "Regular tank cleaning schedules"
+          ],
           status: "normal"
         }
       ]

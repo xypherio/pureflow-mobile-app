@@ -40,6 +40,7 @@ export default function ForecastCard({
   trend,
   onPress,
   breachPredicted = false,
+  containerStyle = {},
 }) {
   const trendLabel =
     trend === "rising"
@@ -76,7 +77,7 @@ export default function ForecastCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
-      style={[stylesheet.baseContainer, breachStyles]}
+      style={[stylesheet.baseContainer, breachStyles, containerStyle]}
     >
       {/* Background Arrow */}
       {backgroundArrowMap[trend]}
@@ -152,4 +153,3 @@ const stylesheet = StyleSheet.create({
     zIndex: 2,
   },
 });
-

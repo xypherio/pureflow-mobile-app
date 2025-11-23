@@ -2,10 +2,6 @@ import { getAlertFacade, getDashboardFacade } from '@services/ServiceContainer';
 import { realtimeDataService } from "@services/realtimeDataService";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
-/**
- * Context for managing application-wide data state including sensor data, alerts, and real-time updates.
- * Handles data fetching, caching, and synchronization with Firebase.
- */
 const DataContext = createContext();
 
 /**
@@ -109,8 +105,6 @@ export function DataProvider({ children, initialData = null }) {
   }, []);
 
   /**
-   * Performs a complete refresh of all data sources with optimized fetching and caching.
-   * Implements request deduplication, smart caching, and error handling.
    * 
    * @param {boolean} [useCache=true] - When true, uses cached data when available
    * @returns {Promise<void>}
@@ -132,13 +126,13 @@ export function DataProvider({ children, initialData = null }) {
       const [dashboardResult, realtimeDataResult] = await Promise.allSettled([
         getDashboardFacade().getDashboardData({
           includeHistorical: true,
-          useCache: true, // Always use cache for dashboard data to prevent duplicate reads
-          historicalLimit: 30,  // Reduced from 50 to 30 for better performance
-          hoursBack: 24         // Keep 24h window for daily trends
+          useCache: true, 
+          historicalLimit: 30, 
+          hoursBack: 24      
         }),
         realtimeDataService.getMostRecentData({
-          useCache: true,       // Always use cache for real-time data
-          cacheTtl: 30000       // 30s cache TTL for real-time data
+          useCache: true,      
+          cacheTtl: 30000    
         })
       ]);
 

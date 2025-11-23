@@ -1,8 +1,8 @@
-import React from "react";
-import { AlertTriangle, TouchableOpacity, StyleSheet, Text, View } from "react-native";
 import PureFlowLogo from "@components/ui/UiHeader";
 import NotificationFilter from "@navigation/AlertsFilter";
 import GlobalWrapper from "@ui/GlobalWrapper";
+import React from "react";
+import { AlertTriangle, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const NotificationsErrorState = ({
   error,
@@ -35,7 +35,7 @@ const NotificationsErrorState = ({
         <View style={styles.errorContainer}>
           <AlertTriangle size={48} color="#ef4444" style={styles.errorIcon} />
           <Text style={styles.errorTitle}>Failed to Load Alerts</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
+          <Text style={styles.errorMessage}>unable to update forecast: Showing Recent Forecast</Text>
           <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>

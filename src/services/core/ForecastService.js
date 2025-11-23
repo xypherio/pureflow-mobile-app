@@ -245,8 +245,8 @@ class ForecastService {
         errorMessage = "Network error. Please check your connection.";
       }
 
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: errorMessage,
         fallbackData: this.getDefaultPredictions()
       };
@@ -261,7 +261,7 @@ class ForecastService {
    */
   setupAutomatedRefresh(predictionCallback, intervalHours = 12) {
     const intervalMs = intervalHours * 60 * 60 * 1000;
-    
+
     const predictionInterval = setInterval(async () => {
       console.log("🔄 Automated prediction refresh triggered");
       try {
