@@ -335,16 +335,12 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
     }];
   }, [alerts, realtimeData, processAlerts, generateAlertsFromRealtimeData]);
 
-  // Debug processed alerts
+  // Debug processed alerts - only log count
   useEffect(() => {
     if (displayAlerts.length > 0) {
-      console.log('📋 Displaying alerts:', {
-        count: displayAlerts.length,
-        alerts: displayAlerts,
-        currentIndex: current
-      });
+      console.log(`📋 Displaying ${displayAlerts.length} alerts`);
     }
-  }, [displayAlerts, current]);
+  }, [displayAlerts.length]);
 
   // Sound effects disabled due to expo-av compatibility issues
   // TODO: Re-enable when expo-av is properly configured in the project
@@ -444,7 +440,7 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
     <View style={{ alignItems: "center", width: "100%" }}>
       <Animated.View
         style={[
-          stylesheet.cardContainer,
+          styles.cardContainer,
           {
             opacity: opacityAnim,
             transform: [{ scale: scaleAnim }],
@@ -454,23 +450,23 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
       >
         {/* Color indicator bar */}
         <View
-          style={[stylesheet.indicatorBar, { backgroundColor: getIndicatorColor() }]}
+          style={[styles.indicatorBar, { backgroundColor: getIndicatorColor() }]}
         />
         {/* Parameter icon */}
-        <View style={stylesheet.iconContainer}>
+        <View style={styles.iconContainer}>
           <ParameterIcon size={22} color={style.iconColor} />
         </View>
         {/* Texts */}
-        <View style={stylesheet.textContainer}>
+        <View style={styles.textContainer}>
           <Text
-            style={[stylesheet.titleText, { color: style.title }]}
+            style={[styles.titleText, { color: style.title }]}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {capitalizeWords(alert.title)}
           </Text>
           <Text
-            style={[stylesheet.messageText, { color: style.message }]}
+            style={[styles.messageText, { color: style.message }]}
             numberOfLines={2}
             ellipsizeMode="tail"
           >
@@ -481,54 +477,3 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
     </View>
   );
 }
-
-const stylesheet = StyleSheet.create({
-  cardContainer: {
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    minHeight: 80,
-    height: 75,
-    ...globalStyles.boxShadow,
-    position: "relative",
-  },
-  indicatorBar: {
-    position: "absolute",
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 6,
-    borderRadius: 3,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    marginLeft: 10,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  textContainer: {
-    flex: 1,
-  },
-  titleText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  messageText: {
-    fontSize: 14,
-  },
-  thresholdText: {
-    color: "#6b7280",
-    fontSize: 12,
-    marginTop: 2,
-  },
-});

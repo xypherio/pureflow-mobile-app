@@ -6,18 +6,13 @@ import { StyleSheet, Text, View } from 'react-native';
 // Environment check for production
 const isProduction = __DEV__ === false;
 
-/**
- * Silent logging that only shows in development
- */
+
 const silentLog = (message, ...args) => {
   if (!isProduction) {
     console.log(message, ...args);
   }
 };
 
-/**
- * Silent error logging that only shows in development
- */
 const silentError = (message, error) => {
   if (!isProduction) {
     console.error(message, error);

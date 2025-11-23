@@ -3,7 +3,7 @@
 export const colors = {
 
   // Primary brand colors
-  primary: '#2455A9',        // Main brand blue
+  primary: '#2455a9',        // Main brand blue
   primaryDark: '#1A3F7A',    // Darker shade for emphasis
   primaryLight: '#4A7BC8',  
   

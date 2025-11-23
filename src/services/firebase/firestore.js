@@ -218,3 +218,40 @@ export const addForecastToFirestore = async (forecastData) => {
     throw e;
   }
 };
+
+/**
+ * Get the most recent forecast data from Firestore
+ * Used as fallback when API predictions fail
+ */
+export const getMostRecentForecast = async () => {
+  try {
+    console.log("Fetching most recent forecast data from Firebase");
+
+    const forecastsQuery = firestoreQuery(
+      collection(db, "forecasts"),
+      orderBy("timestamp", "desc"),
+      limit(1)
+    );
+
+    const querySnapshot = await getDocs(forecastsQuery);
+
+    if (!querySnapshot.empty) {
+      const latestDoc = querySnapshot.docs[0];
+      const forecastData = latestDoc.data();
+
+      // Convert Firestore Timestamps to JavaScript Dates
+      if (forecastData.timestamp instanceof Timestamp) {
+        forecastData.timestamp = forecastData.timestamp.toDate();
+      }
+
+      console.log("Retrieved recent forecast data from Firebase:", forecastData.timestamp);
+      return { id: latestDoc.id, ...forecastData };
+    } else {
+      console.log("No forecast data found in Firebase");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error retrieving recent forecast data:", error);
+    throw error;
+  }
+};
