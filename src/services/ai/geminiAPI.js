@@ -10,6 +10,10 @@ const componentCache = new Map();
 const componentTimers = new Map();
 const FETCH_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
 
+// Request deduplication and batching
+const pendingRequests = new Map(); // key -> Promise
+const requestQueue = new Map(); // componentId -> queued requests
+
 // Global quota management
 let isQuotaExceeded = false;
 let quotaResetTime = null;
@@ -18,6 +22,16 @@ const QUOTA_COOLDOWN_PERIOD = 15 * 60 * 1000; // 15-minute cooldown
 // Cache keys
 const CACHE_PREFIX = 'gemini_insights_';
 const CACHE_EXPIRY_PREFIX = 'gemini_insights_expiry_';
+
+// Intelligent error handling
+let circuitBreakerFailures = 0;
+let circuitBreakerLastFailure = null;
+let circuitBreakerState = 'closed'; // 'closed', 'open', 'half-open'
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5;
+const CIRCUIT_BREAKER_TIMEOUT = 60 * 1000; // 1 minute
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRY_DELAY = 10000; // 10 seconds
 
 // Environment check for production
 const isProduction = __DEV__ === false;
@@ -141,9 +155,16 @@ const updateComponentFetchTime = (componentId) => {
 };
 
 /**
- * Generate insight using Gemini API
+ * Generate insight using Gemini API with retry and circuit breaker
  */
 const generateInsightFromAPI = async (sensorData) => {
+  // Check circuit breaker first
+  const circuitState = checkCircuitBreaker();
+  if (circuitState === 'open') {
+    silentLog("🚫 Circuit breaker is open - returning cached response");
+    throw new Error("Circuit breaker is open");
+  }
+
   // If quota was exceeded, check if cooldown is over
   if (isQuotaExceeded && quotaResetTime && Date.now() > quotaResetTime) {
     isQuotaExceeded = false; // Cooldown finished, allow requests again
@@ -164,7 +185,8 @@ const generateInsightFromAPI = async (sensorData) => {
     };
   }
 
-  try {
+  // Use retry with exponential backoff for API calls
+  return retryWithBackoff(async () => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
@@ -262,80 +284,161 @@ const generateInsightFromAPI = async (sensorData) => {
       silentError("Error parsing JSON from Gemini API:", jsonError);
       throw new Error("Failed to parse AI response");
     }
-  } catch (error) {
-    silentError("Error generating insight from Gemini API:", error);
+  });
+};
 
-    // Check if the error is a 429 quota exceeded error
-    if (error.message && error.message.includes("[429 ")) {
-      silentLog("🚫 Gemini API quota limit reached. Activating cooldown.");
-      isQuotaExceeded = true;
-      quotaResetTime = Date.now() + QUOTA_COOLDOWN_PERIOD;
+/**
+ * Circuit breaker implementation
+ */
+const checkCircuitBreaker = () => {
+  const now = Date.now();
+
+  if (circuitBreakerState === 'open') {
+    if (now - (circuitBreakerLastFailure || 0) > CIRCUIT_BREAKER_TIMEOUT) {
+      circuitBreakerState = 'half-open';
+      silentLog('🔄 Circuit breaker moving to half-open state');
+      return 'half-open';
     }
-    // If there's an API error, return a fallback response instead of re-throwing
+    return 'open';
+  }
+
+  return circuitBreakerState;
+};
+
+const recordFailure = () => {
+  circuitBreakerFailures++;
+  circuitBreakerLastFailure = Date.now();
+
+  if (circuitBreakerFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    circuitBreakerState = 'open';
+    silentLog(`🚫 Circuit breaker opened after ${circuitBreakerFailures} failures`);
+  }
+};
+
+const recordSuccess = () => {
+  if (circuitBreakerState === 'half-open') {
+    circuitBreakerState = 'closed';
+    circuitBreakerFailures = 0;
+    silentLog('✅ Circuit breaker closed - service restored');
+  }
+};
+
+/**
+ * Exponential backoff delay calculation
+ */
+const calculateRetryDelay = (attempt) => {
+  const delay = BASE_RETRY_DELAY * Math.pow(2, attempt - 1);
+  const jitter = Math.random() * 0.1 * delay; // Add jitter
+  return Math.min(delay + jitter, MAX_RETRY_DELAY);
+};
+
+/**
+ * Retry function with exponential backoff
+ */
+const retryWithBackoff = async (fn, maxRetries = MAX_RETRIES) => {
+  let attempts = 0;
+
+  while (attempts < maxRetries) {
+    try {
+      attempts++;
+      const result = await fn();
+      recordSuccess(); // Reset circuit breaker on success
+      return result;
+    } catch (error) {
+      silentError(`Attempt ${attempts} failed:`, error.message);
+
+      // Don't retry quota exceeded errors
+      if (error.message && error.message.includes("[429")) {
+        recordFailure();
+        throw error;
+      }
+
+      if (attempts >= maxRetries) {
+        recordFailure();
+        throw error;
+      }
+
+      const delay = calculateRetryDelay(attempts);
+      silentLog(`Retrying in ${Math.round(delay)}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
+
+/**
+ * Create a unique request key for deduplication
+ */
+const createRequestKey = (componentId, dataHash) => {
+  return `${componentId}_${dataHash}`;
+};
+
+/**
+ * Get or create a pending request (deduplication)
+ */
+const getOrCreatePendingRequest = async (requestKey, sensorData, componentId, dataHash) => {
+  if (pendingRequests.has(requestKey)) {
+    silentLog(`🚦 Using pending request for ${componentId}`);
+    return pendingRequests.get(requestKey);
+  }
+
+  const requestPromise = (async () => {
+    try {
+      // Core insight generation logic
+      const insight = await generateInsightCore(sensorData, componentId, dataHash);
+      return insight;
+    } finally {
+      pendingRequests.delete(requestKey);
+    }
+  })();
+
+  pendingRequests.set(requestKey, requestPromise);
+  return requestPromise;
+};
+
+/**
+ * Core insight generation logic (extracted for deduplication)
+ */
+const generateInsightCore = async (sensorData, componentId, dataHash) => {
+  // Try to get cached data first
+  const cachedInsight = await getCachedInsight(componentId, dataHash);
+  if (cachedInsight && !shouldFetchNewData(componentId)) {
+    silentLog(`⏰ Component ${componentId} is within fetch interval, using cached data`);
+    return cachedInsight;
+  }
+
+  try {
+    silentLog(`🔄 Fetching new insight for component ${componentId}`);
+    updateComponentFetchTime(componentId);
+
+    const newInsight = await generateInsightFromAPI(sensorData);
+
+    // Cache the new insight
+    await cacheInsight(componentId, dataHash, newInsight);
+
+    return newInsight;
+  } catch (error) {
+    silentError(`❌ Error fetching new insight for component ${componentId}:`, error);
+
+    // Return cached data if available, otherwise fallback
+    if (cachedInsight) {
+      silentLog(`📦 Returning cached insight as fallback for component ${componentId}`);
+      return {
+        ...cachedInsight,
+        insights: {
+          ...cachedInsight.insights,
+          source: "cached-fallback"
+        }
+      };
+    }
+
+    // Generate fallback response
     return {
       insights: {
-        overallInsight: "AI service currently unavailable. Please try again later.",
+        overallInsight: "Unable to generate insight at this time. Please try again later.",
         timestamp: new Date().toISOString(),
-        source: "api-error-fallback"
+        source: "error"
       },
-      suggestions: [
-        {
-          parameter: "pH",
-          influencingFactors: [
-            "Rainfall intensity affecting water dilution",
-            "Temperature fluctuations impacting solubility",
-            "Low sunlight reducing photosynthesis"
-          ],
-          recommendedActions: [
-            "Monitor pH levels regularly to maintain balance",
-            "Adjust feeding schedules based on water conditions",
-            "Check ammonia and nitrite levels frequently"
-          ],
-          status: "normal"
-        },
-        {
-          parameter: "temperature",
-          influencingFactors: [
-            "Ambient air temperature variations",
-            "Direct sunlight exposure",
-            "Water evaporation rates"
-          ],
-          recommendedActions: [
-            "Maintain stable shading in tanks",
-            "Install temperature monitoring systems",
-            "Use heaters or coolers as needed"
-          ],
-          status: "normal"
-        },
-        {
-          parameter: "salinity",
-          influencingFactors: [
-            "Rate of water evaporation",
-            "Freshwater input volumes",
-            "Salt addition scheduling"
-          ],
-          recommendedActions: [
-            "Monitor salinity levels daily",
-            "Gradually adjust salt concentrations",
-            "Balance freshwater replacement"
-          ],
-          status: "normal"
-        },
-        {
-          parameter: "turbidity",
-          influencingFactors: [
-            "Feed particle suspension",
-            "Fish activity and movement",
-            "Bottom substrate disturbance"
-          ],
-          recommendedActions: [
-            "Reduce overfeeding to minimize particles",
-            "Use appropriate filtration systems",
-            "Regular tank cleaning schedules"
-          ],
-          status: "normal"
-        }
-      ]
+      suggestions: []
     };
   }
 };
@@ -356,55 +459,9 @@ export const generateInsight = async (sensorData, componentId = 'default') => {
   }
 
   const dataHash = createDataHash(sensorData);
+  const requestKey = createRequestKey(componentId, dataHash);
 
-  // Check if we should fetch new data
-  if (!shouldFetchNewData(componentId)) {
-    silentLog(`⏰ Component ${componentId} is within fetch interval, using cached data`);
-
-    // Try to get cached data
-    const cachedInsight = await getCachedInsight(componentId, dataHash);
-    if (cachedInsight) {
-      return cachedInsight;
-    }
-  }
-
-  // Try to get any cached data as fallback while fetching new data
-  const fallbackInsight = await getCachedInsight(componentId, dataHash);
-
-  try {
-    silentLog(`🔄 Fetching new insight for component ${componentId}`);
-    updateComponentFetchTime(componentId);
-
-    const newInsight = await generateInsightFromAPI(sensorData);
-
-    // Cache the new insight
-    await cacheInsight(componentId, dataHash, newInsight);
-
-    return newInsight;
-  } catch (error) {
-    silentError(`❌ Error fetching new insight for component ${componentId}:`, error);
-
-    // Return cached data if available, otherwise return error response
-    if (fallbackInsight) {
-      silentLog(`📦 Returning cached insight as fallback for component ${componentId}`);
-      return {
-        ...fallbackInsight,
-        insights: {
-          ...fallbackInsight.insights,
-          source: "cached-fallback"
-        }
-      };
-    }
-
-    return {
-      insights: {
-        overallInsight: "Unable to generate insight at this time. Please try again later.",
-        timestamp: new Date().toISOString(),
-        source: "error"
-      },
-      suggestions: []
-    };
-  }
+  return getOrCreatePendingRequest(requestKey, sensorData, componentId, dataHash);
 };
 
 /**
