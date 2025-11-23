@@ -1,39 +1,23 @@
-import React, { Suspense, useMemo, useCallback } from "react";
 import { useData } from "@contexts/DataContext";
 import { useDeviceStatus } from "@hooks/useDeviceStatus";
 import { useNotifications } from "@hooks/useNotifications";
 import { useNotificationSetup } from "@hooks/useNotificationSetup";
 import { useWaterQualityNotifications } from "@hooks/useWaterQualityNotifications";
+import React, { Suspense, useCallback, useMemo } from "react";
 
-import { globalStyles } from "@styles/globalStyles";
-import GlobalWrapper from "@ui/GlobalWrapper";
-import ErrorBoundary from "@ui/ErrorBoundary";
-import RefreshControlWrapper from "@ui/RefreshControlWrapper";
-import WeatherBadge from "@ui/WeatherBadge";
-import PureFlowLogo from "@ui/UiHeader";
 import SystemStatusSection from "@components/sections/SystemStatusSection";
+import { globalStyles } from "@styles/globalStyles";
+import ErrorBoundary from "@ui/ErrorBoundary";
+import GlobalWrapper from "@ui/GlobalWrapper";
+import {
+  DashboardSkeleton,
+  InsightsSkeleton,
+  SystemStatusSkeleton,
+} from "@ui/LoadingSkeletons";
+import RefreshControlWrapper from "@ui/RefreshControlWrapper";
+import PureFlowLogo from "@ui/UiHeader";
 import { getWeatherInfo } from "@utils/sensorDataUtils";
-import { ScrollView, View, Text, ActivityIndicator } from "react-native";
-
-// Loading placeholder component for lazy loading fallback
-const LoadingPlaceholder = React.memo(({ message }) => (
-  <View style={{
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120
-  }}>
-    <ActivityIndicator size="large" color="#4a90e2" />
-    <Text style={{
-      marginTop: 10,
-      fontSize: 16,
-      color: '#64748b',
-      textAlign: 'center'
-    }}>
-      {message}
-    </Text>
-  </View>
-));
+import { ScrollView } from "react-native";
 
 // Lazy-loaded heavy components for better performance
 const LazyInsightsSection = React.lazy(() =>
@@ -107,16 +91,20 @@ export default function HomeScreen() {
         >
           {/* System Status Section */}
           <ErrorBoundary fallbackMessage="System status temporarily unavailable">
-            <SystemStatusSection
-              isDatmActive={isDatmActive}
-              isSolarPowered={isSolarPowered}
-              isRaining={realtimeData?.isRaining || 0}
-            />
+            {loading ? (
+              <SystemStatusSkeleton />
+            ) : (
+              <SystemStatusSection
+                isDatmActive={isDatmActive}
+                isSolarPowered={isSolarPowered}
+                isRaining={realtimeData?.isRaining || 0}
+              />
+            )}
           </ErrorBoundary>
 
           {/* Dashboard Sections - Lazy loaded for better performance */}
           <ErrorBoundary fallbackMessage="Dashboard data temporarily unavailable">
-            <Suspense fallback={<LoadingPlaceholder message="Loading dashboard..." />}>
+            <Suspense fallback={<DashboardSkeleton />}>
               <LazyDashboardSection
                 alerts={alerts}
                 realtimeData={realtimeData}
@@ -127,7 +115,7 @@ export default function HomeScreen() {
 
           {/* Insights Section - Lazy loaded for better performance */}
           <ErrorBoundary fallbackMessage="AI insights temporarily unavailable">
-            <Suspense fallback={<LoadingPlaceholder message="Loading insights..." />}>
+            <Suspense fallback={<InsightsSkeleton />}>
               <LazyInsightsSection
                 loading={loading}
                 realtimeData={realtimeData}
