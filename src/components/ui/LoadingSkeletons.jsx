@@ -64,6 +64,8 @@ const skeletonStyles = StyleSheet.create({
   insightsSkeleton: {
     height: 200,
     marginBottom: 20,
+    backgroundColor: '#cbd5e1',
+    opacity: 0.9,
   },
   forecastInsightsSkeleton: {
     height: 180,

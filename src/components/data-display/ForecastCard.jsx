@@ -115,7 +115,7 @@ const stylesheet = StyleSheet.create({
     right: -5,
   },
   baseContainer: {
-    backgroundColor: "#f6fafd",
+    backgroundColor: "#fff",
     padding: 16,
     marginRight: 12,
     width: 190,

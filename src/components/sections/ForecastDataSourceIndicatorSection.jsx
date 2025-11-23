@@ -20,13 +20,13 @@ const DataSourceIndicator = ({ forecastDataAvailable, dataSource }) => {
 
 const styles = StyleSheet.create({
   dataSourceContainer: {
-    backgroundColor: "#2455a9",
+    backgroundColor: "#fff",
     padding: 10,
     borderRadius: 12,
     marginVertical: 8,
   },
   dataSourceText: {
-    color: "#fff",
+    color: "#2455a9",
     fontSize: 14,
     textAlign: "center",
     fontWeight: "500",

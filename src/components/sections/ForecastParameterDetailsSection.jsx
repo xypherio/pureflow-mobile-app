@@ -59,7 +59,7 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
 
 const styles = StyleSheet.create({
   promptCard: {
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#fff",
     padding: 20,
     marginVertical: 10,
     borderRadius: 12,
