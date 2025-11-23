@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 // Components
 import InsightsCard from "@dataDisplay/InsightsCard";
+import { ForecastInsightsSkeleton } from "@ui/LoadingSkeletons";
 
 const ForecastInsights = ({
   isGeminiLoading,
@@ -33,11 +34,7 @@ const ForecastInsights = ({
           sensorData={forecastPredicted}
         />
       ) : (
-        <Text style={styles.noDataText}>
-          {forecastDataAvailable
-            ? "Failed to load forecast insights. Please check your Gemini API quota or try again later."
-            : "No forecast available yet."}
-        </Text>
+        <ForecastInsightsSkeleton />
       )}
     </View>
   );
