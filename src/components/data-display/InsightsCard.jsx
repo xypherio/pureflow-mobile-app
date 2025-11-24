@@ -72,12 +72,13 @@ const INSIGHT_TYPES = {
   }
 };
 
-export default function InsightsCard({ 
-  type = 'info', 
-  title, 
-  description, 
+export default function InsightsCard({
+  type = 'info',
+  title,
+  description,
   suggestion,
-  action, 
+  recommendations,
+  action,
   onActionPress,
   timestamp,
   sensorData,
@@ -221,6 +222,15 @@ export default function InsightsCard({
 
           {renderContent()}
 
+          {recommendations && recommendations.length > 0 && (
+            <View style={styles.recommendationsContainer}>
+              <Text style={styles.recommendationsTitle}>Recommendations:</Text>
+              {recommendations.map((rec, index) => (
+                <Text key={index} style={styles.recommendationItem}>• {rec}</Text>
+              ))}
+            </View>
+          )}
+
           {/* Status indicator */}
           <View style={styles.statusIndicator}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
@@ -228,7 +238,7 @@ export default function InsightsCard({
               {getStatusText()}
             </Text>
           </View>
-          
+
           {lastUpdated && (
             <Text style={styles.lastUpdated}>
               Last updated: {new Date(lastUpdated).toLocaleString()}
@@ -356,5 +366,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     fontStyle: 'italic',
+  },
+  recommendationsContainer: {
+    marginTop: 12,
+  },
+  recommendationsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 6,
+  },
+  recommendationItem: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 22,
+    marginLeft: 8,
   }
 });

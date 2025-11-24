@@ -1,16 +1,12 @@
 import {
   AlertCircle,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
   Droplet,
   Gauge,
-  Shield,
   Thermometer,
   Waves
 } from "lucide-react-native";
-import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { colors } from "../../constants/colors";
 
 const getAlertColors = (type) => {
@@ -52,13 +48,10 @@ export default NotificationCard = ({
   title,
   message,
   timestamp,
-  expandable = false,
   impact = null,
   recommendations = [],
   parameter = null
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const renderParameterIcon = () => {
     let IconComponent = AlertCircle;
     let iconColor = '#FFFFFF'; // White icon color for contrast
@@ -124,41 +117,6 @@ export default NotificationCard = ({
     return <Text style={styles.timestamp}>{timeAgo}</Text>;
   };
 
-  const renderExpandedContent = () => {
-    if (!isExpanded) return null;
-
-    return (
-      <View style={styles.expandedContainer}>
-        {/* Impact */}
-        {impact && (
-          <View style={styles.expandedItem}>
-            <Shield size={16} color="#EF4444" style={styles.expandedIcon} />
-            <Text style={styles.expandedLabel}>Impact:</Text>
-            <View style={[styles.impactBadge, { backgroundColor: getImpactColor(impact) }]}>
-              <Text style={styles.impactText}>{impact.toUpperCase()}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Recommendations */}
-        {recommendations && recommendations.length > 0 && (
-          <View style={styles.recommendationsContainer}>
-            <View style={styles.expandedItem}>
-              <CheckCircle size={16} color="#3B82F6" style={styles.expandedIcon} />
-              <Text style={styles.expandedLabel}>Recommendations:</Text>
-            </View>
-            {recommendations.map((rec, index) => (
-              <View key={index} style={styles.recommendationItem}>
-                <Text style={styles.bulletPoint}>•</Text>
-                <Text style={styles.recommendationText}>{rec}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  };
-
   const getImpactColor = (impact) => {
     switch (impact.toLowerCase()) {
       case 'critical': return '#EF4444';
@@ -170,22 +128,7 @@ export default NotificationCard = ({
   };
 
   return (
-    <TouchableOpacity
-      onPress={() => setIsExpanded(!isExpanded)}
-      activeOpacity={0.7}
-      style={[styles.container]}
-    >
-      {/* Dropdown button positioned at top right */}
-      {expandable && (
-        <View style={styles.dropdownButtonContainer}>
-          {isExpanded ? (
-            <ChevronUp size={16} color="#6B7280" />
-          ) : (
-            <ChevronDown size={16} color="#6B7280" />
-          )}
-        </View>
-      )}
-
+    <View style={[styles.container]}>
       {renderParameterIcon()}
       <View style={styles.contentContainer}>
         <View style={styles.titleContainer}>
@@ -193,9 +136,8 @@ export default NotificationCard = ({
           <Text style={styles.title}>{title}</Text>
         </View>
         <Text style={styles.message}>{message}</Text>
-        {expandable && renderExpandedContent()}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -224,7 +166,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    paddingRight: 32,
     paddingLeft: 50
   },
   title: {

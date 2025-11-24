@@ -33,6 +33,7 @@ export const createAlertItem = (
 
   return {
     id: item.id,
+    itemId: item.id,
     title: item.title,
     message: enhancedMessage,
     parameter: item.parameter,
@@ -41,7 +42,7 @@ export const createAlertItem = (
     bg: alertLevel.bg,
     iconColor: alertLevel.iconColor,
     dotColor: getParameterColor(item.parameter),
-    expandable: true,
+
     confidence: alertDetails.confidence,
     impact: alertDetails.impact,
     recommendations: alertDetails.recommendations,

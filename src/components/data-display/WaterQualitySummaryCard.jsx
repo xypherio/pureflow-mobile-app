@@ -10,6 +10,7 @@ import {
 import { StyleSheet, Text, View } from "react-native";
 import { globalStyles } from "../../styles/globalStyles";
 
+// Quality levels configuration for different water quality states
 const QUALITY_LEVELS = {
   normal: {
     color: "#10B981",
@@ -34,6 +35,7 @@ const QUALITY_LEVELS = {
   },
 };
 
+// Parameter icons mapping for different sensor types
 const PARAMETER_ICONS = {
   pH: Gauge,
   temperature: Thermometer,
@@ -41,12 +43,108 @@ const PARAMETER_ICONS = {
   turbidity: Droplet,
 };
 
+/**
+ * Get status color based on parameter status level
+ * @param {string} status - The status level (critical, warning, normal)
+ * @returns {string} Hex color code for the status
+ */
 const getStatusColor = (status) =>
   ({
     critical: "#DC2626",
     warning: "#D97706",
     normal: "#10B981",
   }[status] || "#10B981");
+
+/**
+ * ParameterPill component for displaying individual parameter values
+ * @param {Object} props
+ * @param {string} props.name - Parameter name (pH, temperature, etc.)
+ * @param {number} props.value - Parameter value
+ * @param {string} props.status - Parameter status
+ * @param {string} props.unit - Parameter unit
+ */
+const ParameterPill = ({ name, value, status, unit }) => {
+  const Icon = PARAMETER_ICONS[name] || Droplet;
+  const color = getStatusColor(status);
+
+  return (
+    <View style={[styles.parameterPill, { borderColor: `${color}20` }]}>
+      <View style={[styles.parameterIcon, { backgroundColor: `${color}15` }]}>
+        <Icon size={16} color={color} />
+      </View>
+      <View>
+        <Text style={styles.parameterName}>{name}</Text>
+        <Text style={[styles.parameterValue, { color }]}>
+          {value !== undefined && value !== null ? Number(value).toFixed(2) : "N/A"}
+          {unit}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+export default function WaterQualitySummaryCard({
+  qualityLevel = "normal",
+  lastUpdated = "Just now",
+  parameters = [],
+}) {
+  const level = QUALITY_LEVELS[qualityLevel] || QUALITY_LEVELS.normal;
+  const IconComponent = level.icon;
+
+  // If no parameters, show the monitoring starting state
+  if (parameters.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={[styles.statusIcon, { backgroundColor: '#dbeafe' }]}>
+            <CheckCircle size={28} color="#3b82f6" />
+          </View>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Water Quality Monitoring</Text>
+            <Text style={styles.subtitle}>Not started yet</Text>
+          </View>
+        </View>
+
+        <View style={[styles.statusBanner, { backgroundColor: '#dbeafe' }]}>
+          <Text style={[styles.statusLabel, { color: '#3b82f6' }]}>
+            Monitoring Starting
+          </Text>
+          <Text style={styles.statusDescription}>
+            Parameters will appear once sensors begin collecting data
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show normal card with parameters
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={[styles.statusIcon, { backgroundColor: level.bg }]}>
+          <IconComponent size={28} color={level.color} />
+        </View>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>Water Quality Status</Text>
+          <Text style={styles.subtitle}>Last updated: {lastUpdated}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statusBanner, { backgroundColor: level.bg }]}>
+        <Text style={[styles.statusLabel, { color: level.color }]}>
+          {level.label}
+        </Text>
+        <Text style={styles.statusDescription}>{level.description}</Text>
+      </View>
+
+      <View style={styles.parametersGrid}>
+        {parameters.map((param) => (
+          <ParameterPill key={param.name} {...param} />
+        ))}
+      </View>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -134,61 +232,3 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
-
-const ParameterPill = ({ name, value, status, unit }) => {
-  const Icon = PARAMETER_ICONS[name] || Droplet;
-  const color = getStatusColor(status);
-
-  return (
-    <View style={[styles.parameterPill, { borderColor: `${color}20` }]}>
-      <View style={[styles.parameterIcon, { backgroundColor: `${color}15` }]}>
-        <Icon size={16} color={color} />
-      </View>
-      <View>
-        <Text style={styles.parameterName}>{name}</Text>
-        <Text style={[styles.parameterValue, { color }]}>
-          {value !== undefined && value !== null ? Number(value).toFixed(2) : 'N/A'}
-          {unit}
-        </Text>
-      </View>
-    </View>
-  );
-};
-
-export default function WaterQualitySummaryCard({
-  qualityLevel = "normal",
-  lastUpdated = "Just now",
-  parameters = [],
-}) {
-  const level = QUALITY_LEVELS[qualityLevel] || QUALITY_LEVELS.normal;
-  const IconComponent = level.icon;
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={[styles.statusIcon, { backgroundColor: level.bg }]}>
-          <IconComponent size={28} color={level.color} />
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Water Quality Status</Text>
-          <Text style={styles.subtitle}>Last updated: {lastUpdated}</Text>
-        </View>
-      </View>
-
-      <View style={[styles.statusBanner, { backgroundColor: level.bg }]}>
-        <Text style={[styles.statusLabel, { color: level.color }]}>
-          {level.label}
-        </Text>
-        <Text style={styles.statusDescription}>{level.description}</Text>
-      </View>
-
-      {parameters.length > 0 && (
-        <View style={styles.parametersGrid}>
-          {parameters.map((param) => (
-            <ParameterPill key={param.name} {...param} />
-          ))}
-        </View>
-      )}
-    </View>
-  );
-}
