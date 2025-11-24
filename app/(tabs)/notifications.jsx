@@ -1,11 +1,10 @@
 import React from "react";
-import GlobalWrapper from "@ui/GlobalWrapper";
 
 // Components
-import NotificationsLoadingState from "@components/sections/NotificationsLoadingState";
-import NotificationsErrorState from "@components/sections/NotificationsErrorState";
 import NotificationsEmptyState from "@components/sections/NotificationsEmptyState";
+import NotificationsErrorState from "@components/sections/NotificationsErrorState";
 import NotificationsList from "@components/sections/NotificationsList";
+import NotificationsLoadingState from "@components/sections/NotificationsLoadingState";
 
 // Hooks
 import { useNotificationsData } from "@hooks/useNotificationsData";

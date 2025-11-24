@@ -27,23 +27,25 @@ export class WaterQualityNotifier {
         customMessage = null,
         provider = 'default'
       } = options;
-  
+
+      console.log(`🚨 Water quality alert: ${parameter} = ${value} (${alertLevel})`);
+
       // Check cooldown unless forced
       if (!forceNotify && !this.canSendNotification(parameter, alertLevel)) {
         console.log(`⏰ Notification cooldown active for ${parameter}-${alertLevel}`);
         return { success: false, reason: 'cooldown_active' };
       }
-  
+
       try {
         // Create notification using template
-        const notification = customMessage ? 
+        const notification = customMessage ?
           this.createCustomNotification(parameter, value, alertLevel, customMessage) :
           NotificationTemplates.waterQualityAlert(
             parameter.charAt(0).toUpperCase() + parameter.slice(1),
             this.formatParameterValue(parameter, value),
             alertLevel
           );
-  
+
         // Send notification
         const result = await this.notificationService.send(notification, provider);
   

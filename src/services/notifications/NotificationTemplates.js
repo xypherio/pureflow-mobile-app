@@ -18,7 +18,7 @@ class NotificationTemplates {
       categoryId: 'alerts',
       priority: status === 'critical' ? 'high' : 'normal',
       sound: status === 'critical' ? 'critical_alert' : 'default',
-      vibration: status === 'critical' ? [0, 250, 250, 250] : [0, 100, 100, 100]
+      vibration: status === 'critical' ? [0, 250, 250, 250] : false
     };
   }
 
@@ -34,7 +34,8 @@ class NotificationTemplates {
         category: 'system'
       },
       categoryId: 'system',
-      priority: 'normal'
+      priority: 'normal',
+      vibration: [0, 500, 200, 500] // Double long vibration for connection issues
     };
   }
 
@@ -137,7 +138,8 @@ class NotificationTemplates {
         category: 'system'
       },
       categoryId: 'system',
-      priority: 'high'
+      priority: 'high',
+      vibration: [0, 200, 100, 200, 100, 200] // Multiple short bursts for sync error
     };
   }
 
@@ -255,7 +257,7 @@ class NotificationTemplates {
       categoryId: 'alerts',
       priority: 'normal',
       sound: 'default',
-      vibration: true
+      vibration: false
     };
   }
 
@@ -308,7 +310,8 @@ class NotificationTemplates {
         deepLink: 'pureflow://alerts'
       },
       categoryId: 'alerts',
-      priority: 'high'
+      priority: 'high',
+      vibration: [0, 500, 300, 500, 300, 500] // Intense emergency pattern for harmful water
     };
   }
 

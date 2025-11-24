@@ -1,6 +1,7 @@
 import { getWaterQualityThresholds } from "@constants/thresholds";
 import { useData } from "@contexts/DataContext";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { WaterQualityCalculator } from "../../services/core/WaterQualityCalculator";
@@ -63,12 +64,19 @@ export default function RealTimeData() {
       const value = sensorData[key];
       const hasValidValue = value != null && !isNaN(value);
 
-      // Calculate threshold status using WaterQualityCalculator
+      // Calculate threshold status based on threshold limits
       let thresholdStatus = 'normal';
-      if (hasValidValue) {
-        const calculator = new WaterQualityCalculator();
-        const score = calculator.calculateParameterScore(key, value);
-        thresholdStatus = score >= 80 ? 'normal' : 'approaching';
+      if (hasValidValue && thresholds[key]) {
+        const threshold = thresholds[key];
+        const numValue = Number(value);
+
+        if (numValue > threshold.max) {
+          // Above maximum threshold
+          thresholdStatus = numValue > threshold.max * 1.2 ? 'critical' : 'warning';
+        } else if (numValue < threshold.min) {
+          // Below minimum threshold
+          thresholdStatus = numValue < threshold.min * 0.8 ? 'critical' : 'warning';
+        }
       }
 
       return {
@@ -122,40 +130,76 @@ export default function RealTimeData() {
 }
 
 // Memoized parameter card component for better performance
-const ParameterCard = React.memo(({ param }) => (
-  <View style={[
-    styles.parameterCard,
-    param.thresholdStatus === 'approaching' && styles.parameterCardApproaching
-  ]}>
-    <View>
-      {param.icon}
-      <View style={styles.iconValueContainer}>
-        <Text
-          style={[param.hasData ? styles.valueText : styles.valueTextNoData, {
-            color: param.color,
-          }]}
+const ParameterCard = React.memo(({ param }) => {
+  const isWarning = param.thresholdStatus === 'warning';
+  const isCritical = param.thresholdStatus === 'critical';
+
+  // Define gradient colors: white to main tint
+  const getGradientColors = () => {
+    if (isWarning) {
+      return ['#ffffff', '#fff7e6']; // white to warning yellow
+    }
+    if (isCritical) {
+      return ['#ffffff', '#ffeaea']; // white to critical red
+    }
+    return ['#f6fafd', '#f6fafd']; // normal (solid)
+  };
+
+  const WrappedCard = ({ children }) => {
+    if (isWarning || isCritical) {
+      return (
+        <LinearGradient
+          colors={getGradientColors()}
+          style={[
+            styles.parameterCard,
+            styles.parameterCardGradient
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
         >
-          {param.value}
-        </Text>
-        <Text
-          style={[param.hasData ? styles.unitText : styles.unitTextNoData, {
-            color: param.color,
-          }]}
-        >
-          {param.unit}
-        </Text>
+          {children}
+        </LinearGradient>
+      );
+    }
+    return (
+      <View style={styles.parameterCard}>
+        {children}
       </View>
-    </View>
-    <Text style={styles.labelText}>
-      {param.label}
-    </Text>
-    {param.threshold && param.threshold.min !== undefined && param.threshold.max !== undefined && (
-      <Text style={styles.thresholdText}>
-        Normal range: {param.threshold.min} - {param.threshold.max}
+    );
+  };
+
+  return (
+    <WrappedCard>
+      <View>
+        {param.icon}
+        <View style={styles.iconValueContainer}>
+          <Text
+            style={[param.hasData ? styles.valueText : styles.valueTextNoData, {
+              color: param.color,
+            }]}
+          >
+            {param.value}
+          </Text>
+          <Text
+            style={[param.hasData ? styles.unitText : styles.unitTextNoData, {
+              color: param.color,
+            }]}
+          >
+            {param.unit}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.labelText}>
+        {param.label}
       </Text>
-    )}
-  </View>
-));
+      {param.threshold && param.threshold.min !== undefined && param.threshold.max !== undefined && (
+        <Text style={styles.thresholdText}>
+          Normal range: {param.threshold.min} - {param.threshold.max}
+        </Text>
+      )}
+    </WrappedCard>
+  );
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -194,9 +238,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     justifyContent: "space-between",
   },
-  parameterCardApproaching: {
-    backgroundColor: "#ffdddd",
-    borderRadius: 12
+  parameterCardGradient: {
+    borderRadius: 12,
   },
   iconValueContainer: {
     flexDirection: "row",
