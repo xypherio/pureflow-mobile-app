@@ -276,9 +276,9 @@ class ServiceContainer {
         send: async (notification) => await pushProvider.send(notification)
       });
 
-      // Set 'default' to use push notifications for alerts
+      // Set 'default' to use local notifications for alerts (always works when app is open)
       notificationService.registerProvider('default', {
-        send: async (notification) => await notificationService.send(notification, 'push')
+        send: async (notification) => await notificationManager.sendLocalNotification(notification)
       });
 
       this.register('notificationService', notificationService);

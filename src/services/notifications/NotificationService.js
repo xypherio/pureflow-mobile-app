@@ -33,18 +33,19 @@ export class NotificationService {
         console.log('📱 Notifications disabled globally');
         return { success: false, reason: 'disabled' };
       }
-  
+
       try {
         // Apply middleware
         let processedNotification = await this.applyMiddleware(notification);
-        
+
         const provider = this.providers.get(providerName);
         if (!provider) {
+          console.error(`❌ Provider ${providerName} not found. Available: ${Array.from(this.providers.keys()).join(', ')}`);
           throw new Error(`Provider ${providerName} not found`);
         }
-  
+
         // Send with retry logic
-        return await this.sendWithRetry(provider, processedNotification);
+        return await this.sendWithRetry(provider, processedNotification, providerName);
         
       } catch (error) {
         console.error(`❌ Error sending notification via ${providerName}:`, error);
