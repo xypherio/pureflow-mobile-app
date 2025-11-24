@@ -355,12 +355,16 @@ export class WaterQualityNotifier {
           analysis.direction
         );
 
-        const result = await this.notificationService.send(notification);
+        const result = await this.notificationService.send(notification, 'push'); // Explicitly use push provider
 
         if (result.success) {
+          // Record notification time with 'borderline' severity
           const key = `borderline-${parameter}`;
           this.cooldowns.set(key, Date.now());
-          console.log(`📱 Borderline alert sent: ${parameter} (${analysis.direction})`);
+          console.log(`📱 Borderline alert sent: ${parameter} = ${value} (${analysis.direction})`);
+          console.log('📲 Borderline push notification delivered to device');
+        } else {
+          console.error('❌ Failed to send borderline push notification:', result.error);
         }
 
         return result;

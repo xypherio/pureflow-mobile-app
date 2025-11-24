@@ -1,5 +1,5 @@
-import { getAlertFacade, getDashboardFacade } from '@services/ServiceContainer';
 import { realtimeDataService } from "@services/realtimeDataService";
+import serviceContainer from '@services/ServiceContainer';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 const DataContext = createContext();
@@ -70,7 +70,7 @@ export function DataProvider({ children, initialData = null }) {
         console.log('🚀 Using precomputed alerts from initial load');
       } else {
         // Process new alerts with deduplication and threshold checking
-        const alertResult = await getAlertFacade().processSensorData(newSensorData);
+        const alertResult = await serviceContainer.getAlertFacade().processSensorData(newSensorData);
         setAlerts(alertResult.processedAlerts);
 
         if (alertResult.newAlerts.length > 0) {
@@ -83,7 +83,7 @@ export function DataProvider({ children, initialData = null }) {
       }
 
       // Update alert statistics for dashboard display
-      const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+      const allAlerts = await serviceContainer.getAlertFacade().getAlertsForDisplay({ limit: 1000 });
       const stats = {
         total: allAlerts.length,
         high: allAlerts.filter(alert => alert.severity === 'high').length,
@@ -124,11 +124,11 @@ export function DataProvider({ children, initialData = null }) {
 
       // Use optimized dashboard data with smart limits
       const [dashboardResult, realtimeDataResult] = await Promise.allSettled([
-        getDashboardFacade().getDashboardData({
+        serviceContainer.getDashboardFacade().getDashboardData({
           includeHistorical: true,
-          useCache: true, 
-          historicalLimit: 30, 
-          hoursBack: 24      
+          useCache: true,
+          historicalLimit: 30,
+          hoursBack: 24
         }),
         realtimeDataService.getMostRecentData({
           useCache: true,      
@@ -160,8 +160,8 @@ export function DataProvider({ children, initialData = null }) {
         if (!current) {
           console.warn('⚠️ Daily report is null/undefined in context update');
         }
-      } else if (sensorDataResult.status === 'rejected') {
-        console.error('❌ Failed to fetch sensor data:', sensorDataResult.reason);
+      } else if (dashboardResult.status === 'rejected') {
+        console.error('❌ Failed to fetch dashboard data:', dashboardResult.reason);
       }
 
       // Process real-time data
@@ -221,8 +221,8 @@ export function DataProvider({ children, initialData = null }) {
                 datetime: actualSensorData.timestamp || realtimeDataForAlerts.timestamp,
               }];
               
-              const alertResult = await getAlertFacade().processSensorData(sensorDataForAlerts);
-              
+              const alertResult = await serviceContainer.getAlertFacade().processSensorData(sensorDataForAlerts);
+
               // Update the last processed signature
               lastProcessedDataSignature.current = currentDataSignature;
 
@@ -239,7 +239,7 @@ export function DataProvider({ children, initialData = null }) {
                 setAlerts(alertResult.processedAlerts);
 
                 // Update alert statistics for dashboard display
-                const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+                const allAlerts = await serviceContainer.getAlertFacade().getAlertsForDisplay({ limit: 1000 });
                 const stats = {
                   total: allAlerts.length,
                   high: allAlerts.filter(alert => alert.severity === 'high').length,
@@ -312,6 +312,14 @@ export function DataProvider({ children, initialData = null }) {
      * Initializes application data either from props or API
      */
     const initializeData = async () => {
+      // Initialize service container first
+      try {
+        await serviceContainer.initialize();
+        console.log('✅ Service container initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize service container:', error);
+      }
+
       // Use preloaded data if available (from server-side rendering or cache)
       if (initialData) {
         console.log('🚀 Using preloaded initial data');
@@ -321,7 +329,7 @@ export function DataProvider({ children, initialData = null }) {
           console.log(`📦 Initializing AlertFacade with ${initialData.alerts.length} preloaded alerts`);
 
           // Register each alert with AlertFacade to prevent regeneration
-          const alertFacade = getAlertFacade();
+          const alertFacade = serviceContainer.getAlertFacade();
           for (const alert of initialData.alerts) {
             // Note: AlertFacade handles deduplication automatically during processing
             console.log(`📝 AlertFacade will handle alert deduplication automatically`);
@@ -447,23 +455,23 @@ export function DataProvider({ children, initialData = null }) {
                   datetime: actualSensorData.timestamp || newRealtimeData.timestamp,
                 }];
 
-                const alertResult = await getAlertFacade().processSensorData(sensorDataForAlerts);
+                const alertResult = await serviceContainer.getAlertFacade().processSensorData(sensorDataForAlerts);
                 lastProcessedDataSignature.current = currentDataSignature;
 
                 if (alertResult.newAlerts.length > 0) {
-                  console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time Firebase update`);
+                  console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
                 }
 
                 if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
                   console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
                 }
 
-                // Update alerts state asynchronously
+                // Update state immediately and synchronously
                 if (isMountedRef.current) {
                   setAlerts(alertResult.processedAlerts);
 
-                  // Update alert statistics
-                  const allAlerts = await getAlertFacade().getAlertsForDisplay({ limit: 1000 });
+                  // Update alert statistics for dashboard display
+                  const allAlerts = await serviceContainer.getAlertFacade().getAlertsForDisplay({ limit: 1000 });
                   const stats = {
                     total: allAlerts.length,
                     high: allAlerts.filter(alert => alert.severity === 'high').length,
@@ -586,7 +594,7 @@ export function DataProvider({ children, initialData = null }) {
    * @returns {Array} All active alerts with full details
    */
   const getNotificationAlerts = useCallback(async () => {
-    const alertFacade = getAlertFacade();
+    const alertFacade = serviceContainer.getAlertFacade();
     const alerts = await alertFacade.getAlertsForDisplay({ limit: 20 });
     return alerts.map(alert => ({
       ...alert,

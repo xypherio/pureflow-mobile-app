@@ -151,7 +151,7 @@ class ScheduledNotificationManager {
         this.schedules.set(scheduleId, {
           id: result.notificationId,
           type: 'forecast_reminder',
-          trigger: { hour: 11, minute: 35, repeats: true },
+          trigger: { hour: 22, minute: 0, repeats: true },
           created: new Date().toISOString(),
           active: true
         });

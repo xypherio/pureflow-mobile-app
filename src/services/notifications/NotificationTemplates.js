@@ -253,7 +253,9 @@ class NotificationTemplates {
         category: 'alerts'
       },
       categoryId: 'alerts',
-      priority: 'normal'
+      priority: 'normal',
+      sound: 'default',
+      vibration: true
     };
   }
 

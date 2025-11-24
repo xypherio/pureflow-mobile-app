@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "PureFlow",
-    "slug": "pureflow-mobile",
+    "slug": "pureflow",
     "version": "1.0.0",
     "owner": "xy_pher",
     "orientation": "portrait",
@@ -20,11 +20,20 @@
       },
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
-      "package": "com.xypher.pureflowmobile"
+      "package": "com.xypher.pureflowmobile",
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE",
+        "android.permission.INTERNET"
+      ],
+      "useNextNotificationsApi": true
     },
     "notification": {
       "icon": "./assets/logo/logo-emblem.png",
-      "color": "#ffffff"
+      "color": "#ffffff",
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notifications} new interactions"
     },
 
     "web": {

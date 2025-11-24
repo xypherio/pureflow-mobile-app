@@ -101,7 +101,8 @@ export class AlertRepository {
       threshold: rawAlert.threshold,
       timestamp: this.parseTimestamp(rawAlert.timestamp || rawAlert.createdAt),
       createdAt: rawAlert.createdAt,
-      occurrenceCount: rawAlert.occurrenceCount || 1
+      occurrenceCount: rawAlert.occurrenceCount || 1,
+      isWarning: rawAlert.isWarning ?? false
     };
   }
 
