@@ -118,24 +118,6 @@ export const globalStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  
-  // Text styles
-  text: {
-    color: colors.text,
-    fontFamily: 'Poppins_400Regular',
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  subheading: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: colors.text,
-    fontFamily: 'Poppins_500Medium',
-  },
 });
 
 export default globalStyles;
