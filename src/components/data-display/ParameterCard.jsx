@@ -1,19 +1,4 @@
 /**
- * ParameterCard Component
- *
- * An expandable card component that displays water quality parameter data,
- * trends, and charts. Supports collapsible sections for different levels of detail.
- *
- * Features:
- * - Expandable/collapsible interface with smooth animations
- * - Water quality parameter visualization with status indicators
- * - Interactive bar charts with tooltips for detailed data points
- * - AI insights display (when available and card is expanded)
- * - Color-coded status system for quick visual assessment
- * - Parameter-specific icons and colors
- * - Min/Max value display when expanded
- * - Dynamic chart scaling based on data points
- *
  * @param {Object} props
  * @param {string} props.parameter - Parameter name (e.g., 'pH', 'temperature')
  * @param {string|number} props.value - Current parameter value
@@ -24,14 +9,15 @@
  * @param {Array} props.chartData - Chart data points with labels and datasets
  * @param {number} props.minValue - Minimum value encountered
  * @param {number} props.maxValue - Maximum value encountered
- * @param {string} props.insight - AI-generated insight text (optional)
+ * @param {string} props.insight - AI-generated insight text (deprecated - insights are now generated automatically)
  */
 
+import { useInsights } from '@contexts/InsightsContext';
 import { ChevronDown, ChevronUp, Droplet, Gauge, Minus, Plus, Thermometer, Waves } from 'lucide-react-native';
-import { WaterQualityCalculator } from '../../services/core/WaterQualityCalculator';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+import { WaterQualityCalculator } from '../../services/core/WaterQualityCalculator';
 import ChartTooltip from '../ui/ChartToolTip';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -109,6 +95,8 @@ const ParameterCard = ({
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  const { generateComponentInsight, getComponentInsight, isComponentLoading, getComponentError } = useInsights();
 
   // Calculate parameter score and determine threshold-based status
   const calculatedStatus = useMemo(() => {
@@ -243,6 +231,34 @@ const statusColors = {
   const handleTooltipHide = () => {
     setTooltipVisible(false);
   };
+
+  // Generate insights for this parameter when expanded
+  const componentId = `${parameter?.toLowerCase().replace(/[^a-z0-9]/g, '-')}-insight`;
+
+  useEffect(() => {
+    if (expanded && parameter && value !== undefined && aggregatedChartData) {
+      const sensorData = {
+        parameter,
+        value,
+        unit,
+        chartData: aggregatedChartData,
+        minValue,
+        maxValue,
+        status,
+        safeRange,
+        analysis
+      };
+
+      generateComponentInsight(componentId, sensorData).catch(error => {
+        console.warn('Failed to generate insight for parameter:', parameter, error);
+      });
+    }
+  }, [expanded, parameter, value, aggregatedChartData, generateComponentInsight, componentId, unit, minValue, maxValue, status, safeRange, analysis]);
+
+  // Get current insight
+  const currentInsight = getComponentInsight(componentId);
+  const insightLoading = isComponentLoading(componentId);
+  const insightError = getComponentError(componentId);
 
   return (
     <View style={[
@@ -390,16 +406,22 @@ const statusColors = {
               onHide={() => setTooltipVisible(false)}
             />
 
-            {insight && (
-              <View style={[styles.insightContainer, {
-                borderLeftColor: parameterColor,
-              }]}>
-                <Text style={[styles.insightTitle, {
-                  color: parameterColor,
-                }]}>💡 AI Insight</Text>
-                <Text style={styles.insightText}>{insight}</Text>
-              </View>
-            )}
+            <View style={[styles.insightContainer, {
+              borderLeftColor: parameterColor,
+            }]}>
+              <Text style={[styles.insightTitle, {
+                color: parameterColor,
+              }]}>💡 AI Insight</Text>
+              {insightLoading ? (
+                <Text style={styles.insightText}>Generating insight...</Text>
+              ) : insightError ? (
+                <Text style={styles.insightText}>Unable to generate insight at this time.</Text>
+              ) : currentInsight?.insights?.overallInsight ? (
+                <Text style={styles.insightText}>{currentInsight.insights.overallInsight}</Text>
+              ) : (
+                <Text style={styles.insightText}>Insights will be available once the AI analyzes this parameter's data.</Text>
+              )}
+            </View>
           </View>
         )}
         {expanded && !aggregatedChartData && (
