@@ -53,19 +53,50 @@ export default function RootLayout() {
 
   useEffect(() => {
     let isMounted = true;
+    let initializationTimeout;
 
     async function prepareApp() {
+      const startTime = Date.now();
+      console.log('🚀 Starting app preparation...');
+
       try {
         console.log('🔧 Initializing application services...');
-        // Initialize all application services
-        await initializeServices();
-        console.log('✅ All services initialized, app is ready to launch.');
+
+        // Add timeout protection for service initialization
+        const serviceInitPromise = initializeServices();
+        const timeoutPromise = new Promise((_, reject) => {
+          initializationTimeout = setTimeout(() => {
+            reject(new Error('Service initialization timed out after 30 seconds'));
+          }, 30000); // 30 second timeout
+        });
+
+        await Promise.race([serviceInitPromise, timeoutPromise]);
+        clearTimeout(initializationTimeout);
+
+        const serviceInitTime = Date.now() - startTime;
+        console.log(`✅ All services initialized successfully in ${serviceInitTime}ms, app is ready to launch.`);
+
         if (isMounted) {
           setServicesReady(true);
         }
       } catch (e) {
-        console.error('❌ Failed to initialize app services', e);
-        // Set services as ready anyway to prevent app from being stuck
+        clearTimeout(initializationTimeout);
+        const failTime = Date.now() - startTime;
+        console.error(`❌ Failed to initialize app services after ${failTime}ms:`, e);
+
+        // Determine if this is a critical failure or can continue with limited functionality
+        const isCriticalError = (
+          e.message?.includes('Service initialization timed out') ||
+          e.message?.includes('Firebase config') ||
+          e.message?.includes('Not a physical device')
+        );
+
+        if (isCriticalError) {
+          console.warn('🚨 Critical initialization error detected - some features may not work');
+        }
+
+        // Always set servicesReady to true to prevent app from being stuck
+        // The app will continue with whatever services did initialize successfully
         if (isMounted) {
           setServicesReady(true);
         }
@@ -81,6 +112,9 @@ export default function RootLayout() {
 
     return () => {
       isMounted = false;
+      if (initializationTimeout) {
+        clearTimeout(initializationTimeout);
+      }
     };
   }, [fontsLoaded]);
 

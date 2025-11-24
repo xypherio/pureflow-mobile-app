@@ -267,17 +267,17 @@ export class AlertProcessor {
       const isWarning = alertLevel === 'warning';
 
       const recommendationMap = {
-        ph: this.getPHRecommendations(isCritical, direction, deviation, value),
-        temperature: this.getTemperatureRecommendations(isCritical, direction, deviation, value),
-        turbidity: this.getTurbidityRecommendations(isCritical, direction, deviation, value),
-        salinity: this.getSalinityRecommendations(isCritical, direction, deviation, value),
-        tds: this.getTDSRecommendations(isCritical, direction, deviation, value)
+        ph: this.getPHRecommendations(isCritical, isWarning, direction, deviation, value),
+        temperature: this.getTemperatureRecommendations(isCritical, isWarning, direction, deviation, value),
+        turbidity: this.getTurbidityRecommendations(isCritical, isWarning, direction, deviation, value),
+        salinity: this.getSalinityRecommendations(isCritical, isWarning, direction, deviation, value),
+        tds: this.getTDSRecommendations(isCritical, isWarning, direction, deviation, value)
       };
 
       return recommendationMap[paramLower] || this.getDefaultRecommendations(parameter, alertLevel);
     }
 
-    getPHRecommendations(isCritical, direction, deviation, value) {
+    getPHRecommendations(isCritical, isWarning, direction, deviation, value) {
       if (direction === 'high') {
         if (isCritical) {
           if (deviation > 20) {
@@ -344,7 +344,7 @@ export class AlertProcessor {
       return ['Monitor pH levels and maintain stability'];
     }
 
-    getTemperatureRecommendations(isCritical, direction, deviation, value) {
+    getTemperatureRecommendations(isCritical, isWarning, direction, deviation, value) {
       if (direction === 'high') {
         if (isCritical) {
           return [
@@ -384,7 +384,7 @@ export class AlertProcessor {
       return ['Maintain stable temperature conditions'];
     }
 
-    getTurbidityRecommendations(isCritical, direction, deviation, value) {
+    getTurbidityRecommendations(isCritical, isWarning, direction, deviation, value) {
       if (direction === 'high') {
         if (isCritical || deviation > 50) {
           return [
@@ -421,7 +421,7 @@ export class AlertProcessor {
       return ['Monitor water clarity and filtration performance'];
     }
 
-    getSalinityRecommendations(isCritical, direction, deviation, value) {
+    getSalinityRecommendations(isCritical, isWarning, direction, deviation, value) {
       if (direction === 'high') {
         if (isCritical) {
           return [
@@ -459,7 +459,7 @@ export class AlertProcessor {
       return ['Monitor salinity levels and maintain stability'];
     }
 
-    getTDSRecommendations(isCritical, direction, deviation, value) {
+    getTDSRecommendations(isCritical, isWarning, direction, deviation, value) {
       if (direction === 'high') {
         if (isCritical) {
           return [

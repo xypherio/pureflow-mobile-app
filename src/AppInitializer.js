@@ -31,8 +31,18 @@ export default function AppInitializer({ children }) {
         const permissionResult = await notificationManager.requestPermissions();
         if (permissionResult.success) {
           console.log('✅ Notification permissions granted automatically');
+          console.log('🔍 Permission status:', permissionResult.status);
+
+          // Get device token to verify it's working
+          const tokenResult = await notificationManager.getDeviceToken(true); // Force refresh for logging
+          if (tokenResult.success) {
+            console.log('📱 Device token retrieved during init:', tokenResult.token);
+          } else {
+            console.error('❌ Failed to get device token during init:', tokenResult.reason || tokenResult.error);
+          }
         } else {
           console.log('⚠️ Notification permissions not granted (user can grant later)');
+          console.log('🔍 Permission status:', permissionResult.status);
         }
 
         setProgress('Loading initial data...');

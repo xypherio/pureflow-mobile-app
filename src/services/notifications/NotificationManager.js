@@ -190,6 +190,7 @@ class NotificationManager {
     }
 
     if (this.deviceToken && !forceRefresh) {
+      console.log('📱 Using cached device token:', this.deviceToken);
       return { success: true, token: this.deviceToken };
     }
 
@@ -205,10 +206,11 @@ class NotificationManager {
       // Get the token
       const tokenResult = await Notifications.getExpoPushTokenAsync();
       this.deviceToken = tokenResult.data;
-      
-      // Store token locally for future use
+
+      // Store token locally for future use (both formats for compatibility)
       await AsyncStorage.setItem('expo_push_token', this.deviceToken);
-      
+      await AsyncStorage.setItem('expo_push_tokens', JSON.stringify([this.deviceToken]));
+
       console.log('✅ Device token obtained:', this.deviceToken);
       
       return { 

@@ -1,4 +1,4 @@
-import { getDashboardFacade } from '@services/ServiceContainer';
+import serviceContainer from '@services/ServiceContainer';
 import { historicalAlertsService } from '@services/historicalAlertsService';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -34,13 +34,31 @@ export default function SplashScreen({ onDataLoaded, servicesReady }) {
     }
   }, [servicesReady, onDataLoaded]);
 
+  useEffect(() => {
+    // Set up timeout for data preloading (fail-safe)
+    const preloadTimeout = setTimeout(() => {
+      console.warn('⚠️ Data preloading timeout reached, continuing without preloaded data');
+      if (onDataLoaded) {
+        onDataLoaded({
+          sensorData: [],
+          alerts: [],
+          fromCache: false,
+          loadTime: 0,
+          timeout: true
+        });
+      }
+},15000);
+
+    return () => clearTimeout(preloadTimeout);
+  }, [onDataLoaded]);
+
   const preloadAppData = async () => {
     try {
       setLoadingText('Loading sensor data...');
       setProgress(25);
 
       // Preload dashboard data
-      const dashboardData = await getDashboardFacade().getDashboardData({
+      const dashboardData = await serviceContainer.getDashboardFacade().getDashboardData({
         includeHistorical: true,
         useCache: true
       });

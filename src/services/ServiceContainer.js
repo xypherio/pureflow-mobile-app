@@ -10,6 +10,9 @@ import { SensorDataRepository } from './data/SensorDataRepository';
 import { AlertRepository } from './data/AlertRepository';
 import { DataAggregationService } from './data/DataAggregationService';
 
+// Health monitoring
+import { serviceHealthMonitor } from './ServiceHealthMonitor';
+
 // Notification layer - imported dynamically to avoid circular dependencies
 
 // Caching layer
@@ -55,61 +58,139 @@ class ServiceContainer {
     }
 
     this.initializationPromise = (async () => {
+      const startTime = Date.now();
+      let currentStep = 0;
+
+      const stepTiming = (stepName) => {
+        const elapsed = Date.now() - startTime;
+        console.log(`⏱️ Step ${++currentStep} completed in ${elapsed}ms: ${stepName}`);
+      };
+
+      const failStep = (stepName, error) => {
+        const elapsed = Date.now() - startTime;
+        console.error(`❌ Step ${currentStep + 1} failed after ${elapsed}ms: ${stepName}`, error);
+        console.error(`📊 Service status when failed:`, this.getServiceStatus());
+      };
+
       try {
         if (this.initialized) {
           console.log('⚠️ ServiceContainer already initialized');
           return;
         }
-        console.log('🔧 Initializing ServiceContainer...');
+        console.log('🔧 Starting ServiceContainer initialization...');
 
+        // Step 1: Initialize core services
+        console.log('1️⃣ Initializing core services...');
         try {
-          console.log('1️⃣ Initializing core services...');
           await this.initializeCoreServices();
-          console.log('✅ Core services initialized');
-          
-          console.log('2️⃣ Initializing data services...');
-          await this.initializeDataServices();
-          console.log('✅ Data services initialized');
-          
-          console.log('3️⃣ Initializing caching services...');
-          await this.initializeCachingServices();
-          console.log('✅ Caching services initialized');
-          
-          console.log('4️⃣ Initializing notification services...');
-          await this.initializeNotificationServices();
-          console.log('✅ Notification services initialized');
-          
-          console.log('5️⃣ Initializing processing services...');
-          await this.initializeProcessingServices();
-          console.log('✅ Processing services initialized');
-          
-          console.log('6️⃣ Initializing facade services...');
-          await this.initializeFacadeServices();
-          console.log('✅ Facade services initialized');
-          
-          console.log('7️⃣ Setting up validation and monitoring...');
-          await this.setupValidationAndMonitoring();
-          console.log('✅ Validation and monitoring set up');
-          
-          console.log('8️⃣ Initializing legacy adapters...');
-          await this.initializeLegacyAdapters();
-          console.log('✅ Legacy adapters initialized');
-          
-          console.log('9️⃣ Running post-initialization...');
-          await this.postInitializeServices();
-          console.log('✅ Post-initialization complete');
-          
-          this.initialized = true;
-          console.log('✅✅✅ ServiceContainer initialized successfully');
+          stepTiming('Core services initialized');
         } catch (error) {
-          console.error('❌ Error during initialization step:', error);
-          throw error; // Re-throw to be caught by the outer try-catch
+          failStep('Core services initialization', error);
+          throw error;
         }
+
+        // Step 2: Initialize data services
+        console.log('2️⃣ Initializing data services...');
+        try {
+          await this.initializeDataServices();
+          stepTiming('Data services initialized');
+        } catch (error) {
+          failStep('Data services initialization', error);
+          throw error;
+        }
+
+        // Step 3: Initialize caching services
+        console.log('3️⃣ Initializing caching services...');
+        try {
+          await this.initializeCachingServices();
+          stepTiming('Caching services initialized');
+        } catch (error) {
+          failStep('Caching services initialization', error);
+          throw error;
+        }
+
+        // Step 4: Initialize notification services
+        console.log('4️⃣ Initializing notification services...');
+        try {
+          await this.initializeNotificationServices();
+          stepTiming('Notification services initialized');
+        } catch (error) {
+          failStep('Notification services initialization', error);
+          throw error;
+        }
+
+        // Step 5: Initialize processing services
+        console.log('5️⃣ Initializing processing services...');
+        try {
+          await this.initializeProcessingServices();
+          stepTiming('Processing services initialized');
+        } catch (error) {
+          failStep('Processing services initialization', error);
+          throw error;
+        }
+
+        // Step 6: Initialize facade services
+        console.log('6️⃣ Initializing facade services...');
+        try {
+          await this.initializeFacadeServices();
+          stepTiming('Facade services initialized');
+        } catch (error) {
+          failStep('Facade services initialization', error);
+          throw error;
+        }
+
+        // Step 7: Setup validation and monitoring
+        console.log('7️⃣ Setting up validation and monitoring...');
+        try {
+          await this.setupValidationAndMonitoring();
+          stepTiming('Validation and monitoring set up');
+        } catch (error) {
+          failStep('Validation and monitoring setup', error);
+          throw error;
+        }
+
+        // Step 8: Initialize legacy adapters
+        console.log('8️⃣ Initializing legacy adapters...');
+        try {
+          await this.initializeLegacyAdapters();
+          stepTiming('Legacy adapters initialized');
+        } catch (error) {
+          failStep('Legacy adapters initialization', error);
+          throw error;
+        }
+
+        // Step 9: Run post-initialization
+        console.log('9️⃣ Running post-initialization...');
+        try {
+          await this.postInitializeServices();
+          stepTiming('Post-initialization complete');
+        } catch (error) {
+          failStep('Post-initialization', error);
+          throw error;
+        }
+
+        this.initialized = true;
+        const totalTime = Date.now() - startTime;
+        console.log(`✅✅✅ ServiceContainer initialized successfully in ${totalTime}ms`);
+
+        // Log final health check
+        await this.performHealthCheck();
+
       } catch (error) {
         console.error('❌ Critical error during ServiceContainer initialization:', error);
-        this.initializationPromise = null; // Allow retry
+        const totalTime = Date.now() - startTime;
+        console.error(`🚨 Total initialization time before failure: ${totalTime}ms`);
+
+        // Check which services are registered despite failure
+        const services = this.getServiceStatus();
+        const registeredCount = Object.values(services).length;
+        console.error(`📊 Services registered: ${registeredCount}/~40`);
+
+        // Reset state for retry
+        this.initializationPromise = null;
         this.initialized = false;
-        throw error; // Re-throw to allow the app to handle it
+
+        throw error;
       }
     })();
 
@@ -182,20 +263,22 @@ class ServiceContainer {
       // Core notification service
       const notificationService = new NotificationService();
 
-      // Register notification providers
+      // Register local notification providers (work only when app is running)
       notificationService.registerProvider('local', {
-        send: async (notification) => {
-          // Integrate with your existing notification manager
-          return await notificationManager.sendLocalNotification(notification);
-        }
+        send: async (notification) => await notificationManager.sendLocalNotification(notification)
       });
 
-      // Register default provider for backward compatibility
+      // Register push notification providers (work even when app is closed)
+      const { PushNotificationProvider } = await import('./notifications/PushNotificationProvider');
+      const pushProvider = new PushNotificationProvider();
+
+      notificationService.registerProvider('push', {
+        send: async (notification) => await pushProvider.send(notification)
+      });
+
+      // Set 'default' to use push notifications for alerts
       notificationService.registerProvider('default', {
-        send: async (notification) => {
-          // Integrate with your existing notification manager
-          return await notificationManager.sendLocalNotification(notification);
-        }
+        send: async (notification) => await notificationService.send(notification, 'push')
       });
 
       this.register('notificationService', notificationService);
@@ -291,11 +374,13 @@ class ServiceContainer {
     // Register performance monitor
     this.register('performanceMonitor', performanceMonitor);
 
-    // Schedule cache maintenance
-    this.scheduleCacheMaintenance();
-
     // Setup service health monitoring
     this.setupHealthMonitoring();
+    this.register('serviceHealthMonitor', serviceHealthMonitor);
+    serviceHealthMonitor.startMonitoring();
+
+    // Schedule cache maintenance
+    this.scheduleCacheMaintenance();
 
     console.log('✅ Validation and monitoring setup complete');
   }
@@ -477,10 +562,25 @@ export async function initializeServices() {
 
 export default serviceContainer;
 
-// Convenience exports for direct access to facades
-export const getDashboardFacade = () => serviceContainer.getDashboardFacade();
-export const getAlertFacade = () => serviceContainer.getAlertFacade();
-export const getReportsFacade = () => serviceContainer.getReportsFacade();
+// Convenience exports for direct access to facades with lazy initialization
+export const getDashboardFacade = async () => {
+  if (!serviceContainer.initialized) {
+    await serviceContainer.initialize();
+  }
+  return serviceContainer.getDashboardFacade();
+};
+export const getAlertFacade = async () => {
+  if (!serviceContainer.initialized) {
+    await serviceContainer.initialize();
+  }
+  return serviceContainer.getAlertFacade();
+};
+export const getReportsFacade = async () => {
+  if (!serviceContainer.initialized) {
+    await serviceContainer.initialize();
+  }
+  return serviceContainer.getReportsFacade();
+};
 
 // src/services/index.js - Main service exports for easy importing
 export { default as ServiceContainer } from './ServiceContainer';
