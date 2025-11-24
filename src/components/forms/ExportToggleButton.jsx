@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   optionButtonWrapper: {
     alignItems: "center",
-    marginBottom: 5, // Reduced margin
+    marginBottom: 5, 
   },
   optionButton: {
     width: 56,
@@ -177,5 +177,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    marginRight: 8,
   },
 });

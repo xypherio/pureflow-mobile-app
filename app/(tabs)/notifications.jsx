@@ -42,15 +42,18 @@ export default function NotificationsScreen() {
     handleDismissAlert,
   } = useNotificationsData();
 
+  // Define filter props for reuse
+  const filterProps = {
+    activeParameter,
+    activeSeverity,
+    handleParameterChange,
+    handleSeverityChange,
+  };
+
   // Render loading state
   if (isLoading) {
     return (
-      <NotificationsLoadingState
-        activeParameter={activeParameter}
-        activeSeverity={activeSeverity}
-        handleParameterChange={handleParameterChange}
-        handleSeverityChange={handleSeverityChange}
-      />
+      <NotificationsLoadingState {...filterProps} />
     );
   }
 
@@ -59,10 +62,7 @@ export default function NotificationsScreen() {
     return (
       <NotificationsErrorState
         error={error}
-        activeParameter={activeParameter}
-        activeSeverity={activeSeverity}
-        handleParameterChange={handleParameterChange}
-        handleSeverityChange={handleSeverityChange}
+        {...filterProps}
         onRetry={() => onRefresh()}
       />
     );
@@ -71,12 +71,7 @@ export default function NotificationsScreen() {
   // Render empty state
   if (!limitedSections?.length) {
     return (
-      <NotificationsEmptyState
-        activeParameter={activeParameter}
-        activeSeverity={activeSeverity}
-        handleParameterChange={handleParameterChange}
-        handleSeverityChange={handleSeverityChange}
-      />
+      <NotificationsEmptyState {...filterProps} />
     );
   }
 
@@ -108,10 +103,7 @@ export default function NotificationsScreen() {
       isLoadingMore={isLoadingMore}
 
       // Filters
-      activeParameter={activeParameter}
-      activeSeverity={activeSeverity}
-      handleParameterChange={handleParameterChange}
-      handleSeverityChange={handleSeverityChange}
+      {...filterProps}
     />
   );
 }

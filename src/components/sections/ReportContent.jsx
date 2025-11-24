@@ -2,11 +2,11 @@ import { PARAMETER_CONFIG } from "@constants/report";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import ParameterCard from "@dataDisplay/ParameterCard";
 import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
-import EmptyState from "@ui/EmptyState";
 import { useRouter } from "expo-router";
-import { AlertCircle } from "lucide-react-native";
+import { AlertCircle, History } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { globalStyles } from "../../styles/globalStyles";
 
 const ReportContent = ({
   reportData,
@@ -91,61 +91,81 @@ const ReportContent = ({
                 />
               ))
             ) : (
-              <View style={styles.noParametersContainer}>
-                <Text style={styles.noParametersText}>
-                  No report available for now, come back later
-                </Text>
+              <View style={styles.noParametersCard}>
+                <View style={styles.noParametersHeader}>
+                  <View style={[styles.noParametersIcon, { backgroundColor: '#dbeafe' }]}>
+                    <History size={28} color="#2563eb" />
+                  </View>
+                  <View style={styles.noParametersHeaderText}>
+                    <Text style={styles.noParametersTitle}>Parameters Unavailable</Text>
+                    <Text style={styles.noParametersSubtitle}>Waiting for sensor data to generate parameter report</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.noParametersBanner, { backgroundColor: '#dbeafe' }]}>
+                  <Text style={[styles.noParametersStatus, { color: '#2563eb' }]}>
+                    Data Collection Pending
+                  </Text>
+                  <Text style={styles.noParametersDescription}>
+                    Sensors are collecting initial data. Parameters will appear soon.
+                  </Text>
+                </View>
               </View>
             )}
           </View>
 
-          <View style={styles.insightsContainer}>
-            <Text style={styles.sectionLabel}>
-              AI Recommendations
-            </Text>
-            {isGeminiLoading ? (
-              <ActivityIndicator
-                style={styles.insightsLoading}
-                color="#3b82f6"
-              />
-            ) : geminiResponse ? (
-              <InsightsCard
-                type="info"
-                title="Overall Water Quality Insight"
-                description={
-                  geminiResponse?.insights?.overallInsight || ""
-                }
-                timestamp={reportData.generatedAt}
-                componentId="report-overall-insight"
-                autoRefresh={false}
-                sensorData={reportData}
-              />
-            ) : (
-              // Only show error message if we're not actively switching filters
-              !isSwitchingFilter && (
-                <View style={styles.insightsErrorContainer}>
-                  <View style={styles.insightsErrorHeader}>
-                    <View style={[styles.insightsErrorIcon, { backgroundColor: '#FFFBEB' }]}>
-                      <AlertCircle size={28} color="#D97706" />
+          {reportData && Object.keys(reportData.parameters || {}).length > 0 && processedParameters && processedParameters.length > 0 && (
+            <View style={styles.insightsContainer}>
+              <Text style={styles.sectionLabel}>
+                AI Recommendations
+              </Text>
+              {isGeminiLoading ? (
+                <ActivityIndicator
+                  style={styles.insightsLoading}
+                  color="#3b82f6"
+                />
+              ) : geminiResponse ? (
+                <InsightsCard
+                  type="info"
+                  title="Overall Water Quality Insight"
+                  description={
+                    geminiResponse?.insights?.overallInsight || ""
+                  }
+                  recommendations={
+                    (geminiResponse?.suggestions?.flatMap(s => s.recommendedActions) || []).slice(0, 5)
+                  }
+                  timestamp={reportData.generatedAt}
+                  componentId="report-overall-insight"
+                  autoRefresh={false}
+                  sensorData={reportData}
+                />
+              ) : (
+                // Only show error message if we're not actively switching filters
+                !isSwitchingFilter && (
+                  <View style={styles.insightsErrorContainer}>
+                    <View style={styles.insightsErrorHeader}>
+                      <View style={[styles.insightsErrorIcon, { backgroundColor: '#FFFBEB' }]}>
+                        <AlertCircle size={28} color="#D97706" />
+                      </View>
+                      <View style={styles.insightsErrorHeaderText}>
+                        <Text style={styles.insightsErrorTitle}>AI Insights Unavailable</Text>
+                        <Text style={styles.insightsErrorSubtitle}>Unable to generate recommendations</Text>
+                      </View>
                     </View>
-                    <View style={styles.insightsErrorHeaderText}>
-                      <Text style={styles.insightsErrorTitle}>AI Insights Unavailable</Text>
-                      <Text style={styles.insightsErrorSubtitle}>Unable to generate recommendations</Text>
-                    </View>
-                  </View>
 
-                  <View style={[styles.insightsErrorBanner, { backgroundColor: '#FFFBEB' }]}>
-                    <Text style={[styles.insightsErrorStatus, { color: '#D97706' }]}>
-                      Service Unavailable
-                    </Text>
-                    <Text style={styles.insightsErrorDescription}>
-                      Unable to generate AI recommendations at this time. Please try again later.
-                    </Text>
+                    <View style={[styles.insightsErrorBanner, { backgroundColor: '#FFFBEB' }]}>
+                      <Text style={[styles.insightsErrorStatus, { color: '#D97706' }]}>
+                        Service Unavailable
+                      </Text>
+                      <Text style={styles.insightsErrorDescription}>
+                        Unable to generate AI recommendations at this time. Please try again later.
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              )
-            )}
-          </View>
+                )
+              )}
+            </View>
+          )}
         </>
       )}
     </ScrollView>
@@ -224,17 +244,54 @@ const styles = StyleSheet.create({
     color: "#1a2d51",
     marginBottom: 8,
   },
-  noParametersContainer: {
+  noParametersCard: {
     backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 10,
+    ...globalStyles.boxShadow,
+  },
+  noParametersHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  noParametersIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  noParametersHeaderText: {
+    flex: 1,
+  },
+  noParametersTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  noParametersSubtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  noParametersBanner: {
     borderRadius: 12,
     padding: 16,
-    marginVertical: 8,
+    marginBottom: 16,
   },
-  noParametersText: {
-    fontSize: 16,
-    color: "#6B7280",
+  noParametersStatus: {
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 4,
     textAlign: "center",
-    lineHeight: 24,
+  },
+  noParametersDescription: {
+    fontSize: 14,
+    color: "#4B5563",
+    textAlign: "center",
   },
 });
 

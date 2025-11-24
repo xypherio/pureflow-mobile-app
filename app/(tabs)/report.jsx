@@ -6,11 +6,11 @@ import ExportToggleButton from "@components/forms/ExportToggleButton";
 import PureFlowLogo from "@components/ui/UiHeader";
 import SegmentedFilter from "@navigation/SegmentedFilters";
 import GlobalWrapper from "@ui/GlobalWrapper";
+import { ReportSkeleton } from "@components/ui/LoadingSkeletons";
 
 // Report Components
 import ReportContent from "@components/sections/ReportContent";
 import ReportErrorState from "@components/sections/ReportErrorState";
-import ReportLoadingState from "@components/sections/ReportLoadingState";
 
 // Hooks
 import { useReportData } from "@hooks/useReportData";
@@ -94,12 +94,29 @@ const ReportScreen = () => {
   // Render loading state
   if (isLoading) {
     return (
-      <ReportLoadingState
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        onExportPdf={handleExportPdf}
-        isExporting={isExporting}
-      />
+      <>
+        <PureFlowLogo
+          weather={{
+            label: "Loading...",
+            temp: "--°C",
+            icon: "partly",
+          }}
+        />
+        <SegmentedFilter
+          options={timePeriodOptions}
+          selectedValue={activeFilter}
+          onValueChange={setActiveFilter}
+          style={styles.filter}
+          disabled={true}
+        />
+        <GlobalWrapper>
+          <ReportSkeleton />
+        </GlobalWrapper>
+        <ExportToggleButton
+          onExportPdf={handleExportPdf}
+          isExporting={isExporting}
+        />
+      </>
     );
   }
 

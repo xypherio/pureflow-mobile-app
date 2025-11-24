@@ -34,7 +34,7 @@ const SkeletonShimmer = ({ children, duration = 2000 }) => {
 // Skeleton styles
 const skeletonStyles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#c2e3fb',
     borderRadius: 8,
   },
   systemStatusSkeleton: {
@@ -46,8 +46,8 @@ const skeletonStyles = StyleSheet.create({
     height: 80,
     marginBottom: 10,
     marginHorizontal: 0,
-    backgroundColor: '#cbd5e1',
-    opacity: 0.9,
+    backgroundColor: '#c2e3fb',
+    opacity: 0.7,
   },
   parameterCardSkeleton: {
     height: 160,
@@ -58,14 +58,42 @@ const skeletonStyles = StyleSheet.create({
     height: 280,
     marginBottom: 20,
     marginTop: 20,
-    backgroundColor: '#cbd5e1',
-    opacity: 0.9,
+    backgroundColor: '#c2e3fb',
+    opacity: 0.7,
   },
   insightsSkeleton: {
     height: 200,
     marginBottom: 20,
-    backgroundColor: '#cbd5e1',
-    opacity: 0.9,
+    backgroundColor: '#c2e3fb',
+    opacity: 0.7,
+  },
+  // Report-specific skeleton styles
+  waterQualitySummarySkeleton: {
+    height: 120,
+    marginBottom: 16,
+    marginTop: 60,
+    backgroundColor: '#c2e3fb',
+    opacity: 0.7,
+  },
+  sectionLabelSkeleton: {
+    height: 12,
+    width: 120,
+    marginBottom: 8,
+    backgroundColor: '#dceefd',
+    opacity: 0.7,
+  },
+  summaryContainer: {
+    marginBottom: 16,
+  },
+  parametersContainer: {
+    marginBottom: 14,
+  },
+  insightsContainer: {
+    marginBottom: 16,
+    marginTop: 10,
+  },
+  parameterCardWrapper: {
+    marginBottom: 8,
   },
   forecastInsightsSkeleton: {
     height: 180,
@@ -127,6 +155,46 @@ export const InsightsSkeleton = () => (
   <SkeletonShimmer>
     <View style={[skeletonStyles.skeleton, skeletonStyles.insightsSkeleton]} />
   </SkeletonShimmer>
+);
+
+// Report-specific skeletons
+export const WaterQualitySummarySkeleton = () => (
+  <SkeletonShimmer>
+    <View style={[skeletonStyles.skeleton, skeletonStyles.waterQualitySummarySkeleton]} />
+  </SkeletonShimmer>
+);
+
+export const ParameterCardSkeleton = () => (
+  <SkeletonShimmer>
+    <View style={[skeletonStyles.skeleton, skeletonStyles.parameterCardSkeleton]} />
+  </SkeletonShimmer>
+);
+
+export const ReportSkeleton = () => (
+  <View>
+    {/* Water Quality Summary */}
+    <View style={skeletonStyles.summaryContainer}>
+      <View style={skeletonStyles.sectionLabelSkeleton} />
+      <WaterQualitySummarySkeleton />
+    </View>
+
+    {/* Key Parameters Report */}
+    <View style={skeletonStyles.parametersContainer}>
+      <View style={skeletonStyles.sectionLabelSkeleton} />
+      {/* 4 parameter cards */}
+      {Array.from({ length: 4 }).map((_, index) => (
+        <View key={index} style={skeletonStyles.parameterCardWrapper}>
+          <ParameterCardSkeleton />
+        </View>
+      ))}
+    </View>
+
+    {/* AI Recommendations */}
+    <View style={skeletonStyles.insightsContainer}>
+      <View style={skeletonStyles.sectionLabelSkeleton} />
+      <InsightsSkeleton />
+    </View>
+  </View>
 );
 
 // Combined Dashboard Skeleton

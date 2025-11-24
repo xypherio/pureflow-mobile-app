@@ -35,7 +35,7 @@ const NotificationsErrorState = ({
         <View style={styles.errorContainer}>
           <AlertTriangle size={48} color="#ef4444" style={styles.errorIcon} />
           <Text style={styles.errorTitle}>Failed to Load Alerts</Text>
-          <Text style={styles.errorMessage}>unable to update forecast: Showing Recent Forecast</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
           <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>

@@ -1,10 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-/**
- * ErrorBoundary component to catch and handle JavaScript errors in the React component tree
- * Displays a fallback UI when an error occurs instead of crashing the entire app
- */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

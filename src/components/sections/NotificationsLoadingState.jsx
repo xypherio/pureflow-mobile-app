@@ -1,8 +1,9 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import PureFlowLogo from "@components/ui/UiHeader";
 import NotificationFilter from "@navigation/AlertsFilter";
 import GlobalWrapper from "@ui/GlobalWrapper";
+import { AlertsSkeleton } from "@ui/LoadingSkeletons";
 
 const NotificationsLoadingState = ({
   activeParameter,
@@ -30,9 +31,10 @@ const NotificationsLoadingState = ({
           />
         </View>
 
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading alerts...</Text>
+        <View style={styles.skeletonListContainer}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <AlertsSkeleton key={index} />
+          ))}
         </View>
       </GlobalWrapper>
     </>

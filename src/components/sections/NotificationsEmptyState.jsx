@@ -1,5 +1,6 @@
 import React from "react";
-import { Bell, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Bell } from "lucide-react-native";
 import PureFlowLogo from "@components/ui/UiHeader";
 import NotificationFilter from "@navigation/AlertsFilter";
 import GlobalWrapper from "@ui/GlobalWrapper";
