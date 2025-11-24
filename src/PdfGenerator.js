@@ -3,11 +3,14 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { StyleSheet } from 'react-native';
+import { sanitizeTextForPDF } from './utils/exportUtils';
 
 const PdfGenerator = async (reportData) => {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+
 
   // Helper function to wrap text
   const wrapText = (text, font, fontSize, maxWidth) => {
@@ -62,7 +65,179 @@ const PdfGenerator = async (reportData) => {
     startY -= 8;
   };
 
-  // --- Section 1: Overall Water Quality Report ---
+  // --- Section 0: Report Header ---
+  page.drawText('PureFlow Water Quality Report', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight;
+
+  page.drawText(sanitizeTextForPDF(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`), {
+    x: startX,
+    y: startY,
+    font,
+    size: fontSize,
+    color: textColor,
+  });
+  startY -= rowHeight * 0.8;
+
+  page.drawText(sanitizeTextForPDF(`Time Period: ${reportData.metadata?.timePeriod || 'N/A'}`), {
+    x: startX,
+    y: startY,
+    font,
+    size: fontSize,
+    color: textColor,
+  });
+  startY -= rowHeight * 0.8;
+
+  page.drawText(sanitizeTextForPDF(`Water Quality Index: ${reportData.metadata?.wqi?.value || 0}/100 (${reportData.metadata?.wqi?.status || 'unknown'})`), {
+    x: startX,
+    y: startY,
+    font,
+    size: fontSize,
+    color: textColor,
+  });
+  startY -= rowHeight;
+
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+
+  // --- Section 1: Executive Summary ---
+  page.drawText('Executive Summary', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.2;
+
+  if (reportData.executiveSummary) {
+    const sanitizedSummary = sanitizeTextForPDF(reportData.executiveSummary);
+    const summaryWrapped = wrapText(sanitizedSummary, font, fontSize, 500);
+    for (const line of summaryWrapped) {
+      page.drawText(sanitizeTextForPDF(line), { x: startX, y: startY, font, size: fontSize, color: textColor });
+      startY -= font.heightAtSize(fontSize) + 2;
+      checkPageSpace();
+    }
+  } else {
+    page.drawText('Executive summary not available.', { x: startX, y: startY, font, size: fontSize, color: textColor });
+    startY -= rowHeight;
+  }
+
+  startY -= rowHeight * 0.5;
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+
+  // --- Section 2: Environmental & Weather Context ---
+  page.drawText('Environmental Context', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.2;
+
+  if (reportData.environmental?.weather) {
+    page.drawText(`Weather Conditions: ${sanitizeTextForPDF(reportData.environmental.weather.description)}`, {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    if (reportData.environmental.weather.humidity && reportData.environmental.weather.windSpeed) {
+      page.drawText(`Humidity: ${reportData.environmental.weather.humidity}%, Wind: ${reportData.environmental.weather.windSpeed} m/s`, {
+        x: startX,
+        y: startY,
+        font,
+        size: fontSize,
+        color: textColor,
+      });
+      startY -= rowHeight;
+    }
+  } else {
+    page.drawText('Weather data not available during report generation.', {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight;
+  }
+
+  startY -= rowHeight * 0.5;
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+
+  // --- Section 3: Regulatory Compliance Dashboard ---
+  checkPageSpace(rowHeight * 2);
+  page.drawText('Regulatory Compliance Dashboard', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.2;
+
+  if (reportData.compliance) {
+    const compliance = reportData.compliance;
+
+    page.drawText(sanitizeTextForPDF(`Overall Compliance: ${compliance.overallCompliance}% (${compliance.compliantParameters}/${compliance.totalParameters} parameters compliant)`), {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight;
+
+    if (compliance.criticalIssues > 0) {
+      page.drawText(sanitizeTextForPDF(`Critical Issues: ${compliance.criticalIssues}`), {
+        x: startX,
+        y: startY,
+        font,
+        size: fontSize,
+        color: rgb(1, 0, 0), // Red for critical
+      });
+      startY -= rowHeight * 0.8;
+    }
+
+    if (compliance.warningIssues > 0) {
+      page.drawText(sanitizeTextForPDF(`Warning Issues: ${compliance.warningIssues}`), {
+        x: startX,
+        y: startY,
+        font,
+        size: fontSize,
+        color: rgb(1, 0.65, 0), // Orange for warning
+      });
+      startY -= rowHeight;
+    }
+  } else {
+    page.drawText('Compliance data not available.', {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight;
+  }
+
+  startY -= rowHeight * 0.5;
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+
+  // --- Section 4: Overall Water Quality Report ---
+  checkPageSpace(rowHeight * 2);
   page.drawText('Overall Water Quality Report', {
     x: startX,
     y: startY,
@@ -124,8 +299,8 @@ const PdfGenerator = async (reportData) => {
     }
     
     const status = param.data && param.data.status ? param.data.status : 'unknown';
-    const detailsText = param.data && param.data.details ? param.data.details : 
-                        (param.data && param.data.trend && param.data.trend.message ? param.data.trend.message : 'No details available');
+    const detailsText = sanitizeTextForPDF(param.data && param.data.details ? param.data.details :
+                        (param.data && param.data.trend && param.data.trend.message ? param.data.trend.message : 'No details available'));
 
     page.drawText(param.name, { x: startX, y: startY, font, size: fontSize, color: textColor });
     page.drawText(`${averageDisplay}${param.unit}`, { x: startX + columnWidths[0], y: startY, font, size: fontSize, color: textColor });
@@ -207,19 +382,19 @@ const PdfGenerator = async (reportData) => {
     const minValue = getNumericValue(param.data?.min, null);
     const maxValue = getNumericValue(param.data?.max, null);
     const statusValue = param.data?.status || 'unknown';
-    const detailsValue = param.data?.details || 
-                         (param.data?.trend && param.data.trend.message ? param.data.trend.message : 'No details available');
-    
+    const detailsValue = sanitizeTextForPDF(param.data?.details ||
+                         (param.data?.trend && param.data.trend.message ? param.data.trend.message : 'No details available'));
+
     // Format values for display - show "N/A" if null/undefined
     const formatValue = (val) => val !== null && val !== undefined ? val.toFixed(2) : 'N/A';
-    
+
     // Get AI insights for this parameter from recommendations
     const insightsData = reportData.insights || {};
     const recommendations = insightsData.recommendations || [];
-    const paramInsight = recommendations.find(rec => 
+    const paramInsight = recommendations.find(rec =>
       rec.parameter && rec.parameter.toLowerCase() === param.name.toLowerCase()
     );
-    const aiInsightText = paramInsight ? (paramInsight.recommendation || paramInsight.details || 'No AI insights') : 'No AI insights available';
+    const aiInsightText = paramInsight ? sanitizeTextForPDF(paramInsight.recommendation || paramInsight.details || 'No AI insights') : 'No AI insights available';
     
     const values = [
       { label: 'Average', value: formatValue(avgValue), unit: param.unit, details: '' },
@@ -267,7 +442,203 @@ const PdfGenerator = async (reportData) => {
   startY -= rowHeight * 0.7; // More space after divider
   checkPageSpace(rowHeight * 4);
 
-  // --- Section 3: Overall Insights & Recommendations + Forecast ---
+  // --- Section 5: Sampling Information ---
+  if (reportData.samplingInfo) {
+    page.drawText('Sampling Information', {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: sectionTitleFontSize,
+      color: headerColor,
+    });
+    startY -= rowHeight * 1.2;
+
+    const sampling = reportData.samplingInfo;
+    page.drawText(sanitizeTextForPDF(`Time Period: ${sampling.timePeriod}`), {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    page.drawText(sanitizeTextForPDF(`Data Points: ${sampling.dataPoints}`), {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    page.drawText(sanitizeTextForPDF(`Location: ${sampling.location}`), {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    page.drawText(sanitizeTextForPDF(`Reporting Date: ${sampling.reportingDate}`), {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    page.drawText(sanitizeTextForPDF(`System Version: ${sampling.systemVersion}`), {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight * 0.8;
+
+    page.drawText(sanitizeTextForPDF(`Sampling Method: ${sampling.samplingMethod}`), {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight;
+  }
+
+  startY -= rowHeight * 0.5;
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+  checkPageSpace(rowHeight * 4);
+
+  // --- Section 6: Action Priority Matrix ---
+  page.drawText('Action Priority Matrix', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.2;
+
+  if (reportData.insights?.priorityMatrix) {
+    const matrix = reportData.insights.priorityMatrix;
+
+    // Critical Priority
+  if (matrix.critical && matrix.critical.length > 0) {
+    page.drawText('CRITICAL (Immediate Action Required):', {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: fontSize,
+      color: rgb(1, 0, 0),
+    });
+    startY -= rowHeight * 0.8;
+
+    matrix.critical.forEach((item, index) => {
+      checkPageSpace(rowHeight * 2);
+      const itemText = `${item.id}. ${sanitizeTextForPDF(item.text)} (${item.parameter})`;
+      const wrappedItem = wrapText(itemText, font, fontSize, 480);
+      for (const line of wrappedItem) {
+        page.drawText(sanitizeTextForPDF(line), { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
+        startY -= font.heightAtSize(fontSize) + 2;
+        checkPageSpace();
+      }
+    });
+    startY -= rowHeight * 0.5;
+  }
+
+  // High Priority
+  if (matrix.high && matrix.high.length > 0) {
+    page.drawText('HIGH (Important - Requires Attention):', {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: fontSize,
+      color: rgb(1, 0.65, 0),
+    });
+    startY -= rowHeight * 0.8;
+
+    matrix.high.forEach((item) => {
+      checkPageSpace(rowHeight * 2);
+      const itemText = `${item.id}. ${sanitizeTextForPDF(item.text)} (${item.parameter})`;
+      const wrappedItem = wrapText(itemText, font, fontSize, 480);
+      for (const line of wrappedItem) {
+        page.drawText(sanitizeTextForPDF(line), { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
+        startY -= font.heightAtSize(fontSize) + 2;
+        checkPageSpace();
+      }
+    });
+    startY -= rowHeight * 0.5;
+  }
+
+  // Medium Priority
+  if (matrix.medium && matrix.medium.length > 0) {
+    page.drawText('MEDIUM (Monitor and Address if Possible):', {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: fontSize,
+      color: rgb(0, 0.5, 1),
+    });
+    startY -= rowHeight * 0.8;
+
+    matrix.medium.forEach((item) => {
+      checkPageSpace(rowHeight * 2);
+      const itemText = `${item.id}. ${sanitizeTextForPDF(item.text)} (${item.parameter})`;
+      const wrappedItem = wrapText(itemText, font, fontSize, 480);
+      for (const line of wrappedItem) {
+        page.drawText(sanitizeTextForPDF(line), { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
+        startY -= font.heightAtSize(fontSize) + 2;
+        checkPageSpace();
+      }
+    });
+    startY -= rowHeight * 0.5;
+  }
+
+  // Low Priority
+  if (matrix.low && matrix.low.length > 0) {
+    page.drawText('LOW (Optional/General Suggestions):', {
+      x: startX,
+      y: startY,
+      font: fontBold,
+      size: fontSize,
+      color: rgb(0.3, 0.7, 0.3),
+    });
+    startY -= rowHeight * 0.8;
+
+    matrix.low.forEach((item) => {
+      checkPageSpace(rowHeight * 2);
+      const itemText = `${item.id}. ${sanitizeTextForPDF(item.text)} (${item.parameter})`;
+      const wrappedItem = wrapText(itemText, font, fontSize, 480);
+      for (const line of wrappedItem) {
+        page.drawText(sanitizeTextForPDF(line), { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
+        startY -= font.heightAtSize(fontSize) + 2;
+        checkPageSpace();
+      }
+    });
+    startY -= rowHeight * 0.5;
+  }
+  } else {
+    page.drawText('No prioritized recommendations available.', {
+      x: startX,
+      y: startY,
+      font,
+      size: fontSize,
+      color: textColor,
+    });
+    startY -= rowHeight;
+  }
+
+  startY -= rowHeight * 0.5;
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+  checkPageSpace(rowHeight * 4);
+
+  // --- Section 7: Overall Insights & Recommendations + Forecast ---
   page.drawText('Overall Insights & Recommendations', {
     x: startX,
     y: startY,
@@ -283,7 +654,7 @@ const PdfGenerator = async (reportData) => {
   const overallInsights = insightsData.overall || reportData.aiInsights || 'No AI insights available';
   const wrappedInsights = wrapText(overallInsights, font, fontSize, 500);
   for (const line of wrappedInsights) {
-    page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
+    page.drawText(sanitizeTextForPDF(line), { x: startX, y: startY, font, size: fontSize, color: textColor });
     startY -= font.heightAtSize(fontSize) + 2;
     checkPageSpace();
   }
@@ -293,7 +664,7 @@ const PdfGenerator = async (reportData) => {
   if (recommendations.length > 0) {
     startY -= rowHeight * 0.5;
     checkPageSpace(rowHeight * 2);
-    
+
     page.drawText('Recommendations:', {
       x: startX,
       y: startY,
@@ -302,13 +673,13 @@ const PdfGenerator = async (reportData) => {
       color: headerColor,
     });
     startY -= rowHeight * 0.8;
-    
+
     recommendations.forEach((rec, index) => {
       checkPageSpace(rowHeight * 2);
-      const recText = `${index + 1}. ${rec.recommendation || rec.details || 'No recommendation'}`;
+      const recText = `${index + 1}. ${sanitizeTextForPDF(rec.recommendation || rec.details || 'No recommendation')}`;
       const wrappedRec = wrapText(recText, font, fontSize, 500);
       for (const line of wrappedRec) {
-        page.drawText(line, { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
+        page.drawText(sanitizeTextForPDF(line), { x: startX + 20, y: startY, font, size: fontSize, color: textColor });
         startY -= font.heightAtSize(fontSize) + 2;
         checkPageSpace();
       }
@@ -331,7 +702,7 @@ const PdfGenerator = async (reportData) => {
       uri: pdfUri,
     });
   } else {
-    alert('Sharing and printing are not available on this device.');
+  alert('Sharing and printing are not available on this device.');
   }
 };
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { Alert, StyleSheet } from "react-native";
 
 // Components
@@ -19,10 +19,27 @@ import { useReportData } from "@hooks/useReportData";
 import { timePeriodOptions } from "@constants/report";
 import { generateCsv, prepareExportData, shareFiles } from "@utils/exportUtils";
 import PdfGenerator from "../../src/PdfGenerator";
+import { weatherService } from "@services/weatherService";
 
 const ReportScreen = () => {
   const [activeFilter, setActiveFilter] = useState("daily");
   const [isExporting, setIsExporting] = useState(false);
+  const [weatherData, setWeatherData] = useState(null);
+
+  // Fetch weather data for reports
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const weather = await weatherService.getCurrentWeatherByCity('Cebu City');
+        setWeatherData(weather);
+      } catch (error) {
+        console.error('Error fetching weather:', error);
+        setWeatherData(weatherService.getFallbackWeather());
+      }
+    };
+
+    fetchWeather();
+  }, []);
 
   // Use the custom report data hook to manage all report logic
   const {
@@ -44,7 +61,9 @@ const ReportScreen = () => {
       const exportData = prepareExportData(
         reportData,
         processedParameters,
-        geminiResponse
+        geminiResponse,
+        weatherData,
+        activeFilter
       );
       await PdfGenerator(exportData);
 
@@ -62,7 +81,7 @@ const ReportScreen = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [reportData, processedParameters, geminiResponse]);
+  }, [reportData, processedParameters, geminiResponse, weatherData, activeFilter]);
 
   const handleExportCsv = useCallback(async () => {
     setIsExporting(true);
@@ -70,7 +89,9 @@ const ReportScreen = () => {
       const exportData = prepareExportData(
         reportData,
         processedParameters,
-        geminiResponse
+        geminiResponse,
+        weatherData,
+        activeFilter
       );
       const { filePath } = await generateCsv(exportData);
 
@@ -89,7 +110,7 @@ const ReportScreen = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [reportData, processedParameters, geminiResponse]);
+  }, [reportData, processedParameters, geminiResponse, weatherData, activeFilter]);
 
   // Render loading state
   if (isLoading) {
@@ -129,9 +150,9 @@ const ReportScreen = () => {
   return (
     <>
       <PureFlowLogo
-        weather={{
-          label: "Light Rain",
-          temp: "30°C",
+        weather={weatherData || {
+          label: "Loading...",
+          temp: "--°C",
           icon: "partly",
         }}
       />
