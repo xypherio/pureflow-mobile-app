@@ -109,36 +109,32 @@ const ParameterCard = ({
     return score >= 80 ? 'normal' : 'approaching';
   }, [value, parameter]);
 
-/**
- * STATUS-BASED STYLING CONFIGURATION
- * Color schemes for different water quality statuses with consistent theming
- */
 const statusColors = {
   normal: {
-    borderColor: '#10B981', // Green for good quality
+    borderColor: '#10B981',
     shadowColor: '#10B981',
-    bgColor: '#ECFDF5',     // Light green background
+    bgColor: '#ECFDF5',    
     iconColor: '#059669',
     gradientColors: ['#D1FAE5', '#A7F3D0']
   },
   approaching: {
-    borderColor: '#DC2626', // Red for approaching threshold
+    borderColor: '#DC2626', 
     shadowColor: '#DC2626',
-    bgColor: '#FEF2F2',     // Light red background
+    bgColor: '#FEF2F2',    
     iconColor: '#DC2626',
     gradientColors: ['#FEE2E2', '#FECACA']
   },
   caution: {
-    borderColor: '#F59E0B', // Yellow/orange for caution
+    borderColor: '#F59E0B', 
     shadowColor: '#F59E0B',
-    bgColor: '#FFFBEB',     // Light yellow background
+    bgColor: '#FFFBEB',   
     iconColor: '#D97706',
     gradientColors: ['#FEF3C7', '#FDE68A']
   },
   critical: {
-    borderColor: '#EF4444', // Red for critical issues
+    borderColor: '#EF4444', 
     shadowColor: '#EF4444',
-    bgColor: '#FEF2F2',     // Light red background
+    bgColor: '#FEF2F2',    
     iconColor: '#DC2626',
     gradientColors: ['#FEE2E2', '#FECACA']
   }

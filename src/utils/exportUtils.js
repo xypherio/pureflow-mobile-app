@@ -736,7 +736,10 @@ const prepareExportData = (reportData, processedParameters, geminiResponse, weat
       generatedAt: new Date().toISOString(),
       timePeriod: timePeriodFilter || reportData.timePeriod || "N/A",
       overallStatus: reportData.overallStatus || "normal",
-      wqi: reportData.wqi || { value: 0, status: "unknown" },
+      wqi: reportData.wqi ? {
+        value: reportData.wqi.overall || 0,
+        status: reportData.wqi.rating?.level || "unknown"
+      } : { value: 0, status: "unknown" },
       reportDate: new Date().toLocaleDateString(),
       reportTime: new Date().toLocaleTimeString()
     },

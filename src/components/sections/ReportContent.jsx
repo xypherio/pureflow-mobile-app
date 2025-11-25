@@ -69,6 +69,10 @@ const ReportContent = ({
                   unit: PARAMETER_CONFIG[key]?.unit || "",
                 })
               )}
+              wqi={{
+                value: reportData.wqi?.overall || 0,
+                status: reportData.wqi?.rating?.level || "unknown",
+              }}
             />
           </View>
 
