@@ -54,13 +54,13 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 0.95,
-          duration: 230,
+          duration: 250,
           useNativeDriver: true,
           easing: Easing.in(Easing.ease),
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 220,
+          duration: 250,
           useNativeDriver: true,
           easing: Easing.in(Easing.ease),
         }),
@@ -72,13 +72,13 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
         Animated.parallel([
           Animated.timing(scaleAnim, {
             toValue: 1,
-            duration: 260,
+            duration: 280,
             useNativeDriver: true,
             easing: Easing.out(Easing.ease),
           }),
           Animated.timing(opacityAnim, {
             toValue: 1,
-            duration: 260,
+            duration: 280,
             useNativeDriver: true,
             easing: Easing.out(Easing.ease),
           }),

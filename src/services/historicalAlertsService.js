@@ -31,7 +31,9 @@ class HistoricalAlertsService {
       limitCount = 100,
       filterType = null,
       filterSeverity = null,
-      filterParameter = null
+      filterParameter = null,
+      startAfterDocumentId = null,
+      batchSize = null
     } = options;
 
     return await performanceMonitor.measureAsync('historicalAlerts.fetch', async () => {
@@ -53,7 +55,8 @@ class HistoricalAlertsService {
           useCache: false,
           limitCount, // Use the dynamic limit count passed as parameter
           orderByField: 'timestamp',
-          orderDirection: 'desc'
+          orderDirection: 'desc',
+          startAfterDocumentId
         });
 
         console.log(`✅ Retrieved ${alerts.length} historical alerts`);
@@ -355,6 +358,43 @@ class HistoricalAlertsService {
       filteredCount: 0,     // Filtered count (0 when empty)
       lastUpdated: Date.now(), // Current timestamp
     };
+  }
+
+  /**
+   * Fetches raw alerts for paginated accumulation (returns without processing or deduplication)
+   * @param {Object} options - Pagination options
+   * @returns {Promise<Object>} Raw alerts and pagination cursor
+   */
+  async fetchPaginatedAlerts(options = {}) {
+    const {
+      startAfterDocumentId = null,
+      batchSize = 30
+    } = options;
+
+    return await performanceMonitor.measureAsync('historicalAlerts.paginatedFetch', async () => {
+      try {
+        console.log('🔄 Fetching paginated alerts from Firebase...');
+
+        const alerts = await fetchAllDocuments('alerts', {
+          useCache: false,
+          limitCount: batchSize,
+          orderByField: 'timestamp',
+          orderDirection: 'desc',
+          startAfterDocumentId
+        });
+
+        console.log(`✅ Retrieved ${alerts.length} paginated alerts`);
+
+        return {
+          alerts, // Raw alerts without processing
+          lastDocumentId: alerts.length > 0 ? alerts[alerts.length - 1].id : null,
+          hasMore: alerts.length === batchSize
+        };
+      } catch (error) {
+        console.error('❌ Error fetching paginated alerts:', error);
+        throw error;
+      }
+    });
   }
 
   /**

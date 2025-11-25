@@ -1,14 +1,14 @@
   import {
   addDoc,
   collection,
+  doc, // Add onSnapshot import for real-time listeners
+  enableIndexedDbPersistence,
   query as firestoreQuery,
   getDocs,
   limit,
   orderBy,
-  where,
-  onSnapshot,  // Add onSnapshot import for real-time listeners
-  enableIndexedDbPersistence,
-  Timestamp
+  Timestamp,
+  where
 } from "firebase/firestore";
 import { db } from './config';
 
@@ -81,22 +81,24 @@ export const fetchAllDocuments = async (collectionName, options = {}) => {
     try {
       validateQueryOptions(collectionName, options);
       
-      const { 
-        filters = [], 
-        orderByField, 
-        orderDirection = 'asc', 
+      const {
+        filters = [],
+        orderByField,
+        orderDirection = 'asc',
         limit: limitCount,
         startAfter,
-        endBefore
+        endBefore,
+        startAfterDocumentId
       } = options;
-      
-      console.log(`Fetching documents from ${collectionName}`, { 
+
+      console.log(`Fetching documents from ${collectionName}`, {
         filters: filters.map(f => `${f.field} ${f.operator} ${f.value}`),
         orderBy: orderByField ? `${orderByField} ${orderDirection}` : 'none',
         limit: limitCount || 'none',
-        dateRange: startAfter || endBefore 
-          ? `${startAfter?.toISOString?.() || '...'} to ${endBefore?.toISOString?.() || '...'}` 
-          : 'none'
+        dateRange: startAfter || endBefore
+          ? `${startAfter?.toISOString?.() || '...'} to ${endBefore?.toISOString?.() || '...'}`
+          : 'none',
+        startAfterDocumentId: startAfterDocumentId || 'none'
       });
 
       let q = firestoreQuery(collection(db, collectionName));
@@ -124,6 +126,12 @@ export const fetchAllDocuments = async (collectionName, options = {}) => {
       // Add limit
       if (limitCount) {
         q = firestoreQuery(q, limit(limitCount));
+      }
+
+      // Add cursor pagination
+      if (startAfterDocumentId) {
+        const docRef = doc(db, collectionName, startAfterDocumentId);
+        q = firestoreQuery(q, startAfter(docRef));
       }
 
       const querySnapshot = await getDocs(q);

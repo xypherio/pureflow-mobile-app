@@ -99,12 +99,11 @@ const NotificationsList = ({
               isLoadingMore,
               showLoadMore,
             });
-            const hasMore = displayedAlerts < totalAlerts;
-            if (hasMore && !isLoadingMore) {
+            if (showLoadMore && !isLoadingMore) {
               console.log("🚀 Loading more alerts...");
               loadMoreAlerts();
             } else {
-              console.log("⏹️ No more alerts to load", { hasMore, isLoadingMore });
+              console.log("⏹️ No more alerts to load", { showLoadMore });
             }
           }}
           onEndReachedThreshold={0.2}

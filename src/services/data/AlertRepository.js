@@ -1,5 +1,4 @@
-import { addAlertToFirestore } from '@services/firebase/firestore.js';
-import { fetchAllDocuments } from '@services/firebase/firestore.js';
+import { addAlertToFirestore, fetchAllDocuments } from '@services/firebase/firestore.js';
 
 export class AlertRepository {
   constructor() {
@@ -42,7 +41,7 @@ export class AlertRepository {
 
   async getAlerts(options = {}) {
     const {
-      limitCount = 20,
+      limitCount = 40,
       orderByField = 'timestamp',
       orderDirection = 'desc',
       filterType = null,
@@ -78,11 +77,9 @@ export class AlertRepository {
   }
 
   async getActiveAlerts() {
-    // In a real implementation, you might have an 'active' field
-    // For now, we'll consider recent alerts as active
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
-    const alerts = await this.getAlerts({ limitCount: 20 });
+
+    const alerts = await this.getAlerts({ limitCount: 40 });
     return alerts.filter(alert => {
       const alertTime = this.parseTimestamp(alert.timestamp);
       return alertTime >= oneDayAgo;
