@@ -1,38 +1,12 @@
-import { getWaterQualityThresholds } from "@constants/thresholds";
 import { useData } from "@contexts/DataContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { WaterQualityThresholdManager } from "../../services/core/WaterQualityThresholdManager";
 import waterQualityNotificationService from "../../services/WaterQualityNotificationService";
 
-const baseThresholds = getWaterQualityThresholds();
-
-// Add critical thresholds to match alert system logic
-const thresholds = {
-  pH: {
-    ...baseThresholds.pH,
-    critical: {
-      min: baseThresholds.pH.min - 0.5,
-      max: baseThresholds.pH.max + 0.5,
-    },
-  },
-  temperature: {
-    ...baseThresholds.temperature,
-    critical: {
-      min: baseThresholds.temperature.min - 6,
-      max: baseThresholds.temperature.max + 5,
-    },
-  },
-  turbidity: {
-    ...baseThresholds.turbidity,
-    critical: { max: baseThresholds.turbidity.max * 2 },
-  },
-  salinity: {
-    ...baseThresholds.salinity,
-    critical: { max: baseThresholds.salinity.max * 2 },
-  },
-};
+const thresholdManager = new WaterQualityThresholdManager();
 
 // Parameter configuration
 const PARAMETER_CONFIGS = [
@@ -124,33 +98,8 @@ export default function RealTimeData() {
       const value = sensorData[key];
       const hasValidValue = value != null && !isNaN(value);
 
-      // Calculate threshold status based on threshold limits (same logic as alerts)
-      let thresholdStatus = "normal";
-      if (hasValidValue && thresholds[key]) {
-        const threshold = thresholds[key];
-        const numValue = Number(value);
-
-        // Check critical thresholds first
-        if (threshold.critical) {
-          if (threshold.critical.min && numValue < threshold.critical.min) {
-            thresholdStatus = "critical";
-          } else if (
-            threshold.critical.max &&
-            numValue > threshold.critical.max
-          ) {
-            thresholdStatus = "critical";
-          }
-        }
-
-        // If not critical, check normal thresholds for warning
-        if (thresholdStatus === "normal") {
-          if (threshold.min && numValue < threshold.min) {
-            thresholdStatus = "warning";
-          } else if (threshold.max && numValue > threshold.max) {
-            thresholdStatus = "warning";
-          }
-        }
-      }
+      // Calculate threshold status using the same logic as alert system
+      const thresholdStatus = hasValidValue ? thresholdManager.evaluateValue(key, Number(value)) : "normal";
 
       return {
         label,
@@ -158,7 +107,7 @@ export default function RealTimeData() {
         unit,
         icon: <Icon size={30} color={color} />,
         color,
-        threshold: thresholds[key],
+        threshold: thresholdManager.getThreshold(key),
         hasData: hasValidValue,
         thresholdStatus, // Add threshold status for styling
       };

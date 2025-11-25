@@ -1,14 +1,26 @@
 {
-  "messages": [
-    "Water too alkaline stresses fish and slows growth",
-    "Water too acidic weakens immunity in sea animals",
-    "Acidic water slows digestion in fish",
-    "High alkaline levels damage fish gills",
-    "Wrong water levels hurt breeding success",
-    "Extreme levels cause stress in sea fish",
-    "Level changes can dissolve shellfish shells",
-    "Level changes harm breathing in fish",
-    "Level extremes affect body functions in sea life",
-    "Level stress lowers defenses against diseases"
+  "low": [
+    "Low water balance makes fish get sick more easily and reduces how many fish you can harvest",
+    "Too-low water balance slows fish growth and they don't eat as much, delaying harvests",
+    "Water balance below normal hurts fish breathing and they die from the stress",
+    "Too-low balance affects fish egg laying and baby fish numbers, reducing your overall fish crop",
+    "Unbalanced water changes the natural chemicals in fish, making fewer eggs hatch",
+    "Too-low water balance gives fish stomach problems, cutting down on growth",
+    "Unbalanced water makes it hard for fish to build strong bodies and protect their skin",
+    "Very low balance makes fish act strange and stop eating properly",
+    "Too-low water balance builds up harmful waste and poisons the fish, killing many",
+    "Unbalanced water kills the good germs that help break down food for your plants"
+  ],
+  "high": [
+    "High water balance slows fish growth and makes them not taste as good when harvested",
+    "Too-high water balance makes important food bits too hard for fish to use, affecting their skin and bones",
+    "Water balance above normal hurts fish breathing parts, making it hard to get oxygen",
+    "Too-high balance stops fish from producing good eggs and baby fish, lowering harvest numbers",
+    "High water level locks away important food bits, making fish hungry and weak",
+    "Too-high balance allows harmful waste to hurt fish more easily, causing many deaths",
+    "Water extremes make fish lose balance and float strangely in the water",
+    "High balance slows fish digestion and they don't grow as fast from their food",
+    "Too-high water grows bad algae that poisons fish and hurts plant health",
+    "Unbalanced water reduces good algae needed to feed your plants properly"
   ]
 }

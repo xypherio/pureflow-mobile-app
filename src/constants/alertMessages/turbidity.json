@@ -1,14 +1,26 @@
 {
-  "messages": [
-    "Muddy water blocks light for plants",
-    "Cloudy water harms vision and feeding",
-    "Mud damages gills and reduces oxygen",
-    "Dirty water stresses filter feeders",
-    "Low light affects hunting and hiding",
-    "Mud buries bottom creatures",
-    "Cloudiness affects animal movement",
-    "Muddy water slows food plants",
-    "Mud hinders breeding",
-    "Muddy water changes animal habits"
+  "low": [
+    "Very clear water might mean not enough food nutrients for good algae to grow",
+    "Too-clear water gives baby fish no hiding places, increasing attacks from other animals",
+    "Clear water lets too much sun light hit fish, burning their skin and causing stress",
+    "No tiny particles in water reduces natural cleaning, affecting water stay-clear power",
+    "Crystal clear water may stress some fish types that need some murkiness to feel settled",
+    "Low cloudiness conditions reduce places for good germs to grow and help clean",
+    "Very clear conditions suggest over-cleaning, affecting use of compost plant food",
+    "Clear water environments increase fish worry about being seen, changing behaviors",
+    "Very low cloudiness reduces natural protection, possibly affecting fish activity",
+    "Clear conditions may hurt the natural food bits needed for healthy plant growth"
+  ],
+  "high": [
+    "Dirtiness above safe levels blocks sunlight from reaching, slowing algae for plant food",
+    "High dirtiness hurts fish breathing parts with floating particles, blocking air exchange",
+    "Muddy water blocks cleaning systems, hurting quality and needing extra care",
+    "Dirt-filled water limits fish vision, affecting hunting, eating, and baby making",
+    "High cloudiness increases germ sickness risks and speeds up oxygen use",
+    "Dirty water covers bottom creatures important for pond health balance",
+    "Floating dirt slows plant growing power, hurting oxygen output",
+    "High dirtiness hurts fish breathing and causes long-term stress, lowering fish size",
+    "Dirt buildup stays in fish breathing parts, leading to choking and deaths",
+    "Cloudy conditions spread sickness easier through poor water visibility and mixing"
   ]
 }

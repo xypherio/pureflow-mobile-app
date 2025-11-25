@@ -22,27 +22,27 @@ export function useLazyAlertMessages() {
       switch (paramKey) {
         case 'ph':
           const phModule = await import('../constants/alertMessages/ph.json');
-          messages = phModule.default.messages;
+          messages = phModule.default;
           break;
         case 'temperature':
           const tempModule = await import('../constants/alertMessages/temperature.json');
-          messages = tempModule.default.messages;
+          messages = tempModule.default;
           break;
         case 'turbidity':
           const turbModule = await import('../constants/alertMessages/turbidity.json');
-          messages = turbModule.default.messages;
+          messages = turbModule.default;
           break;
         case 'salinity':
           const salModule = await import('../constants/alertMessages/salinity.json');
-          messages = salModule.default.messages;
+          messages = salModule.default;
           break;
         case 'weather':
           const weatherModule = await import('../constants/alertMessages/weather.json');
-          messages = weatherModule.default.messages;
+          messages = weatherModule.default;
           break;
         default:
           // Fallback message
-          messages = [`${parameter || 'Parameter'} level is outside normal range and may affect aquaculture species.`];
+          messages = { low: [`${parameter || 'Parameter'} level is too low and may affect aquaculture species.`], high: [`${parameter || 'Parameter'} level is too high and may affect aquaculture species.`] };
           break;
       }
 
@@ -59,11 +59,28 @@ export function useLazyAlertMessages() {
   }, [loadedMessages]);
 
   // Get random message for parameter (loads if not cached)
-  const getRandomMessage = useCallback(async (parameter) => {
+  const getRandomMessage = useCallback(async (parameter, alertType = null) => {
     const messages = await loadMessagesForParameter(parameter);
-    if (!messages || messages.length === 0) {
+    if (!messages) {
       return `${parameter?.charAt(0).toUpperCase() + parameter?.slice(1) || 'Parameter'} level is outside normal range and may affect aquaculture species.`;
     }
+
+    // If messages is an object (low/high), use the alertType
+    if (typeof messages === 'object' && alertType && messages[alertType]) {
+      const typeMessages = messages[alertType];
+      if (!typeMessages || typeMessages.length === 0) {
+        return `${parameter?.charAt(0).toUpperCase() + parameter?.slice(1) || 'Parameter'} level is outside normal range and may affect aquaculture species.`;
+      }
+      const randomIndex = Math.floor(Math.random() * typeMessages.length);
+      return typeMessages[randomIndex];
+    }
+
+    // Fallback for old array format (like weather messages.length === 0)
+    if (Array.isArray(messages) && messages.length === 0) {
+      return `${parameter?.charAt(0).toUpperCase() + parameter?.slice(1) || 'Parameter'} level is outside normal range and may affect aquaculture species.`;
+    }
+
+    // Default random from messages array (legacy)
     const randomIndex = Math.floor(Math.random() * messages.length);
     return messages[randomIndex];
   }, [loadMessagesForParameter]);
