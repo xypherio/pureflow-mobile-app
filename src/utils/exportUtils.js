@@ -1,37 +1,16 @@
 /**
  * @file exportUtils.js
  * @description Utility functions for exporting and sharing reports in various formats.
- * Provides functionality for generating CSV reports, sharing files, and managing temporary files.
- * 
- * Key Features:
- * - CSV report generation with comprehensive water quality data
- * - Cross-platform file sharing capabilities
- * - Memory-efficient file handling and cleanup
- * - Data validation and error handling
- * - Support for AI-generated insights and recommendations
  */
 
-// Core Dependencies
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 
 /**
- * Comprehensively sanitizes text for PDF encoding by converting problematic Unicode characters
- * to their closest ASCII equivalents or safe alternatives. This ensures compatibility with
- * WinAnsi encoding used by pdf-lib and prevents PDF generation errors.
- *
- * This function maps a wide range of Unicode characters including:
- * - Various types of spaces (non-breaking, narrow, zero-width, etc.)
- * - Typographic punctuation (smart quotes, dashes, etc.)
- * - Latin accented characters
- * - Common symbols and fractions
- * - Currency symbols
- * - Mathematical operators
- * - And many more...
- *
- * @param {string} text - The input text to sanitize
- * @returns {string} - Sanitized text safe for PDF generation
+ * Sanitizes text for PDF encoding by converting Unicode characters to ASCII equivalents.
+ * @param {string} text - Input text
+ * @returns {string} Sanitized text
  */
 const sanitizeTextForPDF = (text) => {
   if (!text) return '';
@@ -254,7 +233,9 @@ const sanitizeTextForPDF = (text) => {
 };
 
 /**
- * Sanitizes weather data object by cleaning all text fields
+ * Sanitizes weather data text fields for PDF compatibility.
+ * @param {Object} weatherData - Weather data object
+ * @returns {Object} Sanitized weather data
  */
 const sanitizeWeatherData = (weatherData) => {
   if (!weatherData) return weatherData;
@@ -264,29 +245,15 @@ const sanitizeWeatherData = (weatherData) => {
     label: sanitizeTextForPDF(weatherData.label) || 'N/A',
     temp: weatherData.temp || 'N/A',
     city: sanitizeTextForPDF(weatherData.city) || 'N/A',
-    raw: weatherData.raw // Keep raw data untouched for debugging
+    raw: weatherData.raw
   };
 };
 
 /**
- * ==============================================
- * FILE SHARING UTILITIES
- * ==============================================
- */
-
-/**
- * Shares files on native platforms with comprehensive error handling and fallback mechanisms.
- * 
- * @async
- * @function shareFiles
- * @param {Array<string>} filePaths - Array of absolute file paths to share
- * @param {string} [title='Share Report'] - Title displayed in the share dialog
- * @param {string} [mimeType='text/csv'] - MIME type of the file being shared
- * @throws {Error} When no files are provided or file doesn't exist
- * @returns {Promise<void>}
- * 
- * @example
- * await shareFiles(['/path/to/report.csv'], 'Water Quality Report', 'text/csv');
+ * Shares files using native platform capabilities with fallback support.
+ * @param {Array<string>} filePaths - File paths to share
+ * @param {string} title - Share dialog title
+ * @param {string} mimeType - File MIME type
  */
 const shareFiles = async (filePaths, title = 'Share Report', mimeType = 'text/csv') => {
   try {
@@ -324,32 +291,9 @@ const shareFiles = async (filePaths, title = 'Share Report', mimeType = 'text/cs
 };
 
 /**
- * ==============================================
- * REPORT GENERATION UTILITIES
- * ==============================================
- */
-
-/**
- * Generates a well-formatted CSV file from the provided export data.
- * The CSV includes metadata, parameter summaries, AI insights, and raw data.
- * 
- * @async
- * @function generateCsv
- * @param {Object} exportData - The prepared export data containing report information
- * @param {Object} exportData.metadata - Report metadata (title, timestamp, etc.)
- * @param {Object} exportData.parameters - Water quality parameters and their values
- * @param {Object} exportData.insights - AI-generated insights and recommendations
- * @param {Array} exportData.rawData - Raw sensor data points
- * @returns {Promise<{filePath: string, fileName: string, size: number}>} - File information
- * @throws {Error} If CSV generation fails
- * 
- * @example
- * const csvInfo = await generateCsv({
- *   metadata: { title: 'Water Quality Report' },
- *   parameters: { /* ... *\/ },
- *   insights: { /* ... *\/ },
- *   rawData: [/* ... *\/]
- * });
+ * Generates CSV file from export data.
+ * @param {Object} exportData - Export data structure
+ * @returns {Promise<{filePath: string, fileName: string, size: number}>} File info
  */
 const generateCsv = async (exportData) => {
   try {
@@ -360,7 +304,6 @@ const generateCsv = async (exportData) => {
 
     let csvContent = '';
 
-    // Helper function to escape CSV values
     const escapeCsv = (value) => {
       if (value === null || value === undefined) return '';
       const str = String(value);
@@ -370,19 +313,15 @@ const generateCsv = async (exportData) => {
       return str;
     };
 
-    // Helper function to format numeric values
     const formatNumeric = (value) => {
       if (value === null || value === undefined) return 'N/A';
       if (typeof value === 'number' && Number.isFinite(value)) {
         return value.toFixed(2);
       }
-      if (typeof value === 'string' && value === 'N/A') return 'N/A';
       return String(value);
     };
 
-    // ============================================
-    // SECTION 1: REPORT HEADER
-    // ============================================
+    // Report header
     csvContent += `${metadata.title}\n`;
     csvContent += `Generated On,${new Date(metadata.generatedAt).toLocaleString()}\n`;
     csvContent += `Time Period,${metadata.timePeriod}\n`;
@@ -390,13 +329,10 @@ const generateCsv = async (exportData) => {
     csvContent += `Water Quality Index,${metadata.wqi.value} (${metadata.wqi.status})\n`;
     csvContent += `\n`;
 
-    // ============================================
-    // SECTION 2: OVERALL WATER QUALITY REPORT
-    // ============================================
+    // Overall water quality report
     csvContent += `OVERALL WATER QUALITY REPORT\n`;
     csvContent += `Parameter,Average,Status,Details\n`;
-    
-    // Get parameter order matching PDF (pH, Temperature, Turbidity, Salinity)
+
     const parameterOrder = ['ph', 'temperature', 'turbidity', 'salinity'];
     parameterOrder.forEach(paramKey => {
       const param = parameters[paramKey];
@@ -407,12 +343,10 @@ const generateCsv = async (exportData) => {
         csvContent += `${escapeCsv(param.displayName)},${escapeCsv(avgDisplay + param.unit)},${escapeCsv(status)},${escapeCsv(details)}\n`;
       }
     });
-    
+
     csvContent += `\n`;
 
-    // ============================================
-    // SECTION 3: DETAILED REPORT FOR EACH PARAMETER
-    // ============================================
+    // Detailed report for each parameter
     csvContent += `DETAILED REPORT FOR EACH PARAMETER\n`;
     csvContent += `\n`;
 
@@ -420,27 +354,22 @@ const generateCsv = async (exportData) => {
       const param = parameters[paramKey];
       if (!param) return;
 
-      // Parameter header
       csvContent += `${param.displayName}\n`;
       csvContent += `Label,Value,Unit,Details / AI Insights\n`;
 
-      // Get AI insights for this parameter
       const recommendations = insights.recommendations || [];
-      const paramInsight = recommendations.find(rec => 
+      const paramInsight = recommendations.find(rec =>
         rec.parameter && rec.parameter.toLowerCase() === param.displayName.toLowerCase()
       );
-      const aiInsightText = paramInsight 
-        ? (paramInsight.recommendation || paramInsight.details || 'No AI insights') 
+      const aiInsightText = paramInsight
+        ? (paramInsight.recommendation || paramInsight.details || 'No AI insights')
         : 'No AI insights available';
 
-      // Parameter details rows
       const detailsValue = param.details || (param.trend?.message || 'No details available');
-      
-      // Get current value - use param.value if available, otherwise use average
-      const currentValue = param.value && param.value !== 'N/A' 
+      const currentValue = param.value && param.value !== 'N/A'
         ? (typeof param.value === 'string' ? param.value : formatNumeric(param.value))
         : formatNumeric(param.average);
-      
+
       csvContent += `Average,${escapeCsv(formatNumeric(param.average))},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
       csvContent += `Current,${escapeCsv(currentValue)},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
       csvContent += `Min,${escapeCsv(formatNumeric(param.min))},${escapeCsv(param.unit)},${escapeCsv('')}\n`;
@@ -448,13 +377,11 @@ const generateCsv = async (exportData) => {
       csvContent += `Status,${escapeCsv(param.status || 'unknown')},,${escapeCsv('')}\n`;
       csvContent += `Details,,,${escapeCsv(detailsValue)}\n`;
       csvContent += `AI Insights,,,${escapeCsv(aiInsightText)}\n`;
-      
+
       csvContent += `\n`;
     });
 
-    // ============================================
-    // SECTION 4: EXECUTIVE SUMMARY
-    // ============================================
+    // Executive summary
     csvContent += `EXECUTIVE SUMMARY\n`;
     if (exportData.executiveSummary) {
       csvContent += `${escapeCsv(exportData.executiveSummary)}\n`;
@@ -463,9 +390,7 @@ const generateCsv = async (exportData) => {
     }
     csvContent += `\n`;
 
-    // ============================================
-    // SECTION 5: ENVIRONMENTAL CONTEXT
-    // ============================================
+    // Environmental context
     csvContent += `ENVIRONMENTAL CONTEXT\n`;
     if (exportData.environmental?.weather) {
       csvContent += `Weather Conditions,${escapeCsv(exportData.environmental.weather.description)}\n`;
@@ -480,9 +405,7 @@ const generateCsv = async (exportData) => {
     }
     csvContent += `\n`;
 
-    // ============================================
-    // SECTION 6: REGULATORY COMPLIANCE DASHBOARD
-    // ============================================
+    // Regulatory compliance dashboard
     csvContent += `REGULATORY COMPLIANCE DASHBOARD\n`;
     if (exportData.compliance) {
       const compliance = exportData.compliance;
@@ -499,9 +422,7 @@ const generateCsv = async (exportData) => {
     }
     csvContent += `\n`;
 
-    // ============================================
-    // SECTION 7: SAMPLING INFORMATION
-    // ============================================
+    // Sampling information
     csvContent += `SAMPLING INFORMATION\n`;
     if (exportData.samplingInfo) {
       const sampling = exportData.samplingInfo;
@@ -514,9 +435,7 @@ const generateCsv = async (exportData) => {
     }
     csvContent += `\n`;
 
-    // ============================================
-    // SECTION 8: ACTION PRIORITY MATRIX
-    // ============================================
+    // Action priority matrix
     csvContent += `ACTION PRIORITY MATRIX\n`;
     if (insights.priorityMatrix) {
       const matrix = insights.priorityMatrix;
@@ -556,18 +475,13 @@ const generateCsv = async (exportData) => {
       csvContent += `No prioritized recommendations available\n\n`;
     }
 
-    // ============================================
-    // SECTION 9: OVERALL INSIGHTS & RECOMMENDATIONS
-    // ============================================
+    // Overall insights & recommendations
     csvContent += `OVERALL INSIGHTS & RECOMMENDATIONS\n`;
     csvContent += `\n`;
-
-    // Overall Insights
     csvContent += `Overall Insights\n`;
     csvContent += `${escapeCsv(insights.overall || 'No AI insights available')}\n`;
     csvContent += `\n`;
 
-    // Recommendations
     if (insights.recommendations && insights.recommendations.length > 0) {
       csvContent += `Recommendations\n`;
       insights.recommendations.forEach((rec, index) => {
@@ -581,25 +495,22 @@ const generateCsv = async (exportData) => {
       csvContent += `\n`;
     }
 
-    // ============================================
-    // SECTION 5: RAW SENSOR DATA (Optional)
-    // ============================================
+    // Raw sensor data
     if (rawData && rawData.length > 0) {
       csvContent += `RAW SENSOR DATA\n`;
       csvContent += `\n`;
-      
-      // Get all unique headers from all data points
+
       const allHeaders = new Set();
       rawData.forEach(item => {
         if (item && typeof item === 'object') {
           Object.keys(item).forEach(key => allHeaders.add(key));
         }
       });
-      
+
       const headers = Array.from(allHeaders);
       if (headers.length > 0) {
         csvContent += headers.map(h => escapeCsv(h)).join(',') + '\n';
-        
+
         rawData.forEach(item => {
           if (item && typeof item === 'object') {
             const row = headers.map(header => {
@@ -616,16 +527,15 @@ const generateCsv = async (exportData) => {
       }
     }
 
-    // Write file
-    await FileSystem.writeAsStringAsync(filePath, csvContent, { 
-      encoding: FileSystem.EncodingType.UTF8 
+    await FileSystem.writeAsStringAsync(filePath, csvContent, {
+      encoding: FileSystem.EncodingType.UTF8
     });
 
     console.log('CSV file generated successfully at:', filePath);
-    return { 
-      filePath, 
+    return {
+      filePath,
       fileName: csvFileName,
-      size: csvContent.length 
+      size: csvContent.length
     };
 
   } catch (error) {
@@ -635,21 +545,9 @@ const generateCsv = async (exportData) => {
 };
 
 /**
- * ==============================================
- * FILE VALIDATION UTILITIES
- * ==============================================
- */
-
-/**
- * Validates if a file exists and has content before sharing.
- * 
- * @async
- * @function validateFile
- * @param {string} filePath - Absolute path to the file to validate
- * @returns {Promise<boolean>} - True if file exists and has content, false otherwise
- * 
- * @example
- * const isValid = await validateFile('/path/to/file.csv');
+ * Validates file existence and content before sharing.
+ * @param {string} filePath - Path to validate
+ * @returns {Promise<boolean>} True if file exists and has content
  */
 const validateFile = async (filePath) => {
   try {
@@ -662,25 +560,164 @@ const validateFile = async (filePath) => {
 };
 
 /**
- * ==============================================
- * DATA PREPARATION UTILITIES
- * ==============================================
+ * Generates fallback overall insight when Gemini API fails.
+ * @param {Object} reportData - Report data structure
+ * @returns {string} Overall insight text
  */
+const generateFallbackOverallInsight = (reportData) => {
+  const parameters = reportData?.parameters || {};
+  const wqi = reportData?.wqi || {};
+  const overallStatus = reportData?.overallStatus || "unknown";
+
+  let criticalCount = 0;
+  let warningCount = 0;
+  let normalCount = 0;
+
+  // Count parameter statuses
+  Object.values(parameters).forEach(param => {
+    if (param?.status === "critical") criticalCount++;
+    else if (param?.status === "warning") warningCount++;
+    else if (param?.status === "normal") normalCount++;
+  });
+
+  let insight = "";
+
+  if (criticalCount > 0) {
+    insight = `System monitoring detected ${criticalCount} parameter${criticalCount > 1 ? 's' : ''} with critical issues requiring immediate attention. `;
+  } else if (warningCount > 0) {
+    insight = `Water quality monitoring shows ${warningCount} parameter${warningCount > 1 ? 's' : ''} with concerns that should be addressed. `;
+  } else if (normalCount > 0) {
+    insight = `All monitored water quality parameters are within acceptable ranges. `;
+  } else {
+    insight = `Water quality monitoring data is being collected and analyzed. `;
+  }
+
+  const wqiValue = wqi.value || 0;
+  if (wqiValue >= 90) {
+    insight += "Water quality is excellent.";
+  } else if (wqiValue >= 70) {
+    insight += "Overall water quality is good.";
+  } else if (wqiValue >= 50) {
+    insight += "Water quality is fair and may need improvement.";
+  } else if (wqiValue >= 25) {
+    insight += "Water quality is poor and requires attention.";
+  } else {
+    insight += "Water quality needs significant improvement.";
+  }
+
+  return insight;
+};
 
 /**
- * Transforms raw report data into a standardized format for export.
- * Merges report data, processed parameters, AI insights, weather data, and compliance info into a single object.
- *
- * @function prepareExportData
- * @param {Object} reportData - The main report data object containing metadata and WQI
- * @param {Array} processedParameters - Processed water quality parameter data
- * @param {Object} geminiResponse - AI-generated insights and recommendations
- * @param {Object} weatherData - Weather conditions during sampling period
- * @param {string} timePeriodFilter - Active time filter (daily/weekly/monthly)
- * @returns {Object} - Unified export data structure
- *
- * @example
- * const exportData = prepareExportData(reportData, processedParameters, geminiResponse, weatherData, activeFilter);
+ * Generates fallback recommendations when Gemini API fails.
+ * @param {Object} parameters - Parameter data
+ * @returns {Array} Array of recommendation objects
+ */
+const generateFallbackRecommendations = (parameters) => {
+  const recommendations = [];
+
+  if (!parameters) return recommendations;
+
+  // Check each parameter and generate appropriate recommendations
+  const paramRecs = {
+    // pH recommendations - prioritized first as most critical
+    pH: (param) => {
+      if (param.status === "critical") {
+        if (param.average < 6.5) {
+          recommendations.unshift({
+            parameter: "pH",
+            recommendedActions: ["Add a spoonful of baking soda or farm lime daily until pH rises to safe level", "Remove uneaten fish food from the pond that makes water acidic", "Do a 20% water change by removing old water and adding fresh water"]
+          });
+        } else if (param.average > 8.5) {
+          recommendations.unshift({
+            parameter: "pH",
+            recommendedActions: ["Stop adding any pH-raising products temporarily", "Add clean water to gradually lower pH", "Check pH once or twice daily until it gets normal"]
+          });
+        }
+      } else if (param.status === "warning") {
+        recommendations.push({
+          parameter: "pH",
+          recommendedActions: ["Add a small amount of baking soda if pH is too low", "Check pH levels and adjust if needed once daily"]
+        });
+      }
+    },
+
+    temperature: (param) => {
+      if (param.status === "critical" || param.status === "warning") {
+        if (param.average > 30) {
+          recommendations.push({
+            parameter: "Temperature",
+            recommendedActions: ["Put shade cloth or tarp over part of the pond to block hot sun", "Add more water depth to your pond to reduce heating", "Move pond to a location with more shade trees"]
+          });
+        } else if (param.average < 24) {
+          recommendations.push({
+            parameter: "Temperature",
+            recommendedActions: ["Move pond to a sunnier location if possible", "Add warm water if you have heating available", "Feed fish less often in cold weather to reduce stress"]
+          });
+        }
+      }
+    },
+
+    turbidity: (param) => {
+      if (param.status === "critical") {
+        recommendations.push({
+          parameter: "Turbidity",
+          recommendedActions: ["Don't overfeed fish to reduce them stirring up mud", "Clean filter daily and make sure water flows through well", "Install a finer mesh filter or add a settling area for murky water"]
+        });
+      } else if (param.status === "warning") {
+        recommendations.push({
+          parameter: "Turbidity",
+          recommendedActions: ["Clean the filter sponge when it gets dirty", "Don't feed too much food that makes water cloudy", "Monitor water clarity and clean filters regularly"]
+        });
+      }
+    },
+
+    salinity: (param) => {
+      if (param.status === "critical") {
+        if (param.average > 35) {
+          recommendations.push({
+            parameter: "Salinity",
+            recommendedActions: ["Do partial water changes with fresh water to reduce salt levels", "Stop adding salt until levels come down", "Test salt levels daily with a salinity meter"]
+          });
+        } else if (param.average < 25) {
+          recommendations.push({
+            parameter: "Salinity",
+            recommendedActions: ["Add salt gradually - 2 tablespoons per 10 gallons of water daily", "Buy aquarium salt or marine salt from stores", "Test salinity every few days until it reaches proper level"]
+          });
+        }
+      }
+    }
+  };
+
+  // Generate recommendations for each parameter
+  Object.entries(parameters).forEach(([key, param]) => {
+    if (param && param.status && param.average !== null) {
+      const recFunc = paramRecs[key];
+      if (recFunc) {
+        recFunc(param);
+      }
+    }
+  });
+
+  // Add general recommendations if none were generated
+  if (recommendations.length === 0) {
+    recommendations.push({
+      parameter: "General",
+      recommendedActions: ["Maintain regular water testing schedule", "Monitor all parameters weekly", "Keep maintenance logs"]
+    });
+  }
+
+  return recommendations;
+};
+
+/**
+ * Transforms raw report data into standardized export format.
+ * @param {Object} reportData - Report data
+ * @param {Array} processedParameters - Processed parameters
+ * @param {Object} geminiResponse - AI insights
+ * @param {Object} weatherData - Weather conditions
+ * @param {string} timePeriodFilter - Time filter
+ * @returns {Object} Export data structure
  */
 const prepareExportData = (reportData, processedParameters, geminiResponse, weatherData, timePeriodFilter) => {
   // Import thresholds for compliance checking
@@ -751,19 +788,19 @@ const prepareExportData = (reportData, processedParameters, geminiResponse, weat
 
     // AI insights and recommendations with priority matrix - sanitized for Unicode safety
     insights: {
-      overall: sanitizeTextForPDF(geminiResponse?.insights?.overallInsight || "No AI insights available"),
+      overall: sanitizeTextForPDF(geminiResponse?.insights?.overallInsight ||
+        generateFallbackOverallInsight(reportData)),
       forecast: sanitizeTextForPDF(geminiResponse?.forecast?.overallForecast || "No forecast available"),
-      recommendations: (geminiResponse?.suggestions || []).map(rec => ({
+      recommendations: (geminiResponse?.suggestions || generateFallbackRecommendations(reportData.parameters)).map(rec => ({
         ...rec,
-        recommendation: sanitizeTextForPDF(rec.recommendation || ''),
+        recommendation: sanitizeTextForPDF(rec.recommendation || rec.recommendedActions?.[0] || rec.details || ''),
         details: sanitizeTextForPDF(rec.details || ''),
         parameter: sanitizeTextForPDF(rec.parameter || '')
       })),
       priorityMatrix: generatePriorityMatrix(
-        (geminiResponse?.suggestions || []).map(rec => ({
+        (geminiResponse?.suggestions || generateFallbackRecommendations(reportData.parameters)).map(rec => ({
           ...rec,
-          recommendation: sanitizeTextForPDF(rec.recommendation || ''),
-          details: sanitizeTextForPDF(rec.details || ''),
+          recommendation: sanitizeTextForPDF(rec.recommendation || rec.recommendedActions?.[0] || rec.details || ''),
           parameter: sanitizeTextForPDF(rec.parameter || '')
         }))
       )
@@ -777,22 +814,9 @@ const prepareExportData = (reportData, processedParameters, geminiResponse, weat
 };
 
 /**
- * ==============================================
- * FILE MANAGEMENT UTILITIES
- * ==============================================
- */
-
-/**
- * Asynchronously deletes temporary files to free up storage space.
- * Silently handles errors to prevent disruption of main application flow.
- * 
- * @async
- * @function cleanupFiles
- * @param {Array<string>} filePaths - Array of absolute file paths to delete
+ * Deletes temporary files to free up storage.
+ * @param {Array<string>} filePaths - Paths to delete
  * @returns {Promise<void>}
- * 
- * @example
- * await cleanupFiles(['/path/to/temp1.csv', '/path/to/temp2.pdf']);
  */
 const cleanupFiles = async (filePaths) => {
   try {
@@ -1093,13 +1117,8 @@ const formatParameterData = (paramData, displayName, unit, safeRange) => {
 
 /**
  * Converts file size in bytes to a human-readable string.
- * 
- * @function formatFileSize
  * @param {number} bytes - File size in bytes
- * @returns {string} - Formatted file size (e.g., '2.5 MB')
- * 
- * @example
- * const size = formatFileSize(1024); // Returns '1 KB'
+ * @returns {string} Formatted file size
  */
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
@@ -1124,6 +1143,6 @@ export {
   prepareExportData,
   sanitizeTextForPDF,
 
-  // S/ Srng
+  // Sharing
   shareFiles
 };
