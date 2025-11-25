@@ -190,13 +190,25 @@ const generateInsightFromAPI = async (sensorData) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-    Based on the following water quality sensor data, provide a detailed analysis and recommendations.
+    Based on the following pond/tank water quality sensor data, provide analysis and simple recommendations for FISH FARMERS.
     The data is: ${JSON.stringify(sensorData)}
+
+    CRITICAL: Use extremely simple, everyday language that a fish farmer with no scientific training can understand.
+    - Avoid technical terms like "alkalinity", "acidification", "reduce alkalinity", etc.
+    - Use common farmer terms like "baking soda", "farm lime", "clean filters", "change some water", etc.
+    - Make each recommendation a clear action that farmers can do TODAY.
+    - Keep instructions very practical and easy to follow.
+
+    Examples of good simple language:
+    ✅ "Add baking soda to raise pH level"
+    ✅ "Change 20% of the water daily"
+    ✅ "Clean the filter and make sure water flows well"
+    ❌ "Implement pH buffer saturation" or "Regulate carbonate equilibrium"
 
     Please return a JSON object with the following structure:
     {
       "insights": {
-        "overallInsight": "A brief, 1 sentence summary of the water quality with specific observations.",
+        "overallInsight": "One simple sentence about your pond water quality using everyday language.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai"
       },
@@ -204,56 +216,56 @@ const generateInsightFromAPI = async (sensorData) => {
         {
           "parameter": "pH",
           "influencingFactors": [
-            "Factor 1 affecting pH",
-            "Factor 2 affecting pH",
-            "Factor 3 affecting pH"
+            "Fish waste making water more acidic",
+            "Too much fish food leftover",
+            "Heavy rainfall washing in acids from soil"
           ],
           "recommendedActions": [
-            "Action 1 for pH management",
-            "Action 2 for pH management",
-            "Action 3 for pH management"
+            "Add a spoonful of baking soda or farm lime daily until pH rises",
+            "Remove uneaten fish food from the pond",
+            "Do a 20% water change by removing old water and adding fresh water"
           ],
           "status": "normal|warning|critical"
         },
         {
           "parameter": "temperature",
           "influencingFactors": [
-            "Factor 1 affecting temperature",
-            "Factor 2 affecting temperature",
-            "Factor 3 affecting temperature"
+            "Hot sun during afternoon",
+            "Using shallow water in pond",
+            "No shade over the pond"
           ],
           "recommendedActions": [
-            "Action 1 for temperature control",
-            "Action 2 for temperature control",
-            "Action 3 for temperature control"
+            "Put shade cloth or tarp over part of the pond",
+            "Add more water depth to pond",
+            "Move pond location away from direct hot sun"
           ],
           "status": "normal|warning|critical"
         },
         {
           "parameter": "salinity",
           "influencingFactors": [
-            "Factor 1 affecting salinity",
-            "Factor 2 affecting salinity",
-            "Factor 3 affecting salinity"
+            "Using too much salt for fish health",
+            "Not adding salt regularly",
+            "Heavy rain diluting the salt level"
           ],
           "recommendedActions": [
-            "Action 1 for salinity management",
-            "Action 2 for salinity management",
-            "Action 3 for salinity management"
+            "Reduce salt feeding by half for a few days",
+            "Add 2 tablespoons of salt per 10 gallons of water daily",
+            "Gradually add salt back over 3-4 days after rain"
           ],
           "status": "normal|warning|critical"
         },
         {
           "parameter": "turbidity",
           "influencingFactors": [
-            "Factor 1 affecting turbidity",
-            "Factor 2 affecting turbidity",
-            "Factor 3 affecting turbidity"
+            "Fish stirring up bottom mud",
+            "Too many fish in small pond",
+            "Filter not clean or not strong enough"
           ],
           "recommendedActions": [
-            "Action 1 for turbidity control",
-            "Action 2 for turbidity control",
-            "Action 3 for turbidity control"
+            "Don't overfeed fish to reduce their activity",
+            "Clean filter daily and make sure water flows through well",
+            "Add a settling pond or reduce fish number"
           ],
           "status": "normal|warning|critical"
         }

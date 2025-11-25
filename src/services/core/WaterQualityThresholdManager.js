@@ -21,7 +21,7 @@ export class WaterQualityThresholdManager {
         turbidity: {
           min: thresholds.turbidity.min,
           max: thresholds.turbidity.max,
-          critical: { max: thresholds.turbidity.max * 2 }
+          critical: { max: 60 }
         },
         salinity: {
           min: thresholds.salinity.min,

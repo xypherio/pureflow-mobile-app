@@ -315,6 +315,30 @@ class NotificationTemplates {
     };
   }
 
+  static weatherAlert(rainStatus, weatherMessage) {
+    const statusEmojis = {
+      'No Rain': '☀️',
+      'Raining': '🌧️',
+      'Heavy Rain': '⛈️'
+    };
+
+    return {
+      title: `${statusEmojis[rainStatus] || '💧'} Weather Alert`,
+      body: weatherMessage,
+      data: {
+        type: 'weather_alert',
+        rainStatus,
+        timestamp: new Date().toISOString(),
+        category: 'weather',
+        deepLink: 'pureflow://forecast'
+      },
+      categoryId: 'alerts',
+      priority: rainStatus === 'Heavy Rain' ? 'high' : 'normal',
+      sound: rainStatus === 'Heavy Rain' ? 'critical_alert' : 'default',
+      vibration: rainStatus === 'Heavy Rain' ? [0, 500, 300, 500] : false
+    };
+  }
+
   static monitoringReminder(hoursInterval = 4) {
     return {
       title: '🌊 Time to Monitor Water Parameters',

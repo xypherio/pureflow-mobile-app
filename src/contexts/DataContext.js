@@ -48,7 +48,8 @@ export function DataProvider({ children, initialData = null }) {
       pH: normalizeValue(sensorData.pH),
       temperature: normalizeValue(sensorData.temperature),
       turbidity: normalizeValue(sensorData.turbidity),
-      salinity: normalizeValue(sensorData.salinity)
+      salinity: normalizeValue(sensorData.salinity),
+      isRaining: sensorData.isRaining || 0 // Include rain status in change detection
     };
 
     return JSON.stringify(signature);
