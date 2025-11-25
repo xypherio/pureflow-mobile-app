@@ -1,11 +1,9 @@
-import { useInsights } from '@contexts/InsightsContext';
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
 
 // Environment check for production
 const isProduction = __DEV__ === false;
-
 
 const silentLog = (message, ...args) => {
   if (!isProduction) {
@@ -85,119 +83,53 @@ export default function InsightsCard({
   componentId = 'insights-card',
   autoRefresh = true
 }) {
-  const { 
-    generateComponentInsight, 
-    getComponentInsight, 
-    isComponentLoading, 
-    getComponentError 
-  } = useInsights();
-  
-  const [insight, setInsight] = useState(description);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  
   const config = INSIGHT_TYPES[type] || INSIGHT_TYPES.info;
   const IconComponent = config.icon;
-  const loading = isComponentLoading(componentId);
-  const error = getComponentError(componentId);
-  const cachedInsight = getComponentInsight(componentId);
+  const currentInsight = description || "No insights available";
+  const lastUpdated = timestamp || new Date();
+  const insightSource = 'static';
 
-  // Use cached insight if available, otherwise use description prop
-  const currentInsight = cachedInsight?.insights?.overallInsight || insight;
-  const lastUpdated = cachedInsight?.lastUpdated || timestamp;
-  const insightSource = cachedInsight?.insights?.source || 'prop';
+  const { width } = Dimensions.get('window');
+  const isLargeScreen = width > 500;
+
+  const [opacity] = useState(new Animated.Value(0));
 
   useEffect(() => {
-    if (sensorData && autoRefresh) {
-      generateComponentInsight(componentId, sensorData).catch(error => {
-        silentError(`Failed to generate insight for ${componentId}:`, error);
-      });
-    }
-  }, [sensorData, componentId, autoRefresh, generateComponentInsight]);
-
-  // Update local insight when cached insight changes
-  useEffect(() => {
-    if (cachedInsight) {
-      setInsight(cachedInsight.insights?.overallInsight || description);
-    }
-  }, [cachedInsight, description]);
-
-  const handleRefresh = async () => {
-    if (!sensorData) {
-      silentLog(`No sensor data available for refresh of ${componentId}`);
-      return;
-    }
-
-    setIsRefreshing(true);
-    try {
-      await generateComponentInsight(componentId, sensorData, true);
-      silentLog(`✅ Successfully refreshed insight for ${componentId}`);
-    } catch (error) {
-      silentError(`Failed to refresh insight for ${componentId}:`, error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+    Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
 
   const getStatusColor = () => {
-    if (loading || isRefreshing) return '#3B82F6'; // Blue for loading
-    if (error) return '#EF4444'; // Red for error
-    if (insightSource === 'cached-fallback') return '#F59E0B'; // Orange for cached fallback
-    if (insightSource === 'gemini-ai') return '#10B981'; // Green for fresh AI data
-    return '#6B7280'; // Gray for default
+    return '#6B7280'; // Gray for static content
   };
 
   const getStatusText = () => {
-    if (loading || isRefreshing) return 'Generating insight...';
-    if (error) return 'Error loading insight';
-    if (insightSource === 'cached-fallback') return 'Using cached data';
-    if (insightSource === 'gemini-ai') return 'AI Generated';
-    return 'Static content';
+    return 'Content available';
   };
 
   // Check if we should show empty state
-  const isEmpty = !loading && !error && (!currentInsight || currentInsight === "No data available");
+  const isEmpty = !currentInsight || currentInsight === "No insights available";
 
   // Determine which config to use - empty state if no data
   const displayConfig = isEmpty ? INSIGHT_TYPES.empty : config;
 
-  // User-friendly error message
-  const getErrorMessage = () => {
-    if (!error) return null;
-
-    // Convert technical errors to user-friendly messages
-    if (error.includes('quota') || error.includes('limit')) {
-      return 'AI service quota exceeded. Please try again later.';
-    }
-    if (error.includes('network') || error.includes('fetch')) {
-      return 'Network error. Please check your connection.';
-    }
-    if (error.includes('timeout')) {
-      return 'Request timed out. Please try again.';
-    }
-
-    return 'Unable to generate insight at this time.';
-  };
-
   // Prepare content based on state
   const renderContent = () => {
-    if (loading) {
-      return <Text style={styles.loadingText}>Generating AI insight...</Text>;
-    }
-
-    if (error) {
-      return <Text style={[styles.loadingText, { color: '#EF4444' }]}>{getErrorMessage()}</Text>;
-    }
-
     if (isEmpty) {
-      return <Text style={styles.description}>"Insights will be available once your water quality sensors start collecting data and our AI analyzes the trends."</Text>;
+      return <Text style={styles.description} accessibilityLabel="Empty state message">{"Insights will be available once your water quality sensors start collecting data and our AI analyzes the trends."}</Text>;
     }
 
-    return <Text style={styles.description}>{safeString(currentInsight)}</Text>;
+    return <Text style={styles.description} accessibilityLabel={"Description: " + safeString(currentInsight)}>{safeString(currentInsight)}</Text>;
   };
 
   return (
-    <View style={[styles.container, {
+    <Animated.View style={[{ opacity }, {
+      ...styles.container,
       borderColor: displayConfig.borderColor,
+      padding: isLargeScreen ? 24 : 20,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
     }]}>
       {/* Gradient overlay */}
       <View style={[styles.gradientOverlay, {
@@ -208,6 +140,10 @@ export default function InsightsCard({
         <View style={[styles.iconContainer, {
           backgroundColor: displayConfig.bgColor,
           shadowColor: displayConfig.iconColor,
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
         }]}>
           <IconComponent
             size={isEmpty ? 20 : 24}
@@ -216,7 +152,7 @@ export default function InsightsCard({
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, { fontSize: isLargeScreen ? 20 : 18, fontWeight: '900', letterSpacing: -0.6 }]} accessibilityLabel={"Title: " + (isEmpty ? "Waiting for Sensor Data" : safeString(title))}>
             {isEmpty ? "Waiting for Sensor Data" : safeString(title)}
           </Text>
 
@@ -226,7 +162,7 @@ export default function InsightsCard({
             <View style={styles.recommendationsContainer}>
               <Text style={styles.recommendationsTitle}>Recommendations:</Text>
               {recommendations.map((rec, index) => (
-                <Text key={index} style={styles.recommendationItem}>• {rec}</Text>
+                <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>• {rec}</Text>
               ))}
             </View>
           )}
@@ -234,13 +170,13 @@ export default function InsightsCard({
           {/* Status indicator */}
           <View style={styles.statusIndicator}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-            <Text style={styles.statusText}>
+            <Text style={styles.statusText} accessibilityLabel="Content status: Content available">
               {getStatusText()}
             </Text>
           </View>
 
           {lastUpdated && (
-            <Text style={styles.lastUpdated}>
+            <Text style={styles.lastUpdated} accessibilityLabel={"Last updated: " + new Date(lastUpdated).toLocaleString()}>
               Last updated: {new Date(lastUpdated).toLocaleString()}
             </Text>
           )}
@@ -255,7 +191,7 @@ export default function InsightsCard({
               }]}>
                 💡 AI Suggestion
               </Text>
-              <Text style={styles.suggestionText}>
+              <Text style={styles.suggestionText} accessibilityLabel={"Suggestion: " + safeString(suggestion)}>
                 {safeString(suggestion)}
               </Text>
             </View>
@@ -263,7 +199,7 @@ export default function InsightsCard({
 
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -271,7 +207,6 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 20,
     marginVertical: 5,
     borderWidth: 1,
     position: 'relative',
@@ -292,28 +227,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
-  contentContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'flex-start' 
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start'
   },
-  title: { 
-    fontSize: 18, 
-    fontWeight: '800', 
+  title: {
     color: '#111827',
     marginBottom: 8,
-    letterSpacing: -0.5,
   },
-  description: { 
-    fontSize: 15, 
+  description: {
     color: '#4B5563',
-    lineHeight: 22,
+    lineHeight: 24,
     marginBottom: 8,
-    fontWeight: '400',
+    fontWeight: '500',
+    fontSize: 15,
   },
   lastUpdated: {
     fontSize: 12,

@@ -302,13 +302,13 @@ const styles = StyleSheet.create({
   compactCard: {
     backgroundColor: "#2455a9",
     borderRadius: 18,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     height: 100,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
     justifyContent: "space-between",
   },
   errorCard: {
