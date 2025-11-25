@@ -308,7 +308,7 @@ class HistoricalAlertsService {
     return Object.keys(groups)
       .map(key => ({
         title: key,          // Section title (e.g., 'Today')
-        data: groups[key],   // Array of alerts in this section
+        data: groups[key].sort((a, b) => b.timestamp.date - a.timestamp.date),   // Sort alerts by timestamp descending (most recent first)
       }))
       .filter(section => section.data.length > 0);  // Only include non-empty sections
   }
