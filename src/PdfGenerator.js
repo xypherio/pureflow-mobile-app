@@ -6,12 +6,14 @@ import { Asset } from 'expo-asset';
 import { StyleSheet } from 'react-native';
 import { sanitizeTextForPDF } from './utils/exportUtils';
 
-const PdfGenerator = async (reportData) => {
+const PdfGenerator = async (exportData) => {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-
+  // Extract the original reportData from exportData structure
+  // The exportData contains processed data, but PDF generator needs access to original report structure too
+  const reportData = exportData.reportData || exportData; // Fallback in case structure changes
 
   // Helper function to wrap text
   const wrapText = (text, font, fontSize, maxWidth) => {
@@ -84,8 +86,8 @@ const PdfGenerator = async (reportData) => {
   const centerX = pageWidth / 2;
 
   // Calculate positions for centered layout (logo left of center, title right of center)
-  const logoLeftPadding = 10; // Space from left edge of logo to start of text
-  const logoTitleGap = 15; // Gap between logo and title text
+  const logoLeftPadding = 10; 
+  const logoTitleGap = 15; 
 
   // Calculate text width using font metrics (PureFlow Water Quality Report at 24pt)
   const titleText = 'PureFlow Water Quality Report';
@@ -131,17 +133,99 @@ const PdfGenerator = async (reportData) => {
   });
   startY -= rowHeight * 1.2;
 
-  if (reportData.executiveSummary) {
-    const sanitizedSummary = sanitizeTextForPDF(reportData.executiveSummary);
-    const summaryWrapped = wrapText(sanitizedSummary, font, fontSize, 500);
-    for (const line of summaryWrapped) {
-      page.drawText(sanitizeTextForPDF(line), { x: startX, y: startY, font, size: fontSize, color: textColor });
-      startY -= font.heightAtSize(fontSize) + 2;
-      checkPageSpace();
-    }
-  } else {
-    page.drawText('Executive summary not available.', { x: startX, y: startY, font, size: fontSize, color: textColor });
-    startY -= rowHeight;
+  // Generate executive summary with WQI data
+  const wqiValue = exportData.metadata?.wqi?.value || 0;
+  const wqiStatus = exportData.metadata?.wqi?.status || "unknown";
+  const wqiDescription =
+    (wqiStatus === "excellent" ? "Water quality is excellent with minimal risk" :
+     wqiStatus === "good" ? "Water quality is good with low risk" :
+     wqiStatus === "fair" ? "Water quality is fair with moderate risk" :
+     wqiStatus === "poor" ? "Water quality is poor with high risk" :
+     wqiStatus === "veryPoor" ? "Water quality is very poor with very high risk" :
+     "Unable to determine water quality");
+
+  const timePeriodFilter = reportData.timePeriod || reportData.timeRange || "weekly";
+  const periodText = timePeriodFilter === "daily" ? "24-hour monitoring period" :
+                     timePeriodFilter === "weekly" ? "7-day monitoring period" :
+                     "30-day monitoring period";
+
+  const statusSummary = wqiStatus === "excellent" ? "excellent with all parameters within optimal ranges" :
+                       wqiStatus === "good" ? "good with minor parameter variations" :
+                       wqiStatus === "fair" ? "requiring attention due to parameter variations" :
+                       wqiStatus === "poor" ? "requiring improvements" :
+                       wqiStatus === "veryPoor" ? "requiring immediate corrective actions" :
+                       "under monitoring with preliminary assessments";
+
+  // Check for critical parameters
+  const paramData = reportData.parameters || {};
+  const criticalParams = [];
+  if (paramData.pH && (paramData.pH.status === "critical" || paramData.pH.status === "warning")) {
+    criticalParams.push("pH");
+  }
+  if (paramData.temperature && (paramData.temperature.status === "critical" || paramData.temperature.status === "warning")) {
+    criticalParams.push("temperature");
+  }
+  if (paramData.turbidity && (paramData.turbidity.status === "critical" || paramData.turbidity.status === "warning")) {
+    criticalParams.push("turbidity");
+  }
+  if (paramData.salinity && (paramData.salinity.status === "critical" || paramData.salinity.status === "warning")) {
+    criticalParams.push("salinity");
+  }
+
+  const criticalText = criticalParams.length > 0 ? ` Special attention required for: ${criticalParams.join(", ")}.` : "";
+
+  const executiveSummary = `This PureFlow water quality report covers the ${periodText} ending ${new Date().toLocaleDateString()}. The overall water quality status is ${statusSummary} (WQI: ${wqiValue}/100).${criticalText} Please review detailed measurements and AI insights for specific parameter recommendations.`;
+
+  const sanitizedSummary = sanitizeTextForPDF(executiveSummary);
+  const summaryWrapped = wrapText(sanitizedSummary, font, fontSize, 500);
+  for (const line of summaryWrapped) {
+    page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
+    startY -= font.heightAtSize(fontSize) + 2;
+    checkPageSpace();
+  }
+
+  startY -= rowHeight * 0.5;
+  drawSectionDivider();
+  startY -= rowHeight * 0.7;
+
+  // --- Section 1.5: Water Quality Index (WQI) ---
+  checkPageSpace(rowHeight * 3);
+  page.drawText('Water Quality Index (WQI)', {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: sectionTitleFontSize,
+    color: headerColor,
+  });
+  startY -= rowHeight * 1.2;
+
+  // Display WQI prominently
+  const wqiScoreText = `WQI Score: ${wqiValue}/100`;
+  const wqiStatusText = `Status: ${wqiStatus.charAt(0).toUpperCase() + wqiStatus.slice(1)}`;
+
+  page.drawText(wqiScoreText, {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: headingFontSize,
+    color: textColor,
+  });
+  startY -= rowHeight;
+
+  page.drawText(wqiStatusText, {
+    x: startX,
+    y: startY,
+    font: fontBold,
+    size: fontSize,
+    color: textColor,
+  });
+  startY -= rowHeight * 0.8;
+
+  // Add WQI description
+  const descriptionWrapped = wrapText(wqiDescription, font, fontSize, 500);
+  for (const line of descriptionWrapped) {
+    page.drawText(line, { x: startX, y: startY, font, size: fontSize, color: textColor });
+    startY -= font.heightAtSize(fontSize) + 2;
   }
 
   startY -= rowHeight * 0.5;

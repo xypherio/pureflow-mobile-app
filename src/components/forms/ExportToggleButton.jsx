@@ -10,8 +10,8 @@ import {
 
 export default function ExportToggleButton({
   isExporting,
-  onExportPdf, // New prop for exporting PDF
-  onExportCsv, // New prop for exporting CSV
+  onExportPdf, 
+  onExportCsv, 
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const animation = React.useRef(new Animated.Value(0)).current;
@@ -32,22 +32,22 @@ export default function ExportToggleButton({
   }, [animation]);
 
   const handleExportPdfPress = useCallback(async () => {
-    setIsExpanded(false); // Collapse after action
+    setIsExpanded(false); 
     Animated.spring(animation, {
       toValue: 5,
       friction: 5,
-      tension: 180,
+      tension: 120,
       useNativeDriver: false,
     }).start();
     if (onExportPdf) {
-      setPdfLoading(true); // Start PDF loading
+      setPdfLoading(true); 
       await onExportPdf();
-      setPdfLoading(false); // End PDF loading
+      setPdfLoading(false); 
     }
   }, [onExportPdf, animation]);
 
   const handleExportCsvPress = useCallback(async () => {
-    setIsExpanded(false); // Collapse after action
+    setIsExpanded(false); 
     Animated.spring(animation, {
       toValue: 0,
       friction: 8,
@@ -55,20 +55,20 @@ export default function ExportToggleButton({
       useNativeDriver: false,
     }).start();
     if (onExportCsv) {
-      setCsvLoading(true); // Start CSV loading
+      setCsvLoading(true); 
       await onExportCsv();
-      setCsvLoading(false); // End CSV loading
+      setCsvLoading(false);
     }
   }, [onExportCsv, animation]);
 
   const pdfButtonTranslateY = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -20], // First option, reduced spacing
+    outputRange: [0, -15], 
   });
 
   const csvButtonTranslateY = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, -30], // Second option, reduced spacing
+    outputRange: [0, -25], 
   });
 
   const opacity = animation.interpolate({
@@ -87,7 +87,7 @@ export default function ExportToggleButton({
             ]}
           >
             <TouchableOpacity
-              style={[styles.optionButton, { backgroundColor: "#d1fae5" }]} // Green for CSV
+              style={[styles.optionButton, { backgroundColor: "#d1fae5" }]} 
               onPress={handleExportCsvPress}
               disabled={isExporting || csvLoading}
               activeOpacity={0.8}
@@ -107,7 +107,7 @@ export default function ExportToggleButton({
             ]}
           >
             <TouchableOpacity
-              style={[styles.optionButton, { backgroundColor: "#ffa79e" }]}
+              style={[styles.optionButton, { backgroundColor: "#fca5a5" }]}
               onPress={handleExportPdfPress}
               disabled={isExporting || pdfLoading}
               activeOpacity={0.8}
@@ -115,7 +115,7 @@ export default function ExportToggleButton({
               {pdfLoading ? (
                 <ActivityIndicator size="small" color="#9e1e11" />
               ) : (
-                <FileDown size={22} color="#9e1e11" />
+                <FileDown size={22} color="#b91c1c" />
               )}
             </TouchableOpacity>
           </Animated.View>
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   optionButtonWrapper: {
     alignItems: "center",
-    marginBottom: 5, 
+    marginBottom: 2, 
   },
   optionButton: {
     width: 56,
