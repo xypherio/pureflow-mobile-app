@@ -1,10 +1,29 @@
 import { globalStyles } from "@styles/globalStyles.js";
+import { useRouter } from "expo-router";
 import { CloudRain, CloudSun, RefreshCw, Sun } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { weatherService } from "../../services/weatherService";
 
 const LOGO_PATH = require("../../../assets/logo/pureflow-logo.png");
+
+const shortenWeatherLabel = (label) => {
+  const lowerLabel = label.toLowerCase();
+  if (lowerLabel === 'clear sky') return 'Clear';
+  if (lowerLabel === 'few clouds') return 'Few';
+  if (lowerLabel === 'scattered clouds') return 'Scattered';
+  if (lowerLabel === 'broken clouds') return 'Broken';
+  if (lowerLabel === 'overcast clouds') return 'Cloudy';
+  if (lowerLabel.includes('rain')) return 'Rain';
+  if (lowerLabel.includes('thunderstorm')) return 'Thunder';
+  if (lowerLabel.includes('snow')) return 'Snow';
+  if (lowerLabel.includes('mist')) return 'Mist';
+  if (lowerLabel.includes('fog')) return 'Fog';
+  // Default: capitalize first word
+  const words = label.split(' ');
+  const first = words[0].charAt(0).toUpperCase() + words[0].slice(1);
+  return first.length > 9 ? first.substring(0, 9) : first;
+};
 
 const weatherIconMap = {
   rain: <CloudRain size={24} color="#3b82f6" />,
@@ -16,6 +35,7 @@ export default function PureFlowLogo({
   style,
   ...props
 }) {
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [weather, setWeather] = useState({
     label: "Loading...",
@@ -49,18 +69,7 @@ export default function PureFlowLogo({
 
   useEffect(() => {
     fetchWeather();
-    
-    // Refresh weather every 10 minutes
-    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
-    
-    return () => clearInterval(interval);
   }, []);
-
-  const handleWeatherRefresh = () => {
-    if (!isLoadingWeather) {
-      fetchWeather();
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -77,8 +86,7 @@ export default function PureFlowLogo({
       {/* Weather Info */}
       <Pressable 
         style={styles.weatherContainer}
-        onPress={handleWeatherRefresh}
-        disabled={isLoadingWeather}
+        onPress={() => router.push('/forecast')}
       >
         {isLoadingWeather ? (
           <ActivityIndicator size="small" color="#3b82f6" />
@@ -92,7 +100,7 @@ export default function PureFlowLogo({
         
         <View style={styles.weatherTextContainer}>
           <Text style={styles.weatherLabel} numberOfLines={1}>
-            {weather.label}
+            {shortenWeatherLabel(weather.label)}
           </Text>
           <Text style={styles.weatherTemp}>
             {weather.temp}
@@ -146,10 +154,9 @@ const styles = StyleSheet.create({
   weatherContainer: {
     flexDirection: "row",
     alignItems: "center",
-    maxWidth: 100,
+    maxWidth: 60,
   },
   weatherTextContainer: {
-    marginLeft: 8,
     flex: 1,
   },
   weatherLabel: {

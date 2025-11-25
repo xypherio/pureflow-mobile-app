@@ -87,6 +87,7 @@ export default function WaterQualitySummaryCard({
   qualityLevel = "normal",
   lastUpdated = "Just now",
   parameters = [],
+  wqi = { value: 0, status: "unknown" },
 }) {
   const level = QUALITY_LEVELS[qualityLevel] || QUALITY_LEVELS.normal;
   const IconComponent = level.icon;
@@ -133,6 +134,9 @@ export default function WaterQualitySummaryCard({
       <View style={[styles.statusBanner, { backgroundColor: level.bg }]}>
         <Text style={[styles.statusLabel, { color: level.color }]}>
           {level.label}
+        </Text>
+        <Text style={[styles.wqiScore, { color: level.color }]}>
+          WQI: {wqi.value}/100 ({wqi.status})
         </Text>
         <Text style={styles.statusDescription}>{level.description}</Text>
       </View>
@@ -189,6 +193,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 4,
+    textAlign: "center",
+  },
+  wqiScore: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
     textAlign: "center",
   },
   statusDescription: {

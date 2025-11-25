@@ -1,19 +1,63 @@
 import { getWaterQualityThresholds } from "@constants/thresholds";
 import { useData } from "@contexts/DataContext";
-import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useMemo } from "react";
+import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
+import React, { useEffect, useMemo, useRef } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { WaterQualityCalculator } from "../../services/core/WaterQualityCalculator";
+import waterQualityNotificationService from "../../services/WaterQualityNotificationService";
 
-const thresholds = getWaterQualityThresholds();
+const baseThresholds = getWaterQualityThresholds();
+
+// Add critical thresholds to match alert system logic
+const thresholds = {
+  pH: {
+    ...baseThresholds.pH,
+    critical: {
+      min: baseThresholds.pH.min - 0.5,
+      max: baseThresholds.pH.max + 0.5,
+    },
+  },
+  temperature: {
+    ...baseThresholds.temperature,
+    critical: {
+      min: baseThresholds.temperature.min - 6,
+      max: baseThresholds.temperature.max + 5,
+    },
+  },
+  turbidity: {
+    ...baseThresholds.turbidity,
+    critical: { max: baseThresholds.turbidity.max * 2 },
+  },
+  salinity: {
+    ...baseThresholds.salinity,
+    critical: { max: baseThresholds.salinity.max * 2 },
+  },
+};
 
 // Parameter configuration
 const PARAMETER_CONFIGS = [
-  { key: 'pH', label: 'pH Level', unit: 'PH', icon: Gauge, color: '#007bff' },
-  { key: 'temperature', label: 'Temperature', unit: '°C', icon: Thermometer, color: '#e83e8c' },
-  { key: 'turbidity', label: 'Turbidity', unit: 'NTU', icon: Waves, color: '#28a745' },
-  { key: 'salinity', label: 'Salinity', unit: 'PPT', icon: Droplet, color: '#8b5cf6' },
+  { key: "pH", label: "pH Level", unit: "PH", icon: Gauge, color: "#007bff" },
+  {
+    key: "temperature",
+    label: "Temperature",
+    unit: "°C",
+    icon: Thermometer,
+    color: "#e83e8c",
+  },
+  {
+    key: "turbidity",
+    label: "Turbidity",
+    unit: "NTU",
+    icon: Waves,
+    color: "#28a745",
+  },
+  {
+    key: "salinity",
+    label: "Salinity",
+    unit: "PPT",
+    icon: Droplet,
+    color: "#8b5cf6",
+  },
 ];
 
 export default function RealTimeData() {
@@ -21,8 +65,8 @@ export default function RealTimeData() {
 
   // Calculate data age - handle both timestamp formats
   const dataAge = useMemo(() => {
-    if (!realtimeData) return 'No data';
-    
+    if (!realtimeData) return "No data";
+
     // Handle different timestamp formats
     let dataTime = null;
     if (realtimeData.timestamp) {
@@ -34,24 +78,40 @@ export default function RealTimeData() {
     } else if (realtimeData.reading?.datetime) {
       dataTime = new Date(realtimeData.reading.datetime).getTime();
     }
-    
-    if (!dataTime || isNaN(dataTime)) return 'No data';
-    
+
+    if (!dataTime || isNaN(dataTime)) return "No data";
+
     const now = Date.now();
     const ageSeconds = Math.floor((now - dataTime) / 1000);
-    
+
     if (ageSeconds < 60) return `${ageSeconds}s ago`;
     if (ageSeconds < 3600) return `${Math.floor(ageSeconds / 60)}m ago`;
     return `${Math.floor(ageSeconds / 3600)}h ago`;
   }, [realtimeData]);
 
   // Check if we have valid data with any sensor readings
-  const hasData = realtimeData && (
-    realtimeData.pH !== undefined || realtimeData.temperature !== undefined ||
-    realtimeData.turbidity !== undefined || realtimeData.salinity !== undefined ||
-    realtimeData.reading?.pH !== undefined || realtimeData.reading?.temperature !== undefined ||
-    realtimeData.reading?.turbidity !== undefined || realtimeData.reading?.salinity !== undefined
-  );
+  const hasData =
+    realtimeData &&
+    (realtimeData.pH !== undefined ||
+      realtimeData.temperature !== undefined ||
+      realtimeData.turbidity !== undefined ||
+      realtimeData.salinity !== undefined ||
+      realtimeData.reading?.pH !== undefined ||
+      realtimeData.reading?.temperature !== undefined ||
+      realtimeData.reading?.turbidity !== undefined ||
+      realtimeData.reading?.salinity !== undefined);
+
+  // Track last processed data for notification triggering
+  const lastProcessedRef = useRef(null);
+
+  // Trigger notifications for fresh data
+  useEffect(() => {
+    if (realtimeData && hasData && realtimeData !== lastProcessedRef.current) {
+      const sensorData = realtimeData.reading || realtimeData;
+      waterQualityNotificationService.processSensorData(sensorData);
+      lastProcessedRef.current = realtimeData;
+    }
+  }, [realtimeData, hasData]);
 
   // Memoized parameters to prevent unnecessary re-renders
   const parameters = useMemo(() => {
@@ -64,18 +124,31 @@ export default function RealTimeData() {
       const value = sensorData[key];
       const hasValidValue = value != null && !isNaN(value);
 
-      // Calculate threshold status based on threshold limits
-      let thresholdStatus = 'normal';
+      // Calculate threshold status based on threshold limits (same logic as alerts)
+      let thresholdStatus = "normal";
       if (hasValidValue && thresholds[key]) {
         const threshold = thresholds[key];
         const numValue = Number(value);
 
-        if (numValue > threshold.max) {
-          // Above maximum threshold
-          thresholdStatus = numValue > threshold.max * 1.2 ? 'critical' : 'warning';
-        } else if (numValue < threshold.min) {
-          // Below minimum threshold
-          thresholdStatus = numValue < threshold.min * 0.8 ? 'critical' : 'warning';
+        // Check critical thresholds first
+        if (threshold.critical) {
+          if (threshold.critical.min && numValue < threshold.critical.min) {
+            thresholdStatus = "critical";
+          } else if (
+            threshold.critical.max &&
+            numValue > threshold.critical.max
+          ) {
+            thresholdStatus = "critical";
+          }
+        }
+
+        // If not critical, check normal thresholds for warning
+        if (thresholdStatus === "normal") {
+          if (threshold.min && numValue < threshold.min) {
+            thresholdStatus = "warning";
+          } else if (threshold.max && numValue > threshold.max) {
+            thresholdStatus = "warning";
+          }
         }
       }
 
@@ -107,7 +180,9 @@ export default function RealTimeData() {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
         <Text style={styles.loadingText}>No real-time data available</Text>
-        <Text style={styles.dataAgeText}>Please check your connection and try again</Text>
+        <Text style={styles.dataAgeText}>
+          Please check your connection and try again
+        </Text>
       </View>
     );
   }
@@ -131,18 +206,18 @@ export default function RealTimeData() {
 
 // Memoized parameter card component for better performance
 const ParameterCard = React.memo(({ param }) => {
-  const isWarning = param.thresholdStatus === 'warning';
-  const isCritical = param.thresholdStatus === 'critical';
+  const isWarning = param.thresholdStatus === "warning";
+  const isCritical = param.thresholdStatus === "critical";
 
   // Define gradient colors: white to main tint
   const getGradientColors = () => {
     if (isWarning) {
-      return ['#ffffff', '#fff7e6']; // white to warning yellow
+      return ["#ffffff", "#feecc7"]; 
     }
     if (isCritical) {
-      return ['#ffffff', '#ffeaea']; // white to critical red
+      return ["#ffffff", "#fecdcf"]; 
     }
-    return ['#f6fafd', '#f6fafd']; // normal (solid)
+    return ["#e5f0f9", "#c2e3fb"];
   };
 
   const WrappedCard = ({ children }) => {
@@ -150,10 +225,7 @@ const ParameterCard = React.memo(({ param }) => {
       return (
         <LinearGradient
           colors={getGradientColors()}
-          style={[
-            styles.parameterCard,
-            styles.parameterCardGradient
-          ]}
+          style={[styles.parameterCard, styles.parameterCardGradient]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
         >
@@ -161,11 +233,7 @@ const ParameterCard = React.memo(({ param }) => {
         </LinearGradient>
       );
     }
-    return (
-      <View style={styles.parameterCard}>
-        {children}
-      </View>
-    );
+    return <View style={styles.parameterCard}>{children}</View>;
   };
 
   return (
@@ -174,29 +242,35 @@ const ParameterCard = React.memo(({ param }) => {
         {param.icon}
         <View style={styles.iconValueContainer}>
           <Text
-            style={[param.hasData ? styles.valueText : styles.valueTextNoData, {
-              color: param.color,
-            }]}
+            style={[
+              param.hasData ? styles.valueText : styles.valueTextNoData,
+              {
+                color: param.color,
+              },
+            ]}
           >
             {param.value}
           </Text>
           <Text
-            style={[param.hasData ? styles.unitText : styles.unitTextNoData, {
-              color: param.color,
-            }]}
+            style={[
+              param.hasData ? styles.unitText : styles.unitTextNoData,
+              {
+                color: param.color,
+              },
+            ]}
           >
             {param.unit}
           </Text>
         </View>
       </View>
-      <Text style={styles.labelText}>
-        {param.label}
-      </Text>
-      {param.threshold && param.threshold.min !== undefined && param.threshold.max !== undefined && (
-        <Text style={styles.thresholdText}>
-          Normal range: {param.threshold.min} - {param.threshold.max}
-        </Text>
-      )}
+      <Text style={styles.labelText}>{param.label}</Text>
+      {param.threshold &&
+        param.threshold.min !== undefined &&
+        param.threshold.max !== undefined && (
+          <Text style={styles.thresholdText}>
+            Normal range: {param.threshold.min} - {param.threshold.max}
+          </Text>
+        )}
     </WrappedCard>
   );
 });
@@ -244,7 +318,7 @@ const styles = StyleSheet.create({
   iconValueContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    marginTop: 8
+    marginTop: 8,
   },
   valueText: {
     fontSize: 45,
