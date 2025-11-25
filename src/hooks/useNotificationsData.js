@@ -15,6 +15,12 @@ export const useNotificationsData = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(false);
 
+  // Pagination state
+  const [accumulatedAlerts, setAccumulatedAlerts] = useState([]);
+  const [seenSignatures, setSeenSignatures] = useState(new Set());
+  const [lastDocId, setLastDocId] = useState(null);
+  const [hasMoreData, setHasMoreData] = useState(true);
+
   const navigation = useNavigation();
 
   // Memoized computed values
@@ -22,77 +28,92 @@ export const useNotificationsData = () => {
   const isRefreshing = refreshing;
   const isLoadingMore = loadingMore;
 
-  // Fetch historical alerts
-  const fetchHistoricalAlerts = useCallback(
-    async (showRefreshIndicator = false, additionalLimit = 0) => {
-      try {
-        if (showRefreshIndicator) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
+  // Load initial batch of alerts
+  const loadInitialBatch = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await historicalAlertsService.fetchPaginatedAlerts({
+        batchSize: 30
+      });
+
+      const newAlerts = [];
+      const newSignatures = new Set();
+
+      for (const alert of result.alerts) {
+        const signature = `${alert.parameter}-${alert.type}-${alert.title}-${Math.round((alert.value || 0) * 100) / 100}`;
+        if (!newSignatures.has(signature)) {
+          newSignatures.add(signature);
+          newAlerts.push(alert);
         }
-        setError(null);
-
-        const baseLimit = 30;
-        const totalLimit = baseLimit + additionalLimit;
-
-        const alertsData = await historicalAlertsService.getHistoricalAlerts({
-          useCache: !showRefreshIndicator,
-          limitCount: totalLimit,
-          filterType: activeSeverity !== "all" ? activeSeverity : null,
-          filterParameter: activeParameter !== "all" ? activeParameter : null,
-        });
-
-        // Check if we got fewer alerts than requested (means we've reached the end)
-        const requestedAdditionalLimit = additionalLimit;
-        const initialLimit = 30;
-        const expectedBatchSize =
-          requestedAdditionalLimit > 0 ? 30 : initialLimit;
-
-        const actuallyReceived =
-          alertsData.totalCount - (historicalData?.totalCount || 0);
-        const hasMoreDataInDatabase =
-          requestedAdditionalLimit === 0 ||
-          actuallyReceived >= expectedBatchSize ||
-          alertsData.totalCount >= 50;
-
-        setHistoricalData({
-          ...alertsData,
-          hasMoreDataInDatabase,
-        });
-      } catch (err) {
-        setError(err.message || "Failed to load alerts");
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-        setLoadingMore(false);
       }
-    },
-    [activeParameter, activeSeverity, historicalData?.totalCount]
-  );
+
+      setAccumulatedAlerts(newAlerts);
+      setSeenSignatures(newSignatures);
+      setLastDocId(result.lastDocumentId);
+      setHasMoreData(result.hasMore);
+
+      // Process and set historicalData
+      const processedData = historicalAlertsService.processAndSectionAlerts(newAlerts, activeSeverity !== "all" ? activeSeverity : null, activeParameter !== "all" ? activeParameter : null);
+      setHistoricalData({
+        ...processedData,
+        hasMoreDataInDatabase: result.hasMore,
+      });
+    } catch (err) {
+      setError(err.message || "Failed to load alerts");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeSeverity, activeParameter]);
 
   // Load more alerts function
   const loadMoreAlerts = useCallback(async () => {
-    if (loadingMore) return;
+    if (loadingMore || !hasMoreData) return;
 
     setLoadingMore(true);
     try {
-      // Always fetch the next batch of 30 alerts
-      const currentBatchNumber = Math.max(
-        1,
-        Math.ceil((historicalData?.totalCount || 30) / 30)
-      );
-      const newAdditionalLimit = currentBatchNumber * 30;
+      const result = await historicalAlertsService.fetchPaginatedAlerts({
+        startAfterDocumentId: lastDocId,
+        batchSize: 30
+      });
 
-      await fetchHistoricalAlerts(false, newAdditionalLimit);
-      // Increase displayed limit
-      setDisplayLimit((prev) => prev + 20);
+      const newAlerts = [];
+      const newSignatures = new Set(seenSignatures);
+
+      for (const alert of result.alerts) {
+        const signature = `${alert.parameter}-${alert.type}-${alert.title}-${Math.round((alert.value || 0) * 100) / 100}`;
+        if (!newSignatures.has(signature)) {
+          newSignatures.add(signature);
+          newAlerts.push(alert);
+        }
+      }
+
+      if (newAlerts.length > 0) {
+        const updatedAlerts = [...accumulatedAlerts, ...newAlerts];
+        setAccumulatedAlerts(updatedAlerts);
+        setSeenSignatures(newSignatures);
+        setLastDocId(result.lastDocumentId);
+        setHasMoreData(result.hasMore);
+
+        // Process and update historicalData
+        const processedData = historicalAlertsService.processAndSectionAlerts(updatedAlerts, activeSeverity !== "all" ? activeSeverity : null, activeParameter !== "all" ? activeParameter : null);
+        setHistoricalData({
+          ...processedData,
+          hasMoreDataInDatabase: result.hasMore,
+        });
+
+        // Increase display limit
+        setDisplayLimit((prev) => prev + 20);
+      } else {
+        setHasMoreData(false);
+      }
     } catch (err) {
       console.error("❌ Error loading more alerts:", err);
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, displayLimit, historicalData, fetchHistoricalAlerts]);
+  }, [loadingMore, hasMoreData, lastDocId, seenSignatures, accumulatedAlerts, activeSeverity, activeParameter]);
 
   // Get limited sections for display
   const limitedSections = useMemo(() => {
@@ -138,28 +159,49 @@ export const useNotificationsData = () => {
 
   // Handle refresh
   const onRefresh = useCallback(() => {
-    historicalAlertsService.clearCache();
-    fetchHistoricalAlerts(true);
-  }, [fetchHistoricalAlerts]);
+    // Reset pagination state
+    setAccumulatedAlerts([]);
+    setSeenSignatures(new Set());
+    setLastDocId(null);
+    setHasMoreData(true);
+    setDisplayLimit(20);
+
+    // Reload initial batch
+    loadInitialBatch();
+  }, [loadInitialBatch]);
 
   // Handle parameter filter changes
   const handleParameterChange = useCallback(
     (newParameter) => {
       setActiveParameter(newParameter);
+      // Reset pagination state for new filter
+      setAccumulatedAlerts([]);
+      setSeenSignatures(new Set());
+      setLastDocId(null);
+      setHasMoreData(true);
       setDisplayLimit(20);
       setIsNearBottom(false);
+      // Reload with new filter
+      loadInitialBatch();
     },
-    []
+    [loadInitialBatch]
   );
 
   // Handle severity filter changes
   const handleSeverityChange = useCallback(
     (newSeverity) => {
       setActiveSeverity(newSeverity);
+      // Reset pagination state for new filter
+      setAccumulatedAlerts([]);
+      setSeenSignatures(new Set());
+      setLastDocId(null);
+      setHasMoreData(true);
       setDisplayLimit(20);
       setIsNearBottom(false);
+      // Reload with new filter
+      loadInitialBatch();
     },
-    []
+    [loadInitialBatch]
   );
 
   // Handle scroll detection
@@ -250,8 +292,8 @@ export const useNotificationsData = () => {
 
   // Initial load
   useEffect(() => {
-    fetchHistoricalAlerts();
-  }, [fetchHistoricalAlerts]);
+    loadInitialBatch();
+  }, [loadInitialBatch]);
 
   // Computed values for UI
   const showLoadMore = hasMoreAlerts && isNearBottom;
