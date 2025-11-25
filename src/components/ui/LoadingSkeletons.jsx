@@ -43,7 +43,7 @@ const skeletonStyles = StyleSheet.create({
     marginHorizontal: 0,
   },
   alertsSkeleton: {
-    height: 80,
+    height: 90,
     marginBottom: 10,
     marginHorizontal: 0,
     backgroundColor: '#c2e3fb',

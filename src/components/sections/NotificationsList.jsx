@@ -1,18 +1,16 @@
+import PureFlowLogo from "@components/ui/UiHeader";
+import NotificationFilter from "@navigation/AlertsFilter";
+import GlobalWrapper from "@ui/GlobalWrapper";
+import NotificationCard from "@ui/NotificationCard";
+import { createAlertItem, renderSectionHeader } from "@utils/notificationsUtils";
 import React from "react";
 import {
   ActivityIndicator,
   RefreshControl,
   SectionList,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View
 } from "react-native";
-import NotificationCard from "@ui/NotificationCard";
-import PureFlowLogo from "@components/ui/UiHeader";
-import NotificationFilter from "@navigation/AlertsFilter";
-import GlobalWrapper from "@ui/GlobalWrapper";
-import { renderSectionHeader, createAlertItem } from "@utils/notificationsUtils";
 
 const NotificationsList = ({
   // Data
@@ -65,41 +63,7 @@ const NotificationsList = ({
     );
   };
 
-  // Render Load More button
-  const renderLoadMoreButton = () => {
-    if (!showLoadMore) return null;
 
-    return (
-      <View style={styles.loadMoreContainer}>
-        <TouchableOpacity
-          onPress={loadMoreAlerts}
-          disabled={isLoadingMore}
-          style={[
-            styles.loadMoreButton,
-            isLoadingMore && styles.loadMoreButtonDisabled,
-          ]}
-        >
-          {isLoadingMore ? (
-            <View style={styles.loadMoreButtonContent}>
-              <ActivityIndicator
-                size="small"
-                color="white"
-                style={styles.activityIndicator}
-              />
-              <Text style={styles.loadMoreButtonText}>Loading more alerts...</Text>
-            </View>
-          ) : (
-            <View style={styles.loadMoreButtonContent}>
-              <Text style={styles.loadMoreButtonText}>Load More Alerts</Text>
-              <Text style={styles.loadMoreButtonSubtext}>
-                ({totalAlerts - displayedAlerts} remaining)
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  };
 
   return (
     <>
@@ -128,6 +92,22 @@ const NotificationsList = ({
           renderSectionHeader={renderSectionHeader}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          onEndReached={() => {
+            console.log("📜 onEndReached triggered", {
+              totalAlerts,
+              displayedAlerts,
+              isLoadingMore,
+              showLoadMore,
+            });
+            const hasMore = displayedAlerts < totalAlerts;
+            if (hasMore && !isLoadingMore) {
+              console.log("🚀 Loading more alerts...");
+              loadMoreAlerts();
+            } else {
+              console.log("⏹️ No more alerts to load", { hasMore, isLoadingMore });
+            }
+          }}
+          onEndReachedThreshold={0.2}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -136,16 +116,17 @@ const NotificationsList = ({
               tintColor={"#007AFF"}
             />
           }
-          contentContainerStyle={[
-            styles.sectionListContent,
-            {
-              paddingBottom: showLoadMore ? 100 : 24,
-            },
-          ]}
+          contentContainerStyle={styles.sectionListContent}
           showsVerticalScrollIndicator={false}
           style={styles.sectionListContainer}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.loadingFooterContainer}>
+                <ActivityIndicator size="small" color="#4a90e2" />
+              </View>
+            ) : null
+          }
         />
-        {renderLoadMoreButton()}
       </GlobalWrapper>
     </>
   );
@@ -163,40 +144,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     color: "#1a2d51",
   },
-  loadMoreContainer: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  loadMoreButton: {
-    backgroundColor: "#2455a9",
-    marginVertical: 5,
-    borderRadius: 15,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadMoreButtonDisabled: {
-    opacity: 0.6,
-  },
-  loadMoreButtonText: {
-    color: "#f0f8fe",
-    fontWeight: "700",
-  },
-  loadMoreButtonSubtext: {
-    color: "#f0f8fe",
-    fontWeight: "500",
-    marginLeft: 8,
-  },
-  loadMoreButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  activityIndicator: {
-    marginRight: 8,
-  },
+
   filtersContainer: {
     marginTop: 65,
     marginHorizontal: 0,
@@ -207,6 +155,11 @@ const styles = StyleSheet.create({
   sectionListContent: {
     flexGrow: 1,
   },
+  loadingFooterContainer: {
+    paddingVertical: 20,
+    alignItems: "center",
+  },
+
 });
 
 export default NotificationsList;
