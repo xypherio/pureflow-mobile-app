@@ -227,7 +227,7 @@ class RealtimeDataService {
       salinity: rawData.salinity ? Number(rawData.salinity) : null,
 
       // Environmental data
-      isRaining: Boolean(rawData.isRaining),
+      isRaining: rawData.isRaining ? Number(rawData.isRaining) : 0,
 
       // Metadata
       lastUpdated: this.normalizeDateTime(rawData.datetime),

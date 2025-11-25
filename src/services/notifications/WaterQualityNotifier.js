@@ -5,15 +5,15 @@ export class WaterQualityNotifier {
       this.notificationService = notificationService;
       this.thresholdManager = thresholdManager;
       this.cooldowns = new Map();
-      this.defaultCooldown = 5 * 60 * 1000; // 5 minutes
-      this.criticalCooldown = 2.5 * 60 * 1000; // 2.5 minutes for critical alerts
-      this.borderlineCooldown = 15 * 60 * 1000; // 15 minutes for borderline alerts
+    this.defaultCooldown = 1.5 * 60 * 1000; // 1.5 minutes
+      this.criticalCooldown = 2 * 60 * 1000; // 2.5 minutes for critical alerts
+      this.borderlineCooldown = 10 * 60 * 1000; // 15 minutes for borderline alerts
 
       // Connection monitoring
       this.connectionState = true; // Default to true
       this.connectionAttemptCount = 0;
       this.maxConnectionAttempts = 3;
-      this.connectionStabilityCooldown = 10 * 60 * 1000; // 10 minutes for connection alerts
+      this.connectionStabilityCooldown = 10 * 60 * 1000; 
       this.lastConnectionAlert = null;
 
       // Threshold alert state tracking
@@ -205,6 +205,78 @@ export class WaterQualityNotifier {
       console.log('🧹 Notification cooldowns cleared');
     }
   
+    /**
+     * Send weather alert notification for rain status changes
+     */
+    async notifyWeatherAlert(rainStatus, value) {
+      console.log(`🌦️ Weather alert: ${rainStatus} (value: ${value})`);
+
+      // Check cooldown for weather alerts (5 minutes default)
+      const weatherKey = `weather_${value}`;
+      const lastTime = this.cooldowns.get(weatherKey);
+
+      if (lastTime && Date.now() - lastTime < 5 * 60 * 1000) { // 5 minute cooldown
+        console.log(`⏰ Weather alert cooldown active for ${rainStatus}`);
+        return { success: false, reason: 'cooldown_active' };
+      }
+
+      try {
+        // Create weather alert notification using template
+        const rainStatusText = this.getRainStatusText(value);
+        const notification = NotificationTemplates.weatherAlert(
+          rainStatusText,
+          this.generateWeatherMessage(value)
+        );
+
+        // Send notification
+        const result = await this.notificationService.send(notification);
+
+        if (result.success) {
+          // Record notification time
+          this.cooldowns.set(weatherKey, Date.now());
+          console.log(`📱 Weather alert sent: ${rainStatusText}`);
+        }
+
+        return result;
+
+      } catch (error) {
+        console.error('❌ Error sending weather alert:', error);
+        return { success: false, error: error.message };
+      }
+    }
+
+    /**
+     * Generate weather alert message based on rain value
+     */
+    generateWeatherMessage(value) {
+      switch (parseInt(value)) {
+        case 0:
+          return 'No precipitation detected. Water parameters are stable.';
+        case 1:
+          return 'Light to moderate rain detected. Monitor water parameters for potential changes in turbidity and pH.';
+        case 2:
+          return 'Heavy rain detected. Increased monitoring recommended as runoff may affect water quality parameters.';
+        default:
+          return `Rain sensor status: ${value}. Monitor water parameters closely.`;
+      }
+    }
+
+    /**
+     * Get rain status text for display
+     */
+    getRainStatusText(value) {
+      switch (parseInt(value)) {
+        case 0:
+          return 'No Rain';
+        case 1:
+          return 'Raining';
+        case 2:
+          return 'Heavy Rain';
+        default:
+          return `Unknown (${value})`;
+      }
+    }
+
     setCooldownPeriod(defaultMs, criticalMs = null) {
       this.defaultCooldown = defaultMs;
       this.criticalCooldown = criticalMs || Math.floor(defaultMs / 2);
