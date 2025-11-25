@@ -118,11 +118,12 @@ export class AlertManagementFacade {
             }
           }
 
-          // Step 4: Send notifications for high-priority alerts
+          // Step 4: Send notifications for high-priority alerts and weather alerts
           const highPriorityAlerts = processorResults.processed.filter(alert =>
             alert.severity === 'high' || alert.alertLevel === 'critical'
           );
-  
+
+          // Send notifications for high-priority water quality alerts
           for (const alert of highPriorityAlerts) {
             try {
               const notificationResult = await this.waterQualityNotifier.notifyWaterQualityAlert(
@@ -130,7 +131,7 @@ export class AlertManagementFacade {
                 alert.value,
                 alert.alertLevel
               );
-  
+
               if (notificationResult.success) {
                 results.notifications.push({
                   alertId: alert.id,
@@ -142,6 +143,38 @@ export class AlertManagementFacade {
               console.error(`❌ Error sending notification for alert ${alert.id}:`, error);
               results.errors.push({
                 type: 'notification_error',
+                alertId: alert.id,
+                message: error.message
+              });
+            }
+          }
+
+          // Send weather notifications for rain alerts (isRaining 1 or 2)
+          const rainAlerts = processorResults.processed.filter(alert =>
+            alert.parameter && alert.parameter.toLowerCase() === 'israining' &&
+            (alert.value === 1 || alert.value === 2)
+          );
+
+          for (const alert of rainAlerts) {
+            try {
+              const notificationResult = await this.waterQualityNotifier.notifyWeatherAlert(
+                this.getRainStatusText(alert.value),
+                alert.value
+              );
+
+              if (notificationResult.success) {
+                results.notifications.push({
+                  alertId: alert.id,
+                  parameter: 'weather',
+                  type: 'weather_alert',
+                  value: alert.value,
+                  notificationId: notificationResult.notificationId
+                });
+              }
+            } catch (error) {
+              console.error(`❌ Error sending weather notification for alert ${alert.id}:`, error);
+              results.errors.push({
+                type: 'weather_notification_error',
                 alertId: alert.id,
                 message: error.message
               });
@@ -322,6 +355,19 @@ export class AlertManagementFacade {
       const paramName = alert.parameter.charAt(0).toUpperCase() + alert.parameter.slice(1);
       const severityText = alert.severity === 'high' ? 'Critical' : 'Warning';
       return `${severityText}: ${paramName} is ${alert.value} (${alert.alertLevel})`;
+    }
+
+    getRainStatusText(value) {
+      switch (parseInt(value)) {
+        case 0:
+          return 'No Rain';
+        case 1:
+          return 'Raining';
+        case 2:
+          return 'Heavy Rain';
+        default:
+          return `Unknown (${value})`;
+      }
     }
   
     calculateTimeAgo(timestamp) {

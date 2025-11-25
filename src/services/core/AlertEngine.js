@@ -10,6 +10,17 @@ export class AlertEngine {
       sensorData
     });
 
+    // DEBUG: Force testing pH=1.0 and turbidity=100
+    if (sensorData.length > 0) {
+      const testData = sensorData[sensorData.length - 1];
+      if (testData.pH && testData.pH === 1.0) {
+        console.log('🚨 DEBUG: Found pH = 1.0, testing threshold evaluation!');
+      }
+      if (testData.turbidity && testData.turbidity === 100) {
+        console.log('🚨 DEBUG: Found turbidity = 100, testing threshold evaluation!');
+      }
+    }
+
     if (!Array.isArray(sensorData) || sensorData.length === 0) {
       console.log('🚨 AlertEngine: No valid sensor data provided');
       return [];
@@ -163,16 +174,7 @@ export class AlertEngine {
           warning: `${flag} Salinity Falling - ${valueFormatted}`
         }
       },
-      tds: {
-        high: {
-          critical: `${flag} TDS Too High - ${valueFormatted}`,
-          warning: `${flag} Salinity Rising - ${valueFormatted}`
-        },
-        low: {
-          critical: `${flag} TDS Too Low - ${valueFormatted}`,
-          warning: `${flag} Salinity Falling - ${valueFormatted}`
-        }
-      }
+
     };
 
     const paramTitles = titles[paramLower];
@@ -213,8 +215,6 @@ export class AlertEngine {
         return `${numValue.toFixed(1)} NTU`;
       case 'salinity':
         return `${numValue.toFixed(1)} ppt`;
-      case 'tds':
-        return `${numValue.toFixed(0)} ppm`;
       case 'israining':
         return this.getRainStatusText(numValue);
       default:
@@ -256,7 +256,7 @@ export class AlertEngine {
   }
 
   isWaterQualityParameter(parameter) {
-    const waterQualityParams = ['ph', 'temperature', 'turbidity', 'salinity', 'tds', 'israining'];
+    const waterQualityParams = ['ph', 'temperature', 'turbidity', 'salinity', 'israining'];
     return waterQualityParams.includes(parameter.toLowerCase());
   }
 }
