@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { Asset } from 'expo-asset';
 import { StyleSheet } from 'react-native';
 import { sanitizeTextForPDF } from './utils/exportUtils';
 
@@ -41,6 +42,7 @@ const PdfGenerator = async (reportData) => {
   const fontSize = 12;
   const headingFontSize = 14;
   const sectionTitleFontSize = 16;
+  const reportTitleFontSize = 25;
   const textColor = rgb(0, 0, 0);
   const headerColor = rgb(0, 0.53, 0.71);
 
@@ -66,42 +68,56 @@ const PdfGenerator = async (reportData) => {
   };
 
   // --- Section 0: Report Header ---
-  page.drawText('PureFlow Water Quality Report', {
-    x: startX,
+  // Load and embed logo image
+  const logoAsset = Asset.fromModule(require('../assets/logo/logo-emblem.png'));
+  await logoAsset.downloadAsync();
+
+  const logoImageBytes = await FileSystem.readAsStringAsync(logoAsset.localUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const logoImage = await pdfDoc.embedPng(logoImageBytes);
+  const logoDims = logoImage.scale(0.2); // Scale to 20% of original size
+
+  // Center the logo and title as a unit
+  const pageWidth = 612; // Letter width in points
+  const centerX = pageWidth / 2;
+
+  // Calculate positions for centered layout (logo left of center, title right of center)
+  const logoLeftPadding = 10; // Space from left edge of logo to start of text
+  const logoTitleGap = 15; // Gap between logo and title text
+
+  // Calculate text width using font metrics (PureFlow Water Quality Report at 24pt)
+  const titleText = 'PureFlow Water Quality Report';
+  const titleWidth = fontBold.widthOfTextAtSize(titleText, reportTitleFontSize);
+
+  // Total width of logo + gap + title
+  const totalWidth = logoDims.width + logoTitleGap + titleWidth;
+
+  // Position logo so the center of the whole unit is at page center
+  const logoX = centerX - (totalWidth / 2);
+  const titleX = logoX + logoDims.width + logoTitleGap;
+
+  // Draw logo (centered vertically with the title text)
+  const logoY = startY + (reportTitleFontSize * 0.3) - (logoDims.height / 2);
+  page.drawImage(logoImage, {
+    x: logoX,
+    y: logoY,
+    width: logoDims.width,
+    height: logoDims.height,
+  });
+
+  // Draw title next to logo with larger font size
+  page.drawText(titleText, {
+    x: titleX,
     y: startY,
     font: fontBold,
-    size: sectionTitleFontSize,
+    size: reportTitleFontSize,
     color: headerColor,
   });
-  startY -= rowHeight;
 
-  page.drawText(sanitizeTextForPDF(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`), {
-    x: startX,
-    y: startY,
-    font,
-    size: fontSize,
-    color: textColor,
-  });
-  startY -= rowHeight * 0.8;
-
-  page.drawText(sanitizeTextForPDF(`Time Period: ${reportData.metadata?.timePeriod || 'N/A'}`), {
-    x: startX,
-    y: startY,
-    font,
-    size: fontSize,
-    color: textColor,
-  });
-  startY -= rowHeight * 0.8;
-
-  page.drawText(sanitizeTextForPDF(`Water Quality Index: ${reportData.metadata?.wqi?.value || 0}/100 (${reportData.metadata?.wqi?.status || 'unknown'})`), {
-    x: startX,
-    y: startY,
-    font,
-    size: fontSize,
-    color: textColor,
-  });
-  startY -= rowHeight;
-
+  // Add proper spacing before section divider (after large 24pt title)
+  startY -= reportTitleFontSize * 1.5; // 36 points spacing for 24pt font
   drawSectionDivider();
   startY -= rowHeight * 0.7;
 

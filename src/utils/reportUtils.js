@@ -1,4 +1,5 @@
 import { getWaterQualityThresholds } from "../constants/thresholds";
+import { WaterQualityCalculator } from "../services/core/WaterQualityCalculator";
 
 // Time intervals in milliseconds
 const TIME_INTERVALS = {
@@ -1007,6 +1008,17 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     overallStatus = "warning";
   }
 
+  // Calculate Water Quality Index (WQI)
+  const wqiCalculator = new WaterQualityCalculator();
+  const wqiData = wqiCalculator.calculateWQI({
+    pH: parameters.pH?.average,
+    temperature: parameters.temperature?.average,
+    turbidity: parameters.turbidity?.average,
+    salinity: parameters.salinity?.average,
+  });
+
+  console.log("Calculated WQI:", wqiData);
+
   // Generate recommendations
   const recommendations = [];
 
@@ -1072,6 +1084,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
     timeRange,
     parameters,
     overallStatus,
+    wqi: wqiData || { value: 0, status: "unknown" },
     recommendations:
       recommendations.length > 0
         ? [...new Set(recommendations)] // Remove duplicates
