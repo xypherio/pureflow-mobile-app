@@ -8,7 +8,7 @@ export class WaterQualityThresholdManager {
       // Convert to the format expected by the rest of the system
       // Add critical thresholds based on the normal ranges
       this.thresholds = {
-        pH: {
+        ph: {
           min: thresholds.pH.min,
           max: thresholds.pH.max,
           critical: { min: thresholds.pH.min - 0.5, max: thresholds.pH.max + 0.5 }

@@ -81,7 +81,7 @@ export class AlertEngine {
       parameter: parameter.toLowerCase(),
       value: parseFloat(value),
       alertLevel,
-      type: isWarning ? 'warning' : 'info',
+      type: 'info',  // Always blue for weather alerts
       title: this.generateRainAlertTitle(value),
       message: this.generateRainAlertMessage(value),
       timestamp: reading.datetime || reading.timestamp || new Date(),
@@ -237,7 +237,7 @@ export class AlertEngine {
 
   generateRainAlertTitle(value) {
     const status = this.getRainStatusText(value);
-    return `Weather Status: ${status}`;
+    return `Weather Update: ${status} Detected`;
   }
 
   generateRainAlertMessage(value) {

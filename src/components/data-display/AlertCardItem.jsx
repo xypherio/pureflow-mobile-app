@@ -80,12 +80,38 @@ export default function AlertCardItem({ alert }) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
+  const getUnit = (parameter) => {
+    switch (parameter?.toLowerCase()) {
+      case "temperature":
+        return "°C";
+      case "ph":
+        return "PH";
+      case "salinity":
+        return "PPT";
+      case "turbidity":
+        return "NTU";
+      default:
+        return "";
+    }
+  };
+
+  const getTitle = (alert) => {
+    if (alert.title) {
+      return alert.title;
+    }
+    // Fallback for alerts without title
+    const param = capitalizeFirst(alert.parameter || 'Unknown');
+    const value = alert.value;
+    const unit = getUnit(alert.parameter);
+    return `${param} Alert - ${value} ${unit}`.trim();
+  };
+
   const getIndicatorColor = () => {
     switch (alert.type) {
       case "success":
         return "#22c55e";
       case "warning":
-        return "#f59e42";
+        return "#fcbd4d";
       case "error":
         return "#ef4444";
       default:
@@ -112,7 +138,7 @@ export default function AlertCardItem({ alert }) {
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {capitalizeWords(alert.title)}
+          {getTitle(alert)}
         </Text>
         <Text
           style={[styles.messageText, { color: style.message }]}
@@ -135,7 +161,7 @@ const typeStyles = {
     message: "#15803d",
   },
   warning: {
-    bg: "#fff7e6",
+    bg: "#fff8eb",
     icon: AlertCircle,
     iconColor: "#f59e42",
     title: "#b45309",
@@ -165,7 +191,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    minHeight: 80,
+    height: 85,
     width: "100%",
     position: "relative",
   },

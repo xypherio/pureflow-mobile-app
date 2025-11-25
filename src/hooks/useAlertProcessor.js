@@ -16,10 +16,10 @@ export function useAlertProcessor() {
 
   // Message cache for random selection
   const messageCache = useMemo(() => ({
-    ph: phMessages.messages,
-    temperature: temperatureMessages.messages,
-    turbidity: turbidityMessages.messages,
-    salinity: salinityMessages.messages,
+    ph: { low: phMessages.low, high: phMessages.high },
+    temperature: { low: temperatureMessages.low, high: temperatureMessages.high },
+    turbidity: { low: turbidityMessages.low, high: turbidityMessages.high },
+    salinity: { low: salinityMessages.low, high: salinityMessages.high },
   }), []);
 
   // Helper function to map severity to type
@@ -58,19 +58,19 @@ export function useAlertProcessor() {
     // Check critical thresholds (if they exist)
     if (threshold.critical) {
       if (threshold.critical.min && numValue < threshold.critical.min) {
-        return { type: 'error', level: 'critical' };
+        return { type: 'error', level: 'critical', alertType: 'low' };
       }
       if (threshold.critical.max && numValue > threshold.critical.max) {
-        return { type: 'error', level: 'critical' };
+        return { type: 'error', level: 'critical', alertType: 'high' };
       }
     }
 
     // Check normal thresholds
     if (threshold.min && numValue < threshold.min) {
-      return { type: 'warning', level: 'warning' };
+      return { type: 'warning', level: 'warning', alertType: 'low' };
     }
     if (threshold.max && numValue > threshold.max) {
-      return { type: 'warning', level: 'warning' };
+      return { type: 'warning', level: 'warning', alertType: 'high' };
     }
 
     return { type: 'success', level: 'normal' };
@@ -93,7 +93,7 @@ export function useAlertProcessor() {
           const threshold = thresholds[param] || thresholds[param.toLowerCase()];
           const paramDisplay = param.charAt(0).toUpperCase() + param.slice(1);
 
-          let message = getRandomAlertMessage(param);
+          let message = getRandomAlertMessage(param, evaluation.alertType);
 
           generatedAlerts.push({
             parameter: paramDisplay,
@@ -111,10 +111,15 @@ export function useAlertProcessor() {
   }, [evaluateParameter, thresholds]);
 
   // Function to get random message for parameter
-  const getRandomAlertMessage = useCallback((parameter) => {
+  const getRandomAlertMessage = useCallback((parameter, alertType) => {
     const paramKey = parameter.toLowerCase();
-    const messages = messageCache[paramKey];
+    const paramMessages = messageCache[paramKey];
 
+    if (!paramMessages || !paramMessages[alertType]) {
+      return `${parameter.charAt(0).toUpperCase() + parameter.slice(1)} level is outside normal range and may affect aquaculture species.`;
+    }
+
+    const messages = paramMessages[alertType];
     if (!messages || messages.length === 0) {
       return `${parameter.charAt(0).toUpperCase() + parameter.slice(1)} level is outside normal range and may affect aquaculture species.`;
     }
