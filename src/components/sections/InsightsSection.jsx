@@ -10,29 +10,24 @@ import InsightsCard from "@dataDisplay/InsightsCard";
  * @param {Date} props.lastUpdate - Last data update timestamp
  */
 const InsightsSection = ({ loading, realtimeData, lastUpdate }) => {
-  return (
+  return loading ? (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.insightsLabel}>Insights & Recommendations</Text>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#4a90e2"
-          style={styles.loadingIndicator}
-        />
-      ) : (
-        <InsightsCard
-          type="info"
-          title="Water Quality Insights"
-          sensorData={realtimeData}
-          timestamp={lastUpdate}
-          componentId="home-insights"
-          autoRefresh={true}
-        />
-      )}
+      <ActivityIndicator
+        size="large"
+        color="#4a90e2"
+        style={styles.loadingIndicator}
+      />
     </View>
+  ) : (
+    <InsightsCard
+      type="info"
+      title="Water Quality Insights"
+      sensorData={realtimeData}
+      timestamp={lastUpdate}
+      componentId="home-insights"
+      autoRefresh={true}
+      sectionTitle="Insights & Recommendations"
+    />
   );
 };
 

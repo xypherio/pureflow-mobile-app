@@ -111,26 +111,32 @@ export const InsightsProvider = ({ children }) => {
     }
   }, [insights, generateComponentInsight]);
 
-  // Auto-refresh insights based on 10-minute intervals
+  // Auto-refresh insights based on longer intervals - less aggressive
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       const componentsToRefresh = [];
 
+      // Only refresh components that haven't been updated in 15+ minutes
       insights.forEach((insight, componentId) => {
+        if (insight.error && Date.now() - new Date(insight.lastUpdated).getTime() < 60 * 60 * 1000) {
+          // Skip components with recent errors - don't retry for an hour
+          return;
+        }
+
         const lastFetch = insight.lastUpdated ? new Date(insight.lastUpdated).getTime() : 0;
         const timeSinceLastFetch = now - lastFetch;
 
-        if (timeSinceLastFetch >= 10 * 60 * 1000) { // 10 minutes
+        if (timeSinceLastFetch >= 15 * 60 * 1000) { // 15 minutes
           componentsToRefresh.push(componentId);
         }
       });
 
       if (componentsToRefresh.length > 0) {
-        silentLog(`⏰ Auto-refreshing insights for components: ${componentsToRefresh.join(', ')}`);
-        // Note: This would need sensor data to be passed, which should be handled by individual components
+        silentLog(`⏰ Auto-refreshing ${componentsToRefresh.length} components: ${componentsToRefresh.join(', ')}`);
+        // Note: Individual components handle their own refresh with sensor data
       }
-    }, 60 * 1000); // Check every minute
+    }, 5 * 60 * 1000); // Check every 5 minutes instead of every minute
 
     return () => {
       clearInterval(interval);
