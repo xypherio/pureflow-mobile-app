@@ -11,32 +11,25 @@ const ForecastInsights = ({
   forecastDataAvailable,
   forecastPredicted
 }) => {
-  return (
-    <View style={{ flex: 1 }}>
-      <View style={styles.insightsHeader}>
-        <Text style={styles.sectionTitle}>Insights & Suggestions</Text>
-      </View>
-
-      {isGeminiLoading ? (
-        <ActivityIndicator
-          size="large"
-          color="#4a90e2"
-          style={styles.loadingIndicator}
-        />
-      ) : geminiResponse ? (
-        <InsightsCard
-          type="info"
-          title="Overall Forecast Insight"
-          description={geminiResponse?.insights?.overallInsight || ""}
-          timestamp={geminiResponse?.insights?.timestamp}
-          componentId="forecast-overall-insight"
-          autoRefresh={true}
-          sensorData={forecastPredicted}
-        />
-      ) : (
-        <ForecastInsightsSkeleton />
-      )}
-    </View>
+  return isGeminiLoading ? (
+    <ActivityIndicator
+      size="large"
+      color="#4a90e2"
+      style={styles.loadingIndicator}
+    />
+  ) : geminiResponse ? (
+    <InsightsCard
+      type="info"
+      title="Overall Forecast Insight"
+      description={geminiResponse?.insights?.overallInsight || ""}
+      timestamp={geminiResponse?.insights?.timestamp}
+      componentId="forecast-overall-insight"
+      autoRefresh={true}
+      sensorData={forecastPredicted}
+      sectionTitle="Insights & Suggestions"
+    />
+  ) : (
+    <ForecastInsightsSkeleton />
   );
 };
 

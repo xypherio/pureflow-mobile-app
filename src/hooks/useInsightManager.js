@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 export const useInsightManager = (componentId, sensorData, options = {}) => {
   const {
     autoRefresh = true,
-    refreshInterval = 10 * 60 * 1000, // 10 minutes
+    refreshInterval = 15 * 60 * 1000, // 15 minutes - less aggressive
     onInsightUpdate = null
   } = options;
 

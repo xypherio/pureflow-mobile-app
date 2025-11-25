@@ -1,32 +1,22 @@
-import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
+// Core imports
 import { useEffect, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
 
-// Environment check for production
+// Third-party imports
+import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
+
+// Local imports
+import { useInsightManager } from '@hooks/useInsightManager';
+
+// ============================================================================
+// CONFIGURATION & CONSTANTS
+// ============================================================================
+
+// Environment configuration
 const isProduction = __DEV__ === false;
+const DEFAULT_SECTION_TITLE = 'Insights & Recommendations';
 
-const silentLog = (message, ...args) => {
-  if (!isProduction) {
-    console.log(message, ...args);
-  }
-};
-
-const silentError = (message, error) => {
-  if (!isProduction) {
-    console.error(message, error);
-  }
-};
-
-const safeString = (value) => {
-  if (value === null || value === undefined) {
-    return "No data available";
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-  return String(value);
-};
-
+// UI theme configuration
 const INSIGHT_TYPES = {
   positive: {
     icon: CheckCircle,
@@ -70,6 +60,123 @@ const INSIGHT_TYPES = {
   }
 };
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Development-only logging utility
+ */
+const silentLog = (message, ...args) => {
+  if (!isProduction) {
+    console.log(message, ...args);
+  }
+};
+
+/**
+ * Development-only error logging utility
+ */
+const silentError = (message, error) => {
+  if (!isProduction) {
+    console.error(message, error);
+  }
+};
+
+/**
+ * Safely converts values to strings for display
+ */
+const safeString = (value) => {
+  if (value === null || value === undefined) {
+    return "No data available";
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+};
+
+/**
+ * Determines screen size for responsive design
+ */
+const useScreenSize = () => {
+  const { width } = Dimensions.get('window');
+  return {
+    isLargeScreen: width > 500,
+    screenWidth: width
+  };
+};
+
+// ============================================================================
+// COMPONENT LOGIC HOOKS
+// ============================================================================
+
+/**
+ * Custom hook for insight-related state and logic
+ */
+const useInsightState = (componentId, sensorData, autoRefresh) => {
+  // Use insight manager for AI-generated insights when sensorData is available
+  const insightData = sensorData
+    ? useInsightManager(componentId, sensorData, { autoRefresh })
+    : {};
+
+  const { insight, loading: insightLoading, error: insightError } = insightData;
+
+  return {
+    insight,
+    insightLoading,
+    insightError
+  };
+};
+
+/**
+ * Custom hook for determining display state and configuration
+ */
+const useDisplayConfig = (type, hasStaticContent, hasAIInsight, insightLoading, insightError) => {
+  // Determine which config to use based on state
+  const config = INSIGHT_TYPES[type] || INSIGHT_TYPES.info;
+
+  const isEmpty = !hasAIInsight && !hasStaticContent && !insightLoading;
+  const isError = insightError && !hasStaticContent;
+
+  // Determine which config to use
+  const displayConfig = isEmpty ? INSIGHT_TYPES.empty : isError ? INSIGHT_TYPES.critical : config;
+
+  return {
+    config,
+    displayConfig,
+    isEmpty,
+    isError
+  };
+};
+
+/**
+ * Custom hook for status information
+ */
+const useStatusInfo = (insightError, insightLoading, hasAIInsight, hasStaticContent) => {
+  const getStatusColor = () => {
+    if (insightError) return '#DC2626'; // Red for error
+    if (insightLoading) return '#F59E0B'; // Yellow for loading
+    return '#10B981'; // Green for success
+  };
+
+  const getStatusText = () => {
+    if (insightError) return 'AI Error';
+    if (insightLoading) return 'Generating...';
+    if (hasAIInsight) return 'AI Generated';
+    if (hasStaticContent) return 'Content Available';
+    return 'Waiting for Data';
+  };
+
+  return {
+    statusColor: getStatusColor(),
+    statusText: getStatusText()
+  };
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
 export default function InsightsCard({
   type = 'info',
   title,
@@ -81,129 +188,249 @@ export default function InsightsCard({
   timestamp,
   sensorData,
   componentId = 'insights-card',
-  autoRefresh = true
+  autoRefresh = true,
+  sectionTitle = DEFAULT_SECTION_TITLE
 }) {
-  const config = INSIGHT_TYPES[type] || INSIGHT_TYPES.info;
-  const IconComponent = config.icon;
-  const currentInsight = description || "No insights available";
-  const lastUpdated = timestamp || new Date();
-  const insightSource = 'static';
+  const { isLargeScreen } = useScreenSize();
 
-  const { width } = Dimensions.get('window');
-  const isLargeScreen = width > 500;
-
+  // Animation state
   const [opacity] = useState(new Animated.Value(0));
-
   useEffect(() => {
     Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
 
-  const getStatusColor = () => {
-    return '#6B7280'; // Gray for static content
-  };
+  // Insight state and data
+  const { insight, insightLoading, insightError } = useInsightState(componentId, sensorData, autoRefresh);
 
-  const getStatusText = () => {
-    return 'Content available';
-  };
+  // Content availability checks
+  const hasStaticContent = description || suggestion || (recommendations && recommendations.length > 0);
+  const hasAIInsight = insight && insight.insight;
 
-  // Check if we should show empty state
-  const isEmpty = !currentInsight || currentInsight === "No insights available";
+  // Display configuration
+  const { config, displayConfig, isEmpty, isError } = useDisplayConfig(
+    type,
+    hasStaticContent,
+    hasAIInsight,
+    insightLoading,
+    insightError
+  );
 
-  // Determine which config to use - empty state if no data
-  const displayConfig = isEmpty ? INSIGHT_TYPES.empty : config;
+  // Status information
+  const { statusColor, statusText } = useStatusInfo(
+    insightError,
+    insightLoading,
+    hasAIInsight,
+    hasStaticContent
+  );
 
-  // Prepare content based on state
+  // Timestamp logic
+  const lastUpdated = hasAIInsight ? insight.lastUpdated : timestamp || new Date();
+
+  // ============================================================================
+  // RENDER HELPERS
+  // ============================================================================
+
   const renderContent = () => {
-    if (isEmpty) {
-      return <Text style={styles.description} accessibilityLabel="Empty state message">{"Insights will be available once your water quality sensors start collecting data and our AI analyzes the trends."}</Text>;
+    // Loading state
+    if (insightLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#4a90e2" style={styles.loadingIndicator} />
+          <Text style={styles.loadingText}>Generating AI insights...</Text>
+        </View>
+      );
     }
 
-    return <Text style={styles.description} accessibilityLabel={"Description: " + safeString(currentInsight)}>{safeString(currentInsight)}</Text>;
+    // Error state
+    if (isError) {
+      return (
+        <Text style={[styles.description, styles.errorText]} accessibilityLabel="Error message">
+          Unable to generate insights at this time. Please try refresh data if the issue persists.
+        </Text>
+      );
+    }
+
+    // Empty state
+    if (isEmpty) {
+      return (
+        <Text style={styles.description} accessibilityLabel="Empty state message">
+          {"Insights will be available once your water quality sensors start collecting data and our AI analyzes the trends."}
+        </Text>
+      );
+    }
+
+    // AI insight content
+    if (hasAIInsight) {
+      return (
+        <Text style={styles.description} accessibilityLabel={`AI Insight: ${safeString(insight.insight)}`}>
+          {safeString(insight.insight)}
+        </Text>
+      );
+    }
+
+    // Static description content
+    if (hasStaticContent && description) {
+      return (
+        <Text style={styles.description} accessibilityLabel={`Description: ${safeString(description)}`}>
+          {safeString(description)}
+        </Text>
+      );
+    }
+
+    // Fallback
+    return (
+      <Text style={styles.description} accessibilityLabel="No insights available">
+        No insights available
+      </Text>
+    );
   };
 
-  return (
-    <Animated.View style={[{ opacity }, {
-      ...styles.container,
-      borderColor: displayConfig.borderColor,
-      padding: isLargeScreen ? 24 : 20,
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 6,
-    }]}>
-      {/* Gradient overlay */}
-      <View style={[styles.gradientOverlay, {
-        backgroundColor: displayConfig.borderColor,
-      }]} />
+  const renderRecommendations = () => {
+    if (!recommendations || recommendations.length === 0) return null;
 
-      <View style={styles.contentContainer}>
-        <View style={[styles.iconContainer, {
-          backgroundColor: displayConfig.bgColor,
-          shadowColor: displayConfig.iconColor,
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 6,
-        }]}>
-          <IconComponent
-            size={isEmpty ? 20 : 24}
-            color={displayConfig.iconColor}
-          />
-        </View>
-
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { fontSize: isLargeScreen ? 20 : 18, fontWeight: '900', letterSpacing: -0.6 }]} accessibilityLabel={"Title: " + (isEmpty ? "Waiting for Sensor Data" : safeString(title))}>
-            {isEmpty ? "Waiting for Sensor Data" : safeString(title)}
+    return (
+      <View style={styles.recommendationsContainer}>
+        <Text style={styles.recommendationsTitle}>Recommendations:</Text>
+        {recommendations.map((rec, index) => (
+          <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>
+            • {rec}
           </Text>
+        ))}
+      </View>
+    );
+  };
 
-          {renderContent()}
+  const renderSuggestion = () => {
+    if (!suggestion) return null;
 
-          {recommendations && recommendations.length > 0 && (
-            <View style={styles.recommendationsContainer}>
-              <Text style={styles.recommendationsTitle}>Recommendations:</Text>
-              {recommendations.map((rec, index) => (
-                <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>• {rec}</Text>
-              ))}
-            </View>
-          )}
+    return (
+      <View style={[styles.suggestionContainer, {
+        backgroundColor: config.bgColor,
+        borderLeftColor: config.iconColor,
+      }]}>
+        <Text style={[styles.suggestionTitle, { color: config.iconColor }]}>
+          💡 AI Suggestion
+        </Text>
+        <Text style={styles.suggestionText} accessibilityLabel={`Suggestion: ${safeString(suggestion)}`}>
+          {safeString(suggestion)}
+        </Text>
+      </View>
+    );
+  };
 
-          {/* Status indicator */}
-          <View style={styles.statusIndicator}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-            <Text style={styles.statusText} accessibilityLabel="Content status: Content available">
-              {getStatusText()}
-            </Text>
+  // ============================================================================
+  // MAIN RENDER
+  // ============================================================================
+
+  return (
+    <View style={styles.sectionContainer}>
+      {/* Standardized Section Header */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+      </View>
+
+      <Animated.View style={[{ opacity }, {
+        ...styles.container,
+        borderColor: displayConfig.borderColor,
+        padding: isLargeScreen ? 24 : 20,
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
+      }]}>
+
+        {/* Gradient overlay */}
+        <View style={[styles.gradientOverlay, {
+          backgroundColor: displayConfig.borderColor,
+        }]} />
+
+        {/* Main content container */}
+        <View style={styles.contentContainer}>
+          {/* Icon */}
+          <View style={[styles.iconContainer, {
+            backgroundColor: displayConfig.bgColor,
+            shadowColor: displayConfig.iconColor,
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 6,
+          }]}>
+            <displayConfig.icon
+              size={isEmpty ? 20 : 24}
+              color={displayConfig.iconColor}
+            />
           </View>
 
-          {lastUpdated && (
-            <Text style={styles.lastUpdated} accessibilityLabel={"Last updated: " + new Date(lastUpdated).toLocaleString()}>
-              Last updated: {new Date(lastUpdated).toLocaleString()}
+          {/* Content */}
+          <View style={{ flex: 1 }}>
+            {/* Title */}
+            <Text style={[
+              styles.title,
+              {
+                fontSize: isLargeScreen ? 20 : 18,
+                fontWeight: '900',
+                letterSpacing: -0.6
+              }
+            ]} accessibilityLabel={`Title: ${isEmpty ? "Waiting for Sensor Data" : safeString(title)}`}>
+              {isEmpty ? "Waiting for Sensor Data" : safeString(title)}
             </Text>
-          )}
 
-          {suggestion && (
-            <View style={[styles.suggestionContainer, {
-              backgroundColor: config.bgColor,
-              borderLeftColor: config.iconColor,
-            }]}>
-              <Text style={[styles.suggestionTitle, {
-                color: config.iconColor,
-              }]}>
-                💡 AI Suggestion
-              </Text>
-              <Text style={styles.suggestionText} accessibilityLabel={"Suggestion: " + safeString(suggestion)}>
-                {safeString(suggestion)}
+            {/* Main content */}
+            {renderContent()}
+
+            {/* Recommendations */}
+            {renderRecommendations()}
+
+            {/* Status indicator */}
+            <View style={styles.statusIndicator}>
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={styles.statusText} accessibilityLabel={`Content status: ${statusText}`}>
+                {statusText}
               </Text>
             </View>
-          )}
 
+            {/* Last updated */}
+            {lastUpdated && (
+              <Text
+                style={styles.lastUpdated}
+                accessibilityLabel={`Last updated: ${new Date(lastUpdated).toLocaleString()}`}
+              >
+                Last updated: {new Date(lastUpdated).toLocaleString()}
+              </Text>
+            )}
+
+            {/* Suggestion */}
+            {renderSuggestion()}
+          </View>
         </View>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
+// ============================================================================
+// STYLES
+// ============================================================================
+
 const styles = StyleSheet.create({
+  // Section styles
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    color: "#1a2d51",
+    fontWeight: "600",
+    marginBottom: 5,
+  },
+
+  // Card container styles
   container: {
     backgroundColor: '#fff',
     borderRadius: 18,
@@ -220,6 +447,12 @@ const styles = StyleSheet.create({
     height: 4,
     opacity: 0.3,
   },
+
+  // Content layout styles
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start'
+  },
   iconContainer: {
     width: 48,
     height: 48,
@@ -228,10 +461,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 16,
   },
-  contentContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start'
-  },
+
+  // Typography styles
   title: {
     color: '#111827',
     marginBottom: 8,
@@ -240,7 +471,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     lineHeight: 24,
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: '400',
     fontSize: 15,
   },
   lastUpdated: {
@@ -250,30 +481,8 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
   },
-  suggestionContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-  },
-  suggestionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  suggestionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-  refreshButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-  },
+
+  // Status and state styles
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -290,11 +499,28 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
+
+  // Loading styles
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  loadingIndicator: {
+    marginRight: 8,
+  },
   loadingText: {
     fontSize: 14,
     color: '#6B7280',
     fontStyle: 'italic',
   },
+
+  // Error styles
+  errorText: {
+    color: '#DC2626',
+  },
+
+  // Recommendations styles
   recommendationsContainer: {
     marginTop: 12,
   },
@@ -305,9 +531,38 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   recommendationItem: {
-    fontSize: 14,
+    fontWeight: '400',
+    fontSize: 15,
     color: '#4B5563',
     lineHeight: 22,
     marginLeft: 8,
+  },
+
+  // Suggestion styles
+  suggestionContainer: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+  },
+  suggestionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  suggestionText: {
+    fontSize: 15,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+
+  // Utility button styles
+  refreshButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
   }
 });

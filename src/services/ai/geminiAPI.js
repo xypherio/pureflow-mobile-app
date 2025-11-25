@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 // Component-specific cache and timing
 const componentCache = new Map();
 const componentTimers = new Map();
-const FETCH_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
+const FETCH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds - less aggressive
 
 // Request deduplication and batching
 const pendingRequests = new Map(); // key -> Promise
@@ -544,4 +544,4 @@ export const clearAllCachedInsights = async () => {
   }
 };
 
-silentLog("Enhanced Gemini API initialized with 10-minute intervals and caching");
+silentLog("Enhanced Gemini API initialized with 15-minute intervals and caching");
