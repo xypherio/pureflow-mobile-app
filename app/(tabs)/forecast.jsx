@@ -62,7 +62,7 @@ export default function ForecastScreen() {
       if (cb) await cb();
     };
     init();
-  }, []); 
+  }, []);
 
   // Set up automated prediction refresh (every 4 hours)
   useEffect(() => {
@@ -74,50 +74,47 @@ export default function ForecastScreen() {
   }, []); // empty deps for interval setup
 
   return (
-    <GlobalWrapper style={{ flex: 1 }}>
-      <PureFlowLogo
-        weather={{
-          label: "Forecast View",
-          temp: "--°C",
-          icon: "partly",
-        }}
-      />
+    <>
+      {/* Header */}
+      <PureFlowLogo />
 
-      {/* Weather Summary Section */}
-      <View>
-        <WeatherBanner showCurrentWeather={true} city="Bogo City" />
-      </View>
+      <GlobalWrapper style={{ flex: 1 }}>
+        {/* Weather Summary Section */}
+        <View>
+          <WeatherBanner showCurrentWeather={true} city="Bogo City" />
+        </View>
 
-      <ForecastErrorMessages
-        predictionError={predictionError}
-        hasEverFetchedOnce={hasEverFetchedOnce}
-        forecastDataAvailable={forecastDataAvailable}
-      />
+        <ForecastErrorMessages
+          predictionError={predictionError}
+          hasEverFetchedOnce={hasEverFetchedOnce}
+          forecastDataAvailable={forecastDataAvailable}
+        />
 
-      <DataSourceIndicator
-        forecastDataAvailable={forecastDataAvailable}
-        dataSource={dataSource}
-      />
+        <DataSourceIndicator
+          forecastDataAvailable={forecastDataAvailable}
+          dataSource={dataSource}
+        />
 
-      <ForecastParameters
-        forecastPredicted={forecastPredicted}
-        selectedParam={selectedParam}
-        setSelectedParam={setSelectedParam}
-        trends={trends}
-      />
+        <ForecastParameters
+          forecastPredicted={forecastPredicted}
+          selectedParam={selectedParam}
+          setSelectedParam={setSelectedParam}
+          trends={trends}
+        />
 
-      <ParameterDetails
-        selectedParam={selectedParam}
-        setSelectedParam={setSelectedParam}
-        geminiResponse={geminiResponse}
-      />
+        <ParameterDetails
+          selectedParam={selectedParam}
+          setSelectedParam={setSelectedParam}
+          geminiResponse={geminiResponse}
+        />
 
-      <ForecastInsights
-        isGeminiLoading={isGeminiLoading}
-        geminiResponse={geminiResponse}
-        forecastDataAvailable={forecastDataAvailable}
-        forecastPredicted={forecastPredicted}
-      />
-    </GlobalWrapper>
+        <ForecastInsights
+          isGeminiLoading={isGeminiLoading}
+          geminiResponse={geminiResponse}
+          forecastDataAvailable={forecastDataAvailable}
+          forecastPredicted={forecastPredicted}
+        />
+      </GlobalWrapper>
+    </>
   );
 }

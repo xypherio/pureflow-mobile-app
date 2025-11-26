@@ -1,6 +1,19 @@
+import phMessages from '../../constants/alertMessages/ph.json';
+import salinityMessages from '../../constants/alertMessages/salinity.json';
+import temperatureMessages from '../../constants/alertMessages/temperature.json';
+import turbidityMessages from '../../constants/alertMessages/turbidity.json';
+
 export class AlertEngine {
   constructor(thresholdManager) {
     this.thresholdManager = thresholdManager;
+
+    // Message cache for random selection
+    this.messageCache = {
+      ph: { low: phMessages.low, high: phMessages.high },
+      temperature: { low: temperatureMessages.low, high: temperatureMessages.high },
+      turbidity: { low: turbidityMessages.low, high: turbidityMessages.high },
+      salinity: { low: salinityMessages.low, high: salinityMessages.high },
+    };
   }
 
   generateAlertsFromSensorData(sensorData) {
@@ -112,6 +125,24 @@ export class AlertEngine {
     return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  // Function to get random message for parameter and alert type (low/high)
+  getRandomAlertMessage(parameter, alertType) {
+    const paramKey = parameter.toLowerCase();
+    const paramMessages = this.messageCache[paramKey];
+
+    if (!paramMessages || !paramMessages[alertType]) {
+      return `${parameter.charAt(0).toUpperCase() + parameter.slice(1)} level is outside normal range and may affect aquaculture species.`;
+    }
+
+    const messages = paramMessages[alertType];
+    if (!messages || messages.length === 0) {
+      return `${parameter.charAt(0).toUpperCase() + parameter.slice(1)} level is outside normal range and may affect aquaculture species.`;
+    }
+
+    const randomIndex = Math.floor(Math.random() * messages.length);
+    return messages[randomIndex];
+  }
+
   generateAlertTitle(parameter, value, alertLevel) {
     const threshold = this.thresholdManager.getThreshold(parameter);
     const direction = this.determineValueDirection(value, threshold);
@@ -187,19 +218,8 @@ export class AlertEngine {
   }
 
   generateAlertMessage(parameter, value, threshold, alertLevel) {
-    const paramName = parameter.charAt(0).toUpperCase() + parameter.slice(1);
-    const formattedValue = this.formatParameterValue(parameter, value);
-
-    let rangeText = '';
-    if (threshold.min && threshold.max) {
-      rangeText = ` (Safe range: ${threshold.min} - ${threshold.max})`;
-    } else if (threshold.max) {
-      rangeText = ` (Safe max: ${threshold.max})`;
-    } else if (threshold.min) {
-      rangeText = ` (Safe min: ${threshold.min})`;
-    }
-
-    return `${paramName} reading of ${formattedValue} is ${alertLevel}${rangeText}`;
+    const direction = this.determineValueDirection(value, threshold);
+    return this.getRandomAlertMessage(parameter, direction);
   }
 
   formatParameterValue(parameter, value) {
@@ -247,9 +267,9 @@ export class AlertEngine {
       case 0:
         return 'No precipitation detected. Water parameters are stable.';
       case 1:
-        return 'Light to moderate rain detected. Monitor water parameters for potential changes in turbidity and pH.';
+        return 'Light to moderate rain detected. Monitor water parameter changes.';
       case 2:
-        return 'Heavy rain detected. Increased monitoring recommended as runoff may affect water quality parameters.';
+        return 'Heavy rain detected. Runoff may affect water quality parameters.';
       default:
         return `Rain sensor status: ${status}. Monitor water parameters closely.`;
     }

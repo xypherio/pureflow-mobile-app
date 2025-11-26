@@ -1,6 +1,7 @@
 import React from "react";
 
 // Components
+import PureFlowLogo from "@components/ui/UiHeader";
 import NotificationsEmptyState from "@components/sections/NotificationsEmptyState";
 import NotificationsErrorState from "@components/sections/NotificationsErrorState";
 import NotificationsList from "@components/sections/NotificationsList";
@@ -10,6 +11,17 @@ import NotificationsLoadingState from "@components/sections/NotificationsLoading
 import { useNotificationsData } from "@hooks/useNotificationsData";
 
 export default function NotificationsScreen() {
+  return (
+    <>
+      {/* Header */}
+      <PureFlowLogo />
+
+      <NotificationsScreenComponent />
+    </>
+  );
+}
+
+function NotificationsScreenComponent() {
   // Use the custom notifications data hook
   const {
     // State

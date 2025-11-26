@@ -72,9 +72,8 @@ export default function HomeScreen() {
 
   return (
     <>
-      {/* Header with dynamic weather */}
+      {/* Header */}
       <PureFlowLogo
-        weather={weatherInfo}
         notificationBadge={unreadCount > 0 ? unreadCount : null}
       />
 
