@@ -12,8 +12,7 @@ const severityFilters = [
   { label: "All Alerts", value: "all" },
   { label: "Critical", value: "critical" },
   { label: "Warning", value: "warning" },
-  { label: "Info", value: "info" },
-  { label: "Normal", value: "normal" },
+  { label: "Info", value: "info" }
 ];
 
 const NotificationFilter = ({

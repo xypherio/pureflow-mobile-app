@@ -91,7 +91,7 @@ export class AlertEngine {
 
     return {
       id: this.generateAlertId(),
-      parameter: parameter.toLowerCase(),
+      parameter: 'weather',
       value: parseFloat(value),
       alertLevel,
       type: 'info',  // Always blue for weather alerts
