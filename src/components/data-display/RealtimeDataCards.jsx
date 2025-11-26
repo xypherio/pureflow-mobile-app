@@ -161,28 +161,25 @@ const ParameterCard = React.memo(({ param }) => {
   // Define gradient colors: white to main tint
   const getGradientColors = () => {
     if (isWarning) {
-      return ["#ffffff", "#feecc7"]; 
+      return ["#ffffff", "#feecc7"];
     }
     if (isCritical) {
-      return ["#ffffff", "#fecdcf"]; 
+      return ["#ffffff", "#fecdcf"];
     }
-    return ["#e5f0f9", "#c2e3fb"];
+    return ["#ffffff", "#d4edda"];
   };
 
   const WrappedCard = ({ children }) => {
-    if (isWarning || isCritical) {
-      return (
-        <LinearGradient
-          colors={getGradientColors()}
-          style={[styles.parameterCard, styles.parameterCardGradient]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-        >
-          {children}
-        </LinearGradient>
-      );
-    }
-    return <View style={styles.parameterCard}>{children}</View>;
+    return (
+      <LinearGradient
+        colors={getGradientColors()}
+        style={[styles.parameterCard, styles.parameterCardGradient]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+        {children}
+      </LinearGradient>
+    );
   };
 
   return (

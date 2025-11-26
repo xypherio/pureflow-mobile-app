@@ -3,6 +3,7 @@ import { InsightsProvider } from "@contexts/InsightsContext";
 import { NotificationProvider } from "@contexts/NotificationContext";
 import { OptimizedDataProvider } from "@contexts/OptimizedDataContext";
 import { SuggestionProvider } from "@contexts/SuggestionContext";
+import { WeatherProvider } from "@contexts/WeatherContext";
 import {
     Poppins_400Regular,
     Poppins_600SemiBold,
@@ -145,23 +146,25 @@ export default function RootLayout() {
   }
 
   return (
-    <NotificationProvider>
-      <InsightsProvider>
-        <OptimizedDataProvider>
-          <DataProvider initialData={preloadedData}>
-            <SuggestionProvider>
-              <Stack>
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{
-                    headerShown: false,
-                  }}
-                />
-              </Stack>
-            </SuggestionProvider>
-          </DataProvider>
-        </OptimizedDataProvider>
-      </InsightsProvider>
-    </NotificationProvider>
+    <WeatherProvider>
+      <NotificationProvider>
+        <InsightsProvider>
+          <OptimizedDataProvider>
+            <DataProvider initialData={preloadedData}>
+              <SuggestionProvider>
+                <Stack>
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                </Stack>
+              </SuggestionProvider>
+            </DataProvider>
+          </OptimizedDataProvider>
+        </InsightsProvider>
+      </NotificationProvider>
+    </WeatherProvider>
   );
 }

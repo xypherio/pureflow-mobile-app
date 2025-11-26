@@ -116,13 +116,7 @@ const ReportScreen = () => {
   if (isLoading) {
     return (
       <>
-        <PureFlowLogo
-          weather={{
-            label: "Loading...",
-            temp: "--°C",
-            icon: "partly",
-          }}
-        />
+      <PureFlowLogo />
         <SegmentedFilter
           options={timePeriodOptions}
           selectedValue={activeFilter}
@@ -149,13 +143,7 @@ const ReportScreen = () => {
   // Render main content
   return (
     <>
-      <PureFlowLogo
-        weather={weatherData || {
-          label: "Loading...",
-          temp: "--°C",
-          icon: "partly",
-        }}
-      />
+      <PureFlowLogo />
 
       <SegmentedFilter
         options={timePeriodOptions}

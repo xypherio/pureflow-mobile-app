@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { CloudRain, CloudSun, RefreshCw, Sun } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { weatherService } from "../../services/weatherService";
+import { useWeather } from "../../contexts/WeatherContext";
 
 const LOGO_PATH = require("../../../assets/logo/pureflow-logo.png");
 
@@ -33,43 +33,22 @@ const weatherIconMap = {
 
 export default function PureFlowLogo({
   style,
-  ...props
+  weather: propWeather,
+  ...otherProps
 }) {
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
-  const [weather, setWeather] = useState({
-    label: "Loading...",
-    temp: "--°C",
-    icon: "partly"
-  });
-  const [isLoadingWeather, setIsLoadingWeather] = useState(true);
-  const [weatherError, setWeatherError] = useState(false);
 
-  const fetchWeather = async () => {
-    setIsLoadingWeather(true);
-    setWeatherError(false);
-    
-    try {
-      // You can also use coordinates if you have location permissions
-      // const weatherData = await weatherService.getCurrentWeather(10.3157, 123.9223); // Mandaue coordinates
-      const weatherData = await weatherService.getCurrentWeatherByCity('Bogo City');
-      setWeather(weatherData);
-    } catch (error) {
-      console.error('Failed to fetch weather:', error);
-      setWeatherError(true);
-      setWeather({
-        label: "Weather unavailable",
-        temp: "--°C",
-        icon: "partly"
-      });
-    } finally {
-      setIsLoadingWeather(false);
-    }
-  };
+  // Use weather from context, or fallback to prop if provided
+  const { weather: contextWeather, isLoadingWeather, error: weatherError, refetchWeather } = useWeather();
+  const weather = propWeather || contextWeather;
 
+  // Ensure weather data is fresh when component mounts
   useEffect(() => {
-    fetchWeather();
-  }, []);
+    if (!propWeather && (weather.label === "Loading..." || weather.label === "Weather unavailable")) {
+      refetchWeather();
+    }
+  }, [weather.label, propWeather, refetchWeather]);
 
   return (
     <View style={styles.container}>
@@ -79,7 +58,7 @@ export default function PureFlowLogo({
           source={LOGO_PATH}
           style={[globalStyles.logo, style]}
           accessibilityLabel="pureflow_logo"
-          {...props}
+          {...otherProps}
         />
       </Pressable>
 
@@ -154,7 +133,8 @@ const styles = StyleSheet.create({
   weatherContainer: {
     flexDirection: "row",
     alignItems: "center",
-    maxWidth: 60,
+    maxWidth: 70,
+    marginLeft: 20,
   },
   weatherTextContainer: {
     flex: 1,

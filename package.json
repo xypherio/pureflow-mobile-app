@@ -69,7 +69,7 @@
     "react-native": "0.79.6",
     "react-native-blob-util": "^0.22.2",
     "react-native-chart-kit": "^6.12.0",
-    "react-native-gesture-handler": "~2.24.0",
+    "react-native-gesture-handler": "2.23.0",
     "react-native-gifted-charts": "^1.4.63",
     "react-native-html-to-pdf": "^0.12.0",
     "react-native-paper": "^5.14.5",
