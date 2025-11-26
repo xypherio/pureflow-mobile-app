@@ -1,5 +1,7 @@
 // src/services/weatherService.js
-const OPENWEATHER_API_KEY = 'cfc684f3ee51ebfad72c9b7f5c063484'; ``
+import React from 'react';
+
+const OPENWEATHER_API_KEY = 'cfc684f3ee51ebfad72c9b7f5c063484';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export const weatherService = {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { useChartData } from "./useChartData";
 import { generateInsight } from "@services/ai/geminiAPI";
 import { generateWaterQualityReport, prepareChartData } from "@utils/reportUtils";
-import { PARAMETER_CONFIG } from "@constants/report";
+import { PARAMETER_CONFIG, getStatusColor } from "@constants/report";
 
 export const useReportData = (activeFilter) => {
   // Consolidated state management
