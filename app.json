@@ -2,7 +2,7 @@
   "expo": {
     "name": "PureFlow",
     "slug": "pureflow-mobile",
-    "version": "1.0.0",
+  "version": "1.1.0",
     "owner": "xy_pher",
     "orientation": "portrait",
   "icon": "./assets/logo/logo-emblem.png",
