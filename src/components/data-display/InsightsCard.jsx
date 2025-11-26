@@ -289,13 +289,19 @@ export default function InsightsCard({
     if (!recommendations || recommendations.length === 0) return null;
 
     return (
-      <View style={styles.recommendationsContainer}>
-        <Text style={styles.recommendationsTitle}>Recommendations:</Text>
-        {recommendations.map((rec, index) => (
-          <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>
-            • {rec}
+      <View style={[styles.recommendationsCard, {
+        borderLeftColor: config.iconColor,
+      }]}>
+        <View style={styles.recommendationsContainer}>
+          <Text style={[styles.recommendationsTitle, { color: config.iconColor }]}>
+            💡 Recommendations:
           </Text>
-        ))}
+          {recommendations.map((rec, index) => (
+            <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>
+              • {rec}
+            </Text>
+          ))}
+        </View>
       </View>
     );
   };
@@ -305,11 +311,12 @@ export default function InsightsCard({
 
     return (
       <View style={[styles.suggestionContainer, {
-        backgroundColor: config.bgColor,
         borderLeftColor: config.iconColor,
       }]}>
-        <Text style={[styles.suggestionTitle, { color: config.iconColor }]}>
-          💡 AI Suggestion
+        <Text style={[styles.suggestionTitle, {
+          color: config.iconColor,
+        }]}>
+          💡 AI Insight
         </Text>
         <Text style={styles.suggestionText} accessibilityLabel={`Suggestion: ${safeString(suggestion)}`}>
           {safeString(suggestion)}
@@ -332,11 +339,12 @@ export default function InsightsCard({
       <Animated.View style={[{ opacity }, {
         ...styles.container,
         borderColor: displayConfig.borderColor,
+        borderTopColor: displayConfig.borderColor + '80',
         padding: isLargeScreen ? 24 : 20,
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.15,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 4 },
-        elevation: 6,
+        elevation: 4,
       }]}>
 
         {/* Gradient overlay */}
@@ -433,9 +441,10 @@ const styles = StyleSheet.create({
   // Card container styles
   container: {
     backgroundColor: '#fff',
-    borderRadius: 18,
+    borderRadius: 20,
     marginVertical: 5,
     borderWidth: 1,
+    borderTopWidth: 1,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -521,39 +530,52 @@ const styles = StyleSheet.create({
   },
 
   // Recommendations styles
+  recommendationsCard: {
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 0,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6b7280',
+  },
   recommendationsContainer: {
-    marginTop: 12,
+    marginTop: 0,
   },
   recommendationsTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 6,
+    color: '#6b7280', // Neutral gray as fallback
+    marginBottom: 4,
   },
   recommendationItem: {
-    fontWeight: '400',
-    fontSize: 15,
-    color: '#4B5563',
-    lineHeight: 22,
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
     marginLeft: 8,
   },
 
   // Suggestion styles
   suggestionContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    padding: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
     borderLeftWidth: 3,
+    borderLeftColor: '#6b7280', // Neutral gray as fallback
   },
   suggestionTitle: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '600',
+    color: '#6b7280', // Neutral gray as fallback
     marginBottom: 4,
   },
   suggestionText: {
-    fontSize: 15,
+    fontSize: 13,
+    color: '#475569',
     lineHeight: 18,
-    fontWeight: '500',
   },
 
   // Utility button styles
