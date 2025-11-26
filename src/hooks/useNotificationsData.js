@@ -23,6 +23,22 @@ export const useNotificationsData = () => {
 
   const navigation = useNavigation();
 
+  // Helper function to map UI severity filter to data severity
+  const mapUISeverityToDataSeverity = useCallback((uiSeverity) => {
+    switch (uiSeverity) {
+      case 'critical':
+        return 'high';
+      case 'warning':
+        return 'medium';
+      case 'info':
+        return 'low';
+      case 'normal':
+        return 'normal';
+      default:
+        return uiSeverity;
+    }
+  }, []);
+
   // Memoized computed values
   const isLoading = loading && !historicalData;
   const isRefreshing = refreshing;
@@ -55,7 +71,9 @@ export const useNotificationsData = () => {
       setHasMoreData(result.hasMore);
 
       // Process and set historicalData
-      const processedData = historicalAlertsService.processAndSectionAlerts(newAlerts, activeSeverity !== "all" ? activeSeverity : null, activeParameter !== "all" ? activeParameter : null);
+      const filterSeverity = activeSeverity !== "all" ? mapUISeverityToDataSeverity(activeSeverity) : null;
+      const filterParameter = activeParameter !== "all" ? activeParameter : null;
+      const processedData = historicalAlertsService.processAndSectionAlerts(newAlerts, null, filterSeverity, filterParameter);
       setHistoricalData({
         ...processedData,
         hasMoreDataInDatabase: result.hasMore,
@@ -97,7 +115,9 @@ export const useNotificationsData = () => {
         setHasMoreData(result.hasMore);
 
         // Process and update historicalData
-        const processedData = historicalAlertsService.processAndSectionAlerts(updatedAlerts, activeSeverity !== "all" ? activeSeverity : null, activeParameter !== "all" ? activeParameter : null);
+        const filterSeverity = activeSeverity !== "all" ? mapUISeverityToDataSeverity(activeSeverity) : null;
+        const filterParameter = activeParameter !== "all" ? activeParameter : null;
+        const processedData = historicalAlertsService.processAndSectionAlerts(updatedAlerts, null, filterSeverity, filterParameter);
         setHistoricalData({
           ...processedData,
           hasMoreDataInDatabase: result.hasMore,
@@ -170,38 +190,42 @@ export const useNotificationsData = () => {
     loadInitialBatch();
   }, [loadInitialBatch]);
 
-  // Handle parameter filter changes
+  // Handle parameter filter changes - filter locally instead of refetching
   const handleParameterChange = useCallback(
     (newParameter) => {
       setActiveParameter(newParameter);
-      // Reset pagination state for new filter
-      setAccumulatedAlerts([]);
-      setSeenSignatures(new Set());
-      setLastDocId(null);
-      setHasMoreData(true);
       setDisplayLimit(20);
       setIsNearBottom(false);
-      // Reload with new filter
-      loadInitialBatch();
+
+      // Reprocess existing accumulated alerts with new filter
+      const filterSeverity = activeSeverity !== "all" ? mapUISeverityToDataSeverity(activeSeverity) : null;
+      const filterParameter = newParameter !== "all" ? newParameter : null;
+      const processedData = historicalAlertsService.processAndSectionAlerts(accumulatedAlerts, null, filterSeverity, filterParameter);
+      setHistoricalData({
+        ...processedData,
+        hasMoreDataInDatabase: hasMoreData,
+      });
     },
-    [loadInitialBatch]
+    [activeSeverity, accumulatedAlerts, hasMoreData, mapUISeverityToDataSeverity]
   );
 
-  // Handle severity filter changes
+  // Handle severity filter changes - filter locally instead of refetching
   const handleSeverityChange = useCallback(
     (newSeverity) => {
       setActiveSeverity(newSeverity);
-      // Reset pagination state for new filter
-      setAccumulatedAlerts([]);
-      setSeenSignatures(new Set());
-      setLastDocId(null);
-      setHasMoreData(true);
       setDisplayLimit(20);
       setIsNearBottom(false);
-      // Reload with new filter
-      loadInitialBatch();
+
+      // Reprocess existing accumulated alerts with new filter
+      const filterSeverity = newSeverity !== "all" ? mapUISeverityToDataSeverity(newSeverity) : null;
+      const filterParameter = activeParameter !== "all" ? activeParameter : null;
+      const processedData = historicalAlertsService.processAndSectionAlerts(accumulatedAlerts, null, filterSeverity, filterParameter);
+      setHistoricalData({
+        ...processedData,
+        hasMoreDataInDatabase: hasMoreData,
+      });
     },
-    [loadInitialBatch]
+    [activeParameter, accumulatedAlerts, hasMoreData, mapUISeverityToDataSeverity]
   );
 
   // Handle scroll detection

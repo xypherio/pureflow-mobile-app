@@ -89,6 +89,8 @@ export default NotificationCard = ({
           return colors.turbidityColor;
         case 'salinity':
           return colors.salinityColor;
+        case 'weather':
+          return '#3B82F6'; // Blue for weather alerts
         default:
           return '#6B7280';
       }
