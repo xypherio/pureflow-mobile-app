@@ -77,7 +77,6 @@ const TabsLayout = () => {
         options={{
           title: "Alerts",
           tabBarTestID: 'alerts-tab',
-          tabBarBadge: 3, // Example badge
         }} 
       />
     </Tabs>
