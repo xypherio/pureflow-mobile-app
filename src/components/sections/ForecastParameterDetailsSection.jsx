@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { Cloud, Lightbulb } from "lucide-react-native";
 
 // Utils
 import { getParameterTheme, hexToRgba } from "@utils/forecastUtils";
@@ -34,7 +35,10 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
             "Low sunlight reducing photosynthesis"
           ];
           return factors.map((factor, index) => (
-            <Text key={index} style={styles.factor}>• {factor}</Text>
+            <View key={index} style={styles.factorItem}>
+              <Cloud size={16} color="#555" />
+              <Text style={styles.factorText}>{factor}</Text>
+            </View>
           ));
         })()}
       </View>
@@ -49,7 +53,10 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
             "Regularly check ammonia and nitrite levels"
           ];
           return actions.map((action, index) => (
-            <Text key={index} style={styles.action}>• {action}</Text>
+            <View key={index} style={styles.actionItem}>
+              <Lightbulb size={16} color="#333" />
+              <Text style={styles.actionText}>{action}</Text>
+            </View>
           ));
         })()}
       </View>
@@ -108,21 +115,51 @@ const styles = StyleSheet.create({
   factorsList: {
     marginBottom: 15,
   },
-  factor: {
-    fontSize: 15,
+  factorItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  factorText: {
+    fontSize: 14,
     color: "#555",
-    marginBottom: 5,
+    marginLeft: 10,
+    flex: 1,
     lineHeight: 20,
   },
   actionsList: {
     marginBottom: 15,
   },
-  action: {
-    fontSize: 15,
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff3cd',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  actionText: {
+    fontSize: 14,
     color: "#333",
-    marginBottom: 5,
+    marginLeft: 10,
+    flex: 1,
     lineHeight: 20,
-    fontStyle: "italic",
+    fontWeight: '500',
   },
   aiInsight: {
     padding: 12,
