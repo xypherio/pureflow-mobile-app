@@ -161,12 +161,12 @@ const ParameterCard = React.memo(({ param }) => {
   // Define gradient colors: white to main tint
   const getGradientColors = () => {
     if (isWarning) {
-      return ["#ffffff", "#feecc7"];
+      return ["#ffffff", "#fefac3"];
     }
     if (isCritical) {
       return ["#ffffff", "#fecdcf"];
     }
-    return ["#ffffff", "#d4edda"];
+    return ["#ffffff", "#cbffe3"];
   };
 
   const WrappedCard = ({ children }) => {
