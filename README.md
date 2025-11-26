@@ -32,6 +32,12 @@ Built with modern React Native and Expo technologies, PureFlow Mobile delivers a
 -   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events with native push notifications
 -   **Data Export & Sharing:** Easily export comprehensive reports as PDFs and CSVs, share critical water quality information with stakeholders
 
+### Environmental Monitoring
+-   **Weather Integration:** Real-time weather tracking and forecasting with OpenWeatherMap API for contextual water quality analysis
+-   **Weather-Based Alerts:** Intelligent notifications for weather conditions that impact water quality parameters
+-   **Weather Context Management:** Centralized weather data handling with WeatherContext for seamless app-wide integration
+-   **Visual Weather Indicators:** Weather badges and indicators in forecasts, summaries, and reports for enhanced situational awareness
+
 ### Advanced AI Features
 -   **AI-Powered Insights & Forecasting:** Leverage Google's Gemini AI to gain insightful suggestions and predictive forecasts regarding water quality trends
 -   **Interval-Based AI Processing:** Smart 10-minute intervals for AI requests to prevent quota exhaustion while maintaining data freshness
@@ -179,7 +185,10 @@ The project follows a modular architecture promoting maintainability and scalabi
 │   ├── contexts/            # React Context implementations
 │   │   ├── DataContext.js   # Main data management
 │   │   ├── InsightsContext.js # AI insights management
-│   │   └── NotificationContext.js # Alert management
+│   │   ├── NotificationContext.js # Alert management
+│   │   ├── OptimizedDataContext.js # Optimized data management
+│   │   ├── SuggestionContext.js # AI suggestions management
+│   │   └── WeatherContext.js # Environmental weather data
 │   ├── hooks/               # Custom React hooks
 │   │   ├── useChartData.js  # Data fetching logic
 │   │   ├── useForecastService.js # Forecast data management
@@ -204,6 +213,34 @@ The project follows a modular architecture promoting maintainability and scalabi
 ```
 
 ## Recent Updates
+
+### Version 2.2 - Environmental Monitoring & Enhanced UX
+
+#### 🌤️ **Environmental Monitoring System**
+- **Weather Integration:** Real-time weather tracking with OpenWeatherMap API integration
+- **Weather Context Management:** Centralized weather data management with WeatherContext for seamless state handling
+- **Weather Alerts & Notifications:** Intelligent weather-based alert system for rainfall impacts on water quality
+- **Weather Badges & Indicators:** Visual weather indicators in forecasts and summaries for better contextual awareness
+
+#### 🔔 **Enhanced Alert Management**
+- **Paginated Alert History:** Infinite scroll implementation for efficient alert loading and navigation
+- **Performance Optimizations:** Improved alert fetching logic with smart pagination and memory management
+- **Enhanced Notification Cooldowns:** Better control over alert frequency to prevent spam while maintaining important notifications
+
+#### 📊 **Advanced Reporting Features**
+- **Enhanced PDF Generation:** Complete overhaul of PDF export with detailed executive summaries
+- **WQI Integration:** Water Quality Index metrics and critical parameter analysis in reports
+- **Improved Export UX:** Better animations and styling for export toggle buttons and options
+
+#### 🤖 **AI Processing Optimizations**
+- **Extended Refresh Intervals:** Increased AI insights auto-refresh intervals to 15 minutes for better performance
+- **Smart Caching Enhancements:** Improved caching strategies for AI responses and data freshness
+- **Optimized API Processing:** Better quota management and error recovery for AI services
+
+#### 🎨 **UI/UX Improvements**
+- **Parameter Details Styling:** Enhanced styling with icons for factors and actions, improved visual distinction
+- **Gradient Color Updates:** Refined warning and critical color gradients for better alert visibility
+- **Component Consistency:** Standardized styles across parameter cards and data visualization components
 
 ### Version 2.1 - Advanced Forecasting & ML Integration
 
