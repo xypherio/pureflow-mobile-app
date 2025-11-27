@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import { getWaterQualityThresholds } from '../constants/thresholds';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { getWaterQualityThresholdsFromSettings } from '../constants/thresholds';
 
 // Static imports for alert messages (kept for now, will be lazy loaded later)
 import phMessages from '../constants/alertMessages/ph.json';
@@ -12,7 +12,15 @@ import salinityMessages from '../constants/alertMessages/salinity.json';
  * Separated from AlertsCard to reduce component complexity and improve reusability
  */
 export function useAlertProcessor() {
-  const thresholds = useMemo(() => getWaterQualityThresholds(), []);
+  const [thresholds, setThresholds] = useState({});
+
+  useEffect(() => {
+    const loadThresholds = async () => {
+      const loadedThresholds = await getWaterQualityThresholdsFromSettings();
+      setThresholds(loadedThresholds);
+    };
+    loadThresholds();
+  }, []);
 
   // Message cache for random selection
   const messageCache = useMemo(() => ({

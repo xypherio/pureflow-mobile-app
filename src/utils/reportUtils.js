@@ -1,4 +1,4 @@
-import { getWaterQualityThresholds } from "../constants/thresholds";
+import { getWaterQualityThresholdsFromSettings } from "../constants/thresholds";
 import { WaterQualityCalculator } from "../services/core/WaterQualityCalculator";
 
 // Time intervals in milliseconds
@@ -621,10 +621,10 @@ const formatDateKey = (date, timeRange) => {
  * Evaluates a single reading against thresholds
  * @param {string} parameter - Parameter name (pH, temperature, etc.)
  * @param {number} value - Parameter value
- * @returns {Object} Evaluation result with status and message
+ * @returns {Promise<Object>} Promise that resolves to evaluation result with status and message
  */
-const evaluateParameter = (parameter, value) => {
-  const thresholds = getWaterQualityThresholds();
+const evaluateParameter = async (parameter, value) => {
+  const thresholds = await getWaterQualityThresholdsFromSettings();
   // Handle case sensitivity - try exact match first, then lowercase
   const paramThresholds =
     thresholds[parameter] || thresholds[parameter.toLowerCase()];
@@ -713,9 +713,9 @@ const analyzeTrend = (values, timestamps) => {
  * Generates a comprehensive water quality report
  * @param {Array} readings - Array of sensor readings
  * @param {string} timeRange - Time range for the report
- * @returns {Object} Complete report with analysis and recommendations
+ * @returns {Promise<Object>} Promise that resolves to complete report with analysis and recommendations
  */
-export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
+export const generateWaterQualityReport = async (readings, timeRange = "weekly") => {
   console.log("Generating water quality report with time range:", timeRange);
   console.log("Input readings count:", readings?.length || 0);
 
@@ -852,7 +852,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
 
   // Analyze each parameter
   const parameters = ["pH", "temperature", "salinity", "turbidity"].reduce(
-    (acc, param) => {
+    async (acc, param) => {
       // Handle case-insensitive parameter access
       const paramLower = param.toLowerCase();
       const paramKey =
@@ -965,7 +965,7 @@ export const generateWaterQualityReport = (readings, timeRange = "weekly") => {
 
       const evaluation =
         typeof avgValue === "number"
-          ? evaluateParameter(displayName, avgValue)
+          ? await evaluateParameter(displayName, avgValue)
           : {
               status: "unknown",
               message: "No data available for this parameter",

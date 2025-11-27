@@ -6,6 +6,7 @@
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
+import { getWaterQualityThresholdsFromSettings } from '../constants/thresholds';
 
 /**
  * Sanitizes text for PDF encoding by converting Unicode characters to ASCII equivalents.

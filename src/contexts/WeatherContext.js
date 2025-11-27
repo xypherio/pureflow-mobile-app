@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { weatherService } from '../services/weatherService';
 
 const WeatherContext = createContext();
@@ -23,7 +24,7 @@ const formatForecastWeather = (forecastData, currentWeather) => {
   return {
     label: currentForecast.description,
     temp: `${Math.round(currentForecast.temp)}°C`,
-    icon: currentForecast.icon,
+    icon: currentWeather.icon, // Use current weather icon for consistency
     city: currentWeather.city,
     country: currentWeather.country,
     raw: forecastData
@@ -36,16 +37,33 @@ export const WeatherProvider = ({ children }) => {
     temp: "--°C",
     icon: "partly"
   });
+  const [currentWeather, setCurrentWeather] = useState(null);
+  const [forecastData, setForecastData] = useState(null);
   const [isLoadingWeather, setIsLoadingWeather] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [error, setError] = useState(false);
 
-  const fetchWeather = async () => {
-    setIsLoadingWeather(true);
-    setError(false);
+  const fetchWeather = async (isRefetch = false) => {
+    if (!isRefetch) setIsLoadingWeather(true);
+    if (!isRefetch) setError(false); // Only reset error for initial load
 
     try {
-      // First get current weather to obtain coordinates
-      const currentWeather = await weatherService.getCurrentWeatherByCity('Bogo City');
+      // Get custom city from settings, fallback to default
+      let city = 'Bogo City';
+      try {
+        const settings = await AsyncStorage.getItem('pureflowSettings');
+        if (settings) {
+          const parsedSettings = JSON.parse(settings);
+          if (parsedSettings.customCity?.trim()) {
+            city = parsedSettings.customCity.trim();
+          }
+        }
+      } catch (settingsError) {
+        console.warn('Could not load custom city setting:', settingsError);
+      }
+
+      // Get current weather for the configured city
+      const currentWeather = await weatherService.getCurrentWeatherByCity(city);
 
       if (!currentWeather.raw?.coord) {
         throw new Error('Unable to get coordinates for forecast');
@@ -60,41 +78,51 @@ export const WeatherProvider = ({ children }) => {
       if (!forecastData) {
         // Fallback to current weather if forecast unavailable
         setWeather(currentWeather);
+        setCurrentWeather(currentWeather);
+        setForecastData(null);
         return;
       }
 
-      // Format forecast data for display
-      const formattedForecast = formatForecastWeather(forecastData, currentWeather);
+      // Store the raw data for components like WeatherBanner
+      setCurrentWeather(currentWeather);
+      setForecastData(forecastData);
 
-      setWeather(formattedForecast);
+      // Use current weather for consistent header display
+      // Forecast data is stored separately for WeatherBanner use
+      setWeather(currentWeather);
     } catch (err) {
       console.error('Weather fetch error:', err);
-      setError(true);
-      setWeather({
-        label: "Weather unavailable",
-        temp: "--°C",
-        icon: "partly"
-      });
+      if (!isRefetch) {
+        setError(true);
+        setWeather({
+          label: "Weather unavailable",
+          temp: "--°C",
+          icon: "partly"
+        });
+      } // For refetch, fail silently without breaking UI
     } finally {
-      setIsLoadingWeather(false);
+      if (!isRefetch) setIsLoadingWeather(false);
     }
   };
 
   useEffect(() => {
     fetchWeather();
-
-    // Auto-refresh every 30 minutes
-    const interval = setInterval(fetchWeather, 30 * 60 * 1000);
-    return () => clearInterval(interval);
+    // Weather will be refreshed manually via refetchWeather() when needed
   }, []);
 
   const refetchWeather = () => {
-    fetchWeather();
+    fetchWeather(true).catch(() => {
+      // Retry failed refetch after 2 seconds
+      setTimeout(() => fetchWeather(true), 2000);
+    });
   };
 
   const value = {
     weather,
+    currentWeather,
+    forecastData,
     isLoadingWeather,
+    isRefetching,
     error,
     refetchWeather,
   };
