@@ -84,9 +84,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   titleText: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: "#f6fafd",
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#fff",
   },
   pillsContainer: {
     flexDirection: "row",

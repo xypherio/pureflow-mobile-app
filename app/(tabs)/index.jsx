@@ -3,7 +3,7 @@ import { useDeviceStatus } from "@hooks/useDeviceStatus";
 import { useNotifications } from "@hooks/useNotifications";
 import { useNotificationSetup } from "@hooks/useNotificationSetup";
 import { useWaterQualityNotifications } from "@hooks/useWaterQualityNotifications";
-import React, { Suspense, useCallback, useMemo } from "react";
+import React, { Suspense, useCallback, useMemo, useState } from "react";
 
 import SystemStatusSection from "@components/sections/SystemStatusSection";
 import { globalStyles } from "@styles/globalStyles";
@@ -16,6 +16,9 @@ import {
 } from "@ui/LoadingSkeletons";
 import RefreshControlWrapper from "@ui/RefreshControlWrapper";
 import PureFlowLogo from "@ui/UiHeader";
+import SettingsModal from "@components/modals/SettingsModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 import { getWeatherInfo } from "@utils/sensorDataUtils";
 import { ScrollView } from "react-native";
 
@@ -56,6 +59,8 @@ export default function HomeScreen() {
   useWaterQualityNotifications();
   useNotificationSetup(isInitialized, addNotificationListener);
 
+
+
   // Memoized weather info computation for performance
   const weatherInfo = useMemo(() =>
     getWeatherInfo(realtimeData?.isRaining || 0),
@@ -65,6 +70,35 @@ export default function HomeScreen() {
   // Note: Using simple lazy loading instead of viewport-based loading
   // for better React Native compatibility
 
+  // Modal states
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isRatingVisible, setIsRatingVisible] = useState(false);
+  const [isIssueReportingVisible, setIsIssueReportingVisible] = useState(false);
+
+  const openSettingsModal = useCallback(() => {
+    setIsSettingsVisible(true);
+  }, []);
+
+  const closeSettingsModal = useCallback(() => {
+    setIsSettingsVisible(false);
+  }, []);
+
+  const handleRateApp = useCallback(() => {
+    setIsRatingVisible(true);
+  }, []);
+
+  const closeRatingModal = useCallback(() => {
+    setIsRatingVisible(false);
+  }, []);
+
+  const handleReportIssue = useCallback(() => {
+    setIsIssueReportingVisible(true);
+  }, []);
+
+  const closeIssueReportingModal = useCallback(() => {
+    setIsIssueReportingVisible(false);
+  }, []);
+
   // Memoized refresh handler to prevent recreation
   const handleRefresh = useCallback(() => {
     refreshData();
@@ -72,9 +106,29 @@ export default function HomeScreen() {
 
   return (
     <>
+      {/* Modals */}
+      <SettingsModal
+        visible={isSettingsVisible}
+        onClose={closeSettingsModal}
+        onRateApp={handleRateApp}
+        onReportIssue={handleReportIssue}
+      />
+
+      <FeatureRatingModal
+        visible={isRatingVisible}
+        onClose={closeRatingModal}
+        onSuccess={closeRatingModal}
+      />
+
+      <IssueReportingModal
+        visible={isIssueReportingVisible}
+        onClose={closeIssueReportingModal}
+      />
+
       {/* Header */}
       <PureFlowLogo
         notificationBadge={unreadCount > 0 ? unreadCount : null}
+        onSettingsPress={openSettingsModal}
       />
 
       <GlobalWrapper style={globalStyles.pageBackground}>

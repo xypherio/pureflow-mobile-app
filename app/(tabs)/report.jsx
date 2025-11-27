@@ -2,12 +2,18 @@ import React, { useCallback, useState, useEffect } from "react";
 import { Alert, StyleSheet } from "react-native";
 import * as FileSystem from 'expo-file-system';
 
+// Contexts
+import { useWeather } from "@contexts/WeatherContext";
+
 // Components
 import ExportToggleButton from "@components/forms/ExportToggleButton";
 import PureFlowLogo from "@components/ui/UiHeader";
 import SegmentedFilter from "@navigation/SegmentedFilters";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import { ReportSkeleton } from "@components/ui/LoadingSkeletons";
+import SettingsModal from "@components/modals/SettingsModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 
 // Report Components
 import ReportContent from "@components/sections/ReportContent";
@@ -20,26 +26,41 @@ import { useReportData } from "@hooks/useReportData";
 import { timePeriodOptions } from "@constants/report";
 import { generateCsv, prepareExportData, shareFiles } from "@utils/exportUtils";
 import PdfGenerator from "../../src/PdfGenerator";
-import { weatherService } from "@services/weatherService";
 
 const ReportScreen = () => {
   const [activeFilter, setActiveFilter] = useState("daily");
   const [isExporting, setIsExporting] = useState(false);
-  const [weatherData, setWeatherData] = useState(null);
 
-  // Fetch weather data for reports
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const weather = await weatherService.getCurrentWeatherByCity('Cebu City');
-        setWeatherData(weather);
-      } catch (error) {
-        console.error('Error fetching weather:', error);
-        setWeatherData(weatherService.getFallbackWeather());
-      }
-    };
+  // Use weather context (loads custom city automatically)
+  const { currentWeather } = useWeather();
 
-    fetchWeather();
+  // Modal states
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isRatingVisible, setIsRatingVisible] = useState(false);
+  const [isIssueReportingVisible, setIsIssueReportingVisible] = useState(false);
+
+  const openSettingsModal = useCallback(() => {
+    setIsSettingsVisible(true);
+  }, []);
+
+  const closeSettingsModal = useCallback(() => {
+    setIsSettingsVisible(false);
+  }, []);
+
+  const handleRateApp = useCallback(() => {
+    setIsRatingVisible(true);
+  }, []);
+
+  const closeRatingModal = useCallback(() => {
+    setIsRatingVisible(false);
+  }, []);
+
+  const handleReportIssue = useCallback(() => {
+    setIsIssueReportingVisible(true);
+  }, []);
+
+  const closeIssueReportingModal = useCallback(() => {
+    setIsIssueReportingVisible(false);
   }, []);
 
   // Use the custom report data hook to manage all report logic
@@ -63,7 +84,7 @@ const ReportScreen = () => {
         reportData,
         processedParameters,
         geminiResponse,
-        weatherData,
+        currentWeather,
         activeFilter
       );
       await PdfGenerator(exportData);
@@ -82,7 +103,7 @@ const ReportScreen = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [reportData, processedParameters, geminiResponse, weatherData, activeFilter]);
+  }, [reportData, processedParameters, geminiResponse, currentWeather, activeFilter]);
 
   const handleExportCsv = useCallback(async () => {
     setIsExporting(true);
@@ -91,7 +112,7 @@ const ReportScreen = () => {
         reportData,
         processedParameters,
         geminiResponse,
-        weatherData,
+        currentWeather,
         activeFilter
       );
       const { filePath } = await generateCsv(exportData);
@@ -119,7 +140,7 @@ const ReportScreen = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [reportData, processedParameters, geminiResponse, weatherData, activeFilter]);
+  }, [reportData, processedParameters, geminiResponse, currentWeather, activeFilter]);
 
   // Render loading state
   if (isLoading) {
@@ -152,7 +173,26 @@ const ReportScreen = () => {
   // Render main content
   return (
     <>
-      <PureFlowLogo />
+      {/* Modals */}
+      <SettingsModal
+        visible={isSettingsVisible}
+        onClose={closeSettingsModal}
+        onRateApp={handleRateApp}
+        onReportIssue={handleReportIssue}
+      />
+
+      <FeatureRatingModal
+        visible={isRatingVisible}
+        onClose={closeRatingModal}
+        onSuccess={closeRatingModal}
+      />
+
+      <IssueReportingModal
+        visible={isIssueReportingVisible}
+        onClose={closeIssueReportingModal}
+      />
+
+      <PureFlowLogo onSettingsPress={openSettingsModal} />
 
       <SegmentedFilter
         options={timePeriodOptions}
