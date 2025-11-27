@@ -208,7 +208,7 @@ const generateInsightFromAPI = async (sensorData) => {
     Please return a JSON object with the following structure:
     {
       "insights": {
-        "overallInsight": "One simple sentence about your pond water quality using everyday language.",
+        "overallInsight": "Short paragraph about your pond water quality using everyday language.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai"
       },

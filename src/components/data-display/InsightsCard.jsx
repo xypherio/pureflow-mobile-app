@@ -403,7 +403,7 @@ export default function InsightsCard({
                 style={styles.lastUpdated}
                 accessibilityLabel={`Last updated: ${new Date(lastUpdated).toLocaleString()}`}
               >
-                Last updated: {new Date(lastUpdated).toLocaleString()}
+                Last updated: {new Date(lastUpdated).toLocaleTimeString("en-US", { hour12: true })}
               </Text>
             )}
 
@@ -473,19 +473,23 @@ const styles = StyleSheet.create({
 
   // Typography styles
   title: {
-    color: '#111827',
-    marginBottom: 8,
+    color: '#0f172a',
+    marginBottom: 12,
+    fontWeight: '700',
+    letterSpacing: -0.025,
+    lineHeight: 24,
   },
   description: {
-    color: '#4B5563',
-    lineHeight: 24,
-    marginBottom: 8,
-    fontWeight: '400',
-    fontSize: 15,
+    color: '#374151',
+    lineHeight: 20,
+    marginBottom: 12,
+    fontWeight: '500',
+    fontSize: 14,
+    letterSpacing: 0.025,
   },
   lastUpdated: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: 11,
+    color: '#6b7280',
     fontWeight: '500',
     fontStyle: 'italic',
     marginTop: 8,
@@ -495,18 +499,24 @@ const styles = StyleSheet.create({
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 6,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginRight: 6,
   },
   statusText: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: 10,
+    color: '#6b7280',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   // Loading styles
@@ -531,51 +541,66 @@ const styles = StyleSheet.create({
 
   // Recommendations styles
   recommendationsCard: {
-    marginTop: 8,
-    marginBottom: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 0,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderLeftWidth: 3,
+    borderRadius: 12,
+    borderLeftWidth: 4,
     borderLeftColor: '#6b7280',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   recommendationsContainer: {
-    marginTop: 0,
+    paddingLeft: 4,
   },
   recommendationsTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280', // Neutral gray as fallback
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 8,
+    letterSpacing: 0.025,
   },
   recommendationItem: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 18,
-    marginLeft: 8,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+    marginLeft: 12,
+    marginBottom: 4,
+    paddingLeft: 4,
   },
 
   // Suggestion styles
   suggestionContainer: {
-    marginTop: 8,
-    marginBottom: 4,
-    padding: 10,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderLeftWidth: 3,
+    borderRadius: 12,
+    borderLeftWidth: 4,
     borderLeftColor: '#6b7280', // Neutral gray as fallback
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   suggestionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6b7280', // Neutral gray as fallback
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
+    letterSpacing: 0.025,
   },
   suggestionText: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 18,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
   },
 
   // Utility button styles

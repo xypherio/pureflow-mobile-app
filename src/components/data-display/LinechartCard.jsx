@@ -2,6 +2,7 @@ import { Activity } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
   Dimensions,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,13 +21,7 @@ import ChartTooltip from "../ui/ChartToolTip";
 
 const { width: screenWidth } = Dimensions.get("window");
 
-/**
- * LineChartCard Component
- *
- * Displays interactive line charts for water quality parameter trends over time.
- * Supports filtering by individual parameters and shows realtime data integration.
- * Features include interactive tooltips, parameter selection, and responsive design.
- */
+
 const getParameterColor = (parameter) => {
   const parameterColors = {
     pH: colors.phColor,
@@ -307,6 +302,12 @@ const LineChartCard = ({
     };
   }, [selectedParameter]);
 
+  // Determine if chart should be scrollable based on data points
+  const dataPointCount = labels.length;
+  const isScrollable = dataPointCount >= 10;
+  const chartWidth = screenWidth - CHART_DIMENSIONS.containerWidth;
+  const scrollableChartWidth = Math.max(dataPointCount * 60, chartWidth);
+
   return (
     <View style={[
       styles.container,
@@ -340,79 +341,161 @@ const LineChartCard = ({
       {/* Chart Container */}
       <View style={styles.chartContainer}>
         {hasDataToShow && datasets.length > 0 ? (
-          <View style={styles.chartWrapper}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={hideTooltip}
+          isScrollable ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
               style={styles.chartWrapper}
             >
-              <LineChart
-                data={{
-                  labels,
-                  datasets,
-                }}
-                width={screenWidth - CHART_DIMENSIONS.containerWidth}
-                height={CHART_DIMENSIONS.height}
-                chartConfig={{
-                  backgroundGradientFrom: '#fff',
-                  backgroundGradientTo: '#fff',
-                  decimalPlaces: 2,
-                  color: (opacity = 1) => colors.primary,
-                  labelColor: (opacity = 1) => colors.text,
-                  // Y-axis specific configuration
-                  yAxisMin: yAxisConfig.min,
-                  yAxisMax: yAxisConfig.max,
-                  formatYLabel: (value) => {
-                    const units = {
-                      temperature: '°C',
-                      turbidity: 'NTU',
-                      salinity: 'ppt',
-                      pH: 'pH'
-                    };
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={hideTooltip}
+                style={{ position: "relative", alignItems: "center" }}
+              >
+                <LineChart
+                  data={{
+                    labels,
+                    datasets,
+                  }}
+                  width={scrollableChartWidth}
+                  height={CHART_DIMENSIONS.height}
+                  chartConfig={{
+                    backgroundGradientFrom: '#fff',
+                    backgroundGradientTo: '#fff',
+                    decimalPlaces: 2,
+                    color: (opacity = 1) => colors.primary,
+                    labelColor: (opacity = 1) => colors.text,
+                    // Y-axis specific configuration
+                    yAxisMin: yAxisConfig.min,
+                    yAxisMax: yAxisConfig.max,
+                    formatYLabel: (value) => {
+                      const units = {
+                        temperature: '°C',
+                        turbidity: 'NTU',
+                        salinity: 'ppt',
+                        pH: 'pH'
+                      };
 
-                    if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
-                    const formatted = parseFloat(value).toFixed(2);
-                    const unit = selectedParameter ? ` ${units[selectedParameter] || ''}` : '';
-                    return `${formatted}${unit}`;
-                  },
-                  // Subtle background grid lines
-                  propsForBackgroundLines: {
-                    strokeWidth: 0.5,
-                    stroke: '#e2e8f0',
-                  },
-                  // Other configurations
-                  propsForDots: {
-                    r: "5",
-                    strokeWidth: "3",
-                    fill: "#FFF",
-                    stroke: getParameterColor(selectedParameter),
-                  },
-                  // Style configurations
-                  strokeWidth: 2,
-                  fillShadowGradientOpacity: 0.2,
-                }}
-                fromZero={false}
-                segments={yAxisConfig.count}
-                bezier={false}
-                style={styles.chart}
-                withDots={true}
-                withShadow={false}
-                withInnerLines={true}
-                withOuterLines={true}
-                withVerticalLines={false}
-                withHorizontalLines={true}
-                withVerticalLabels={true}
-                withHorizontalLabels={true}
-                onDataPointClick={handleChartDataPointPress}
-              />
-              <ChartTooltip
-                data={tooltipData}
-                visible={tooltipVisible}
-                position={tooltipPosition}
-                onHide={() => setTooltipVisible(false)}
-              />
-            </TouchableOpacity>
-          </View>
+                      if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                      const formatted = parseFloat(value).toFixed(2);
+                      const unit = selectedParameter ? ` ${units[selectedParameter] || ''}` : '';
+                      return `${formatted}${unit}`;
+                    },
+                    // Subtle background grid lines
+                    propsForBackgroundLines: {
+                      strokeWidth: 0.5,
+                      stroke: '#e2e8f0',
+                    },
+                    // Only set global propsForDots when showing single parameter
+                    ...(selectedParameter ? {
+                    propsForDots: {
+                      r: "5",
+                      strokeWidth: "3",
+                      fill: getParameterColor(selectedParameter),
+                    },
+                    } : {}),
+                    // Style configurations
+                    strokeWidth: 2,
+                    fillShadowGradientOpacity: 0.2,
+                  }}
+                  fromZero={false}
+                  segments={yAxisConfig.count}
+                  bezier={false}
+                  style={styles.chart}
+                  withDots={true}
+                  withShadow={false}
+                  withInnerLines={true}
+                  withOuterLines={true}
+                  withVerticalLines={false}
+                  withHorizontalLines={true}
+                  withVerticalLabels={false}
+                  withHorizontalLabels={true}
+                  onDataPointClick={handleChartDataPointPress}
+                />
+                <ChartTooltip
+                  data={tooltipData}
+                  visible={tooltipVisible}
+                  position={tooltipPosition}
+                  onHide={() => setTooltipVisible(false)}
+                />
+              </TouchableOpacity>
+            </ScrollView>
+          ) : (
+            <View style={styles.chartWrapper}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={hideTooltip}
+                style={styles.chartWrapper}
+              >
+                <LineChart
+                  data={{
+                    labels,
+                    datasets,
+                  }}
+                  width={chartWidth}
+                  height={CHART_DIMENSIONS.height}
+                  chartConfig={{
+                    backgroundGradientFrom: '#fff',
+                    backgroundGradientTo: '#fff',
+                    decimalPlaces: 2,
+                    color: (opacity = 1) => colors.primary,
+                    labelColor: (opacity = 1) => colors.text,
+                    // Y-axis specific configuration
+                    yAxisMin: yAxisConfig.min,
+                    yAxisMax: yAxisConfig.max,
+                    formatYLabel: (value) => {
+                      const units = {
+                        temperature: '°C',
+                        turbidity: 'NTU',
+                        salinity: 'ppt',
+                        pH: 'pH'
+                      };
+
+                      if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                      const formatted = parseFloat(value).toFixed(2);
+                      const unit = selectedParameter ? ` ${units[selectedParameter] || ''}` : '';
+                      return `${formatted}${unit}`;
+                    },
+                    // Subtle background grid lines
+                    propsForBackgroundLines: {
+                      strokeWidth: 0.5,
+                      stroke: '#e2e8f0',
+                    },
+                    // Only set global propsForDots when showing single parameter
+                    ...(selectedParameter ? {
+                    propsForDots: {
+                      r: "5",
+                      strokeWidth: "3",
+                      fill: getParameterColor(selectedParameter),
+                    },
+                    } : {}),
+                    // Style configurations
+                    strokeWidth: 2,
+                    fillShadowGradientOpacity: 0.2,
+                  }}
+                  fromZero={false}
+                  segments={yAxisConfig.count}
+                  bezier={false}
+                  style={styles.chart}
+                  withDots={true}
+                  withShadow={false}
+                  withInnerLines={true}
+                  withOuterLines={true}
+                  withVerticalLines={false}
+                  withHorizontalLines={true}
+                  withVerticalLabels={false}
+                  withHorizontalLabels={true}
+                  onDataPointClick={handleChartDataPointPress}
+                />
+                <ChartTooltip
+                  data={tooltipData}
+                  visible={tooltipVisible}
+                  position={tooltipPosition}
+                  onHide={() => setTooltipVisible(false)}
+                />
+              </TouchableOpacity>
+            </View>
+          )
         ) : (
           <View
             style={[styles.emptyState, { height: CHART_DIMENSIONS.height }]}
