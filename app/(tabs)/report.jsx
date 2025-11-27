@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useEffect } from "react";
 import { Alert, StyleSheet } from "react-native";
+import * as FileSystem from 'expo-file-system';
 
 // Components
 import ExportToggleButton from "@components/forms/ExportToggleButton";
@@ -95,12 +96,20 @@ const ReportScreen = () => {
       );
       const { filePath } = await generateCsv(exportData);
 
-      Alert.alert("CSV Report Generated", `Report saved to: ${filePath}`, [
-        {
-          text: "OK",
-          onPress: () => shareFiles([filePath], "Share Water Quality Report"),
-        },
-      ]);
+      // Try to auto-open the file
+      try {
+        await FileSystem.openDocumentAsync(filePath);
+        console.log('CSV opened successfully');
+      } catch (openError) {
+        console.error('Failed to open CSV:', openError);
+        // Fallback to share option
+        Alert.alert("CSV Report Generated", `Report saved to: ${filePath}`, [
+          {
+            text: "OK",
+            onPress: () => shareFiles([filePath], "Share Water Quality Report"),
+          },
+        ]);
+      }
     } catch (error) {
       console.error("CSV Generation Error:", error);
       Alert.alert(

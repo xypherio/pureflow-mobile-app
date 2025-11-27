@@ -5,8 +5,13 @@
   "version": "1.1.0",
     "owner": "xy_pher",
     "orientation": "portrait",
-  "icon": "./assets/logo/logo-emblem.png",
+    "icon": "./assets/logo/logo-emblem.png",
     "scheme": "pureflow",
+    "splash": {
+      "image": "./assets/logo/logo-emblem.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#002d66"
+    },
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "jsEngine": "hermes",
@@ -45,7 +50,7 @@
         "expo-notifications",
         {
           "icon": "./assets/logo/logo-emblem.png",
-          "color": "#ffffff",
+          "color": "#002d66",
           "sounds": ["./assets/water-alert.mp3"]
         }
       ],
@@ -56,7 +61,8 @@
           "image": "./assets/logo/logo-emblem.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#002d66"
+          "backgroundColor": "#002d66",
+          "shadowColor": "none"
         }
       ],
       "expo-web-browser",

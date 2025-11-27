@@ -30,8 +30,7 @@ if (typeof window !== "undefined") {
   ]);
 }
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+
 
 const styles = StyleSheet.create({
   container: {
@@ -102,10 +101,8 @@ export default function RootLayout() {
           setServicesReady(true);
         }
       } finally {
-        // The splash screen component will handle data loading and transitions
-        if (fontsLoaded && isMounted) {
-          SplashScreen.hideAsync();
-        }
+        // Native splash will hide automatically, custom splash component handles transitions
+        // No need to manually hide since we're not preventing auto-hide
       }
     }
 
