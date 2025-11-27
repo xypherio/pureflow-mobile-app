@@ -1,9 +1,16 @@
-import { getWaterQualityThresholds } from '../../constants/thresholds';
+import { getWaterQualityThresholdsFromSettings } from '../../constants/thresholds';
 
 export class WaterQualityThresholdManager {
-    constructor() {
+  constructor() {
+    this.initialized = false;
+    this.thresholds = null;
+    this.initializeAsync();
+  }
+
+  async initializeAsync() {
+    try {
       // Use thresholds from constants file instead of hardcoded values
-      const thresholds = getWaterQualityThresholds();
+      const thresholds = await getWaterQualityThresholdsFromSettings();
 
       // Convert to the format expected by the rest of the system
       // Add critical thresholds based on the normal ranges
@@ -31,8 +38,21 @@ export class WaterQualityThresholdManager {
         tds: { max: 500, critical: { max: 1000 } } // TDS not in thresholds.js, keeping existing
       };
 
+      this.initialized = true;
       console.log('ThresholdManager initialized with thresholds from constants:', this.thresholds);
+    } catch (error) {
+      console.error('Failed to initialize ThresholdManager:', error);
+      // Fallback to default values
+      this.thresholds = {
+        ph: { min: 6.5, max: 8.5, critical: { min: 6.0, max: 9.0 } },
+        temperature: { min: 26, max: 30, critical: { min: 20, max: 35 } },
+        turbidity: { min: 0, max: 50, critical: { max: 60 } },
+        salinity: { min: 0, max: 5, critical: { max: 10 } },
+        tds: { max: 500, critical: { max: 1000 } }
+      };
+      this.initialized = true;
     }
+  }
   
     getThreshold(parameter) {
       return this.thresholds[parameter.toLowerCase()];

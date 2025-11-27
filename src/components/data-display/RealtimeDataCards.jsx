@@ -1,12 +1,10 @@
 import { useData } from "@contexts/DataContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { WaterQualityThresholdManager } from "../../services/core/WaterQualityThresholdManager";
+import { getWaterQualityThresholdsFromSettings } from "../../constants/thresholds";
 import waterQualityNotificationService from "../../services/WaterQualityNotificationService";
-
-const thresholdManager = new WaterQualityThresholdManager();
 
 // Parameter configuration
 const PARAMETER_CONFIGS = [
@@ -36,6 +34,8 @@ const PARAMETER_CONFIGS = [
 
 export default function RealTimeData() {
   const { realtimeData, loading } = useData();
+  const [thresholds, setThresholds] = useState({});
+  const [thresholdsLoaded, setThresholdsLoaded] = useState(false);
 
   // Calculate data age - handle both timestamp formats
   const dataAge = useMemo(() => {
@@ -75,6 +75,24 @@ export default function RealTimeData() {
       realtimeData.reading?.turbidity !== undefined ||
       realtimeData.reading?.salinity !== undefined);
 
+  // Load thresholds asynchronously from settings
+  useEffect(() => {
+    const loadThresholds = async () => {
+      try {
+        const loadedThresholds = await getWaterQualityThresholdsFromSettings();
+        setThresholds(loadedThresholds);
+        setThresholdsLoaded(true);
+      } catch (error) {
+        console.warn('Failed to load thresholds for RealtimeDataCards:', error);
+        // Fallback to freshwater defaults
+        const { getWaterQualityThresholds } = await import('../../constants/thresholds');
+        setThresholds(getWaterQualityThresholds('freshwater'));
+        setThresholdsLoaded(true);
+      }
+    };
+    loadThresholds();
+  }, []);
+
   // Track last processed data for notification triggering
   const lastProcessedRef = useRef(null);
 
@@ -87,6 +105,45 @@ export default function RealTimeData() {
     }
   }, [realtimeData, hasData]);
 
+  // Helper function to evaluate parameter status against thresholds
+  const evaluateParameter = (parameter, value) => {
+    if (value === null || value === undefined || isNaN(value) || !thresholdsLoaded) {
+      return "normal";
+    }
+
+    const paramKey = parameter.toLowerCase();
+    const threshold = thresholds[parameter] || thresholds[paramKey];
+
+    if (!threshold) {
+      return "normal";
+    }
+
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+      return "normal";
+    }
+
+    // Check critical thresholds (if they exist)
+    if (threshold.critical) {
+      if (threshold.critical.min && numValue < threshold.critical.min) {
+        return 'critical';
+      }
+      if (threshold.critical.max && numValue > threshold.critical.max) {
+        return 'critical';
+      }
+    }
+
+    // Check normal thresholds
+    if (threshold.min && numValue < threshold.min) {
+      return 'warning';
+    }
+    if (threshold.max && numValue > threshold.max) {
+      return 'warning';
+    }
+
+    return 'normal';
+  };
+
   // Memoized parameters to prevent unnecessary re-renders
   const parameters = useMemo(() => {
     if (!hasData || !realtimeData) return [];
@@ -98,8 +155,12 @@ export default function RealTimeData() {
       const value = sensorData[key];
       const hasValidValue = value != null && !isNaN(value);
 
-      // Calculate threshold status using the same logic as alert system
-      const thresholdStatus = hasValidValue ? thresholdManager.evaluateValue(key, Number(value)) : "normal";
+      // Calculate threshold status using the loaded thresholds
+      const thresholdStatus = hasValidValue ? evaluateParameter(key, Number(value)) : "normal";
+
+      // Get threshold ranges for display
+      const paramKey = key.toLowerCase();
+      const thresholdRange = thresholds[paramKey] || null;
 
       return {
         label,
@@ -107,12 +168,15 @@ export default function RealTimeData() {
         unit,
         icon: <Icon size={30} color={color} />,
         color,
-        threshold: thresholdManager.getThreshold(key),
+        threshold: thresholdRange ? {
+          min: thresholdRange.min,
+          max: thresholdRange.max
+        } : null,
         hasData: hasValidValue,
         thresholdStatus, // Add threshold status for styling
       };
     });
-  }, [hasData, realtimeData]);
+  }, [hasData, realtimeData, thresholds, thresholdsLoaded]);
 
   // Show loading state only if actively loading
   if (loading) {

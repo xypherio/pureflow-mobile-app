@@ -47,40 +47,43 @@ export const useReportData = (activeFilter) => {
   // Process chart data and generate report
   useEffect(() => {
     if (chartData && !loading) {
-      try {
-        if (chartData.length === 0) {
+      const processReport = async () => {
+        try {
+          if (chartData.length === 0) {
+            setReportData({
+              wqi: { value: 0, status: "unknown" },
+              parameters: {},
+              status: "empty",
+              message: "No data available for the selected time period",
+              generatedAt: new Date().toISOString(),
+              overallStatus: "unknown",
+            });
+            setError(null);
+            return;
+          }
+
+          const report = await generateWaterQualityReport(chartData, activeFilter);
           setReportData({
-            wqi: { value: 0, status: "unknown" },
-            parameters: {},
-            status: "empty",
-            message: "No data available for the selected time period",
+            ...report,
             generatedAt: new Date().toISOString(),
-            overallStatus: "unknown",
+            timePeriod: activeFilter,
           });
           setError(null);
-          return;
+        } catch (err) {
+          setError({
+            message: "Failed to generate report from chart data",
+            details: "Data processing error",
+          });
+          setReportData({
+            status: "error",
+            message: err.message || "Report generation failed",
+            parameters: {},
+            wqi: { value: 0, status: "unknown" },
+            generatedAt: new Date().toISOString(),
+          });
         }
-
-        const report = generateWaterQualityReport(chartData, activeFilter);
-        setReportData({
-          ...report,
-          generatedAt: new Date().toISOString(),
-          timePeriod: activeFilter,
-        });
-        setError(null);
-      } catch (err) {
-        setError({
-          message: "Failed to generate report from chart data",
-          details: "Data processing error",
-        });
-        setReportData({
-          status: "error",
-          message: err.message || "Report generation failed",
-          parameters: {},
-          wqi: { value: 0, status: "unknown" },
-          generatedAt: new Date().toISOString(),
-        });
-      }
+      };
+      processReport();
     } else if (chartError) {
       setError({
         message: "Failed to fetch chart data",

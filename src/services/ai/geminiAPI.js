@@ -185,13 +185,111 @@ const generateInsightFromAPI = async (sensorData) => {
     };
   }
 
+  // Retrieve user settings for personalization
+  let userNickname = null;
+  let fishpondType = 'freshwater';
+  try {
+    const savedSettings = await AsyncStorage.getItem('pureflowSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      userNickname = settings.nickname?.trim();
+      fishpondType = settings.fishpondType || 'freshwater';
+    }
+  } catch (error) {
+    silentError('Error retrieving user settings for AI personalization:', error);
+    userNickname = null;
+    fishpondType = 'freshwater';
+  }
+
+  // Analyze overall water quality status for expressive responses
+  const getQualityStatus = (data) => {
+    const params = ['pH', 'temperature', 'salinity', 'turbidity'];
+    let criticalCount = 0;
+    let warningCount = 0;
+    let normalCount = 0;
+
+    for (const param of params) {
+      const value = data[param];
+      if (value != null && !isNaN(value)) {
+        // Get thresholds for the user's fishpond type
+        const thresholds = {
+          freshwater: { pH: { min: 6.5, max: 8.5 }, temperature: { min: 26, max: 30 }, salinity: { min: 0, max: 5 }, turbidity: { min: 0, max: 50 } },
+          saltwater: { pH: { min: 7.5, max: 8.5 }, temperature: { min: 24, max: 30 }, salinity: { min: 15, max: 35 }, turbidity: { min: 0, max: 60 } }
+        };
+
+        const threshold = thresholds[fishpondType]?.[param];
+        if (threshold) {
+          if (value < threshold.min || value > threshold.max) {
+            warningCount++;
+          } else {
+            normalCount++;
+          }
+        } else {
+          normalCount++; // Parameter without specific thresholds
+        }
+      }
+    }
+
+    if (warningCount >= 2) return 'critical';
+    if (warningCount > 0) return 'warning';
+    if (normalCount > 0) return 'excellent';
+    return 'unknown';
+  };
+
+  const qualityStatus = getQualityStatus(sensorData);
+
   // Use retry with exponential backoff for API calls
   return retryWithBackoff(async () => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+    // Determine the greeting style based on quality status
+    const getGreetingStyle = (status, nickname) => {
+      const user = nickname ? nickname : "fish farmer";
+
+      switch (status) {
+        case 'excellent':
+          return {
+            opening: `Excellent news, ${user}! `,
+            tone: "positive and encouraging",
+            examples: ["Great job!", "Fantastic work!", "Well done on maintaining"]
+          };
+        case 'warning':
+          return {
+            opening: `Hey ${user}, `,
+            tone: "concerned but friendly",
+            examples: ["let's address this concern", "we should take a look at this", "here's what we can do"]
+          };
+        case 'critical':
+          return {
+            opening: `Oh no, ${user}! `,
+            tone: "urgently concerned",
+            examples: ["we have a serious issue", "this needs immediate attention", "your water quality is poor"]
+          };
+        default:
+          return {
+            opening: `${user}, `,
+            tone: "neutral and informative",
+            examples: ["here's the current status", "let's review", "this is what we see"]
+          };
+      }
+    };
+
+    const greetingStyle = getGreetingStyle(qualityStatus, userNickname);
+
     const prompt = `
     Based on the following pond/tank water quality sensor data, provide analysis and simple recommendations for FISH FARMERS.
     The data is: ${JSON.stringify(sensorData)}
+
+    USER PERSONALIZATION:
+    - User's nickname: ${userNickname || 'not set'}
+    - Overall quality status: ${qualityStatus}
+    - Greeting style: ${greetingStyle.tone}
+
+    RESPONSE STYLE REQUIREMENTS:
+    - START your overall insight with: "${greetingStyle.opening}"
+    - Address the user by their nickname "${userNickname || 'fish farmer'}" when appropriate
+    - Use expressive greetings based on the quality status (examples: ${greetingStyle.examples.join(", ")})
+    - Make the tone conversational and emotive, not clinical
 
     CRITICAL: Use extremely simple, everyday language that a fish farmer with no scientific training can understand.
     - Avoid technical terms like "alkalinity", "acidification", "reduce alkalinity", etc.
@@ -199,16 +297,16 @@ const generateInsightFromAPI = async (sensorData) => {
     - Make each recommendation a clear action that farmers can do TODAY.
     - Keep instructions very practical and easy to follow.
 
-    Examples of good simple language:
-    ✅ "Add baking soda to raise pH level"
-    ✅ "Change 20% of the water daily"
-    ✅ "Clean the filter and make sure water flows well"
-    ❌ "Implement pH buffer saturation" or "Regulate carbonate equilibrium"
+    Examples of good conversational language:
+    ✅ GOOD: "Hey Alex, your pH seems a bit low - try adding some baking soda daily until it gets back to normal"
+    ✅ EXCELLENT: "Fantastic work, Maria! Your water quality is looking perfect - keep it up!"
+    ✅ CRITICAL: "Oh no, David! Your water is very cloudy - clean that filter right away!"
+    ❌ BAD: "The analysis indicates suboptimal pH levels require immediate corrective measures"
 
     Please return a JSON object with the following structure:
     {
       "insights": {
-        "overallInsight": "Short paragraph about your pond water quality using everyday language.",
+        "overallInsight": "Conversational paragraph about your pond water quality starting with appropriate greeting and addressing the user by name.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai"
       },
@@ -223,7 +321,7 @@ const generateInsightFromAPI = async (sensorData) => {
           "recommendedActions": [
             "Add a spoonful of baking soda or farm lime daily until pH rises",
             "Remove uneaten fish food from the pond",
-            "Do a 20% water change by removing old water and adding fresh water"
+            "Do a 20% of the water change by removing old water and adding fresh water"
           ],
           "status": "normal|warning|critical"
         },
