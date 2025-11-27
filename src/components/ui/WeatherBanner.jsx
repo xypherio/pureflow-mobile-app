@@ -1,12 +1,8 @@
 import React, {
-  useCallback,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
 } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { weatherService } from "../../services/weatherService";
+import { useWeather } from "../../contexts/WeatherContext";
 
 // Weather Icon Component
 const WeatherIcon = ({ condition, size = 50 }) => {
@@ -64,87 +60,13 @@ const getCurrentDateTime = () => {
 export default function WeatherBanner({
   forecast: propForecast,
   showCurrentWeather = false,
-  city = "Mandaue City",
+  city = "Bogo City",
 }) {
-  const [currentWeather, setCurrentWeather] = useState(null);
-  const [forecastData, setForecastData] = useState(null);
-  const [isLoading, setIsLoading] = useState(!propForecast);
-  const [error, setError] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  const intervalRef = useRef(null);
-  const isMountedRef = useRef(true);
-
-  const fetchWeatherData = useCallback(async () => {
-    if (propForecast) return; // Don't fetch if forecast is provided as prop
-
-    console.log("🌤️ Fetching weather data for:", city);
-    setIsLoading(true);
-    setError(false);
-
-    try {
-      // Fetch current weather data
-      const weatherData = await weatherService.getCurrentWeatherByCity(city);
-
-      if (!isMountedRef.current) return;
-
-      setCurrentWeather(weatherData);
-      setLastUpdated(new Date());
-
-      // Try to get 5-day forecast if we have coordinates
-      try {
-        const forecastData = await weatherService.getForecast(
-          weatherData.raw?.coord?.lat,
-          weatherData.raw?.coord?.lon
-        );
-        if (isMountedRef.current && forecastData) {
-          setForecastData(forecastData);
-        }
-      } catch (forecastErr) {
-        console.warn("Forecast data unavailable:", forecastErr.message);
-      }
-    } catch (err) {
-      console.error("Error fetching weather:", err);
-      if (isMountedRef.current) {
-        setError(true);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [city, propForecast]);
-
-  // Auto-refresh every 10 minutes
-  useEffect(() => {
-    isMountedRef.current = true;
-
-    // Initial fetch
-    fetchWeatherData();
-
-    // Set up auto-refresh interval
-    intervalRef.current = setInterval(
-      () => {
-        if (isMountedRef.current) {
-          console.log("🔄 Auto-refreshing weather data...");
-          fetchWeatherData();
-        }
-      },
-      10 * 60 * 1000
-    ); // 10 minutes
-
-    // Cleanup
-    return () => {
-      isMountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [fetchWeatherData]);
+  const { currentWeather, isLoadingWeather, error } = useWeather();
 
   // Memoize compact weather data
   const compactWeatherData = useMemo(() => {
-    if (isLoading || error || !currentWeather) {
+    if (isLoadingWeather || error || !currentWeather) {
       return null;
     }
 
@@ -179,9 +101,9 @@ export default function WeatherBanner({
           : null,
       icon: currentWeather.icon,
     };
-  }, [isLoading, error, currentWeather, city]);
+  }, [isLoadingWeather, error, currentWeather, city]);
 
-  if (isLoading) {
+  if (isLoadingWeather) {
     return (
       <View style={styles.compactCard}>
         <ActivityIndicator size="small" color="#ddeefc" />

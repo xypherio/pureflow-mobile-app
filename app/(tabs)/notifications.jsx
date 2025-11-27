@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef } from "react";
 
 // Components
 import PureFlowLogo from "@components/ui/UiHeader";
@@ -6,15 +6,66 @@ import NotificationsEmptyState from "@components/sections/NotificationsEmptyStat
 import NotificationsErrorState from "@components/sections/NotificationsErrorState";
 import NotificationsList from "@components/sections/NotificationsList";
 import NotificationsLoadingState from "@components/sections/NotificationsLoadingState";
+import SettingsModal from "@components/modals/SettingsModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 
 // Hooks
 import { useNotificationsData } from "@hooks/useNotificationsData";
 
 export default function NotificationsScreen() {
+  // Modal states
+  const [isSettingsVisible, setIsSettingsVisible] = React.useState(false);
+  const [isRatingVisible, setIsRatingVisible] = React.useState(false);
+  const [isIssueReportingVisible, setIsIssueReportingVisible] = React.useState(false);
+
+  const openSettingsModal = useCallback(() => {
+    setIsSettingsVisible(true);
+  }, []);
+
+  const closeSettingsModal = useCallback(() => {
+    setIsSettingsVisible(false);
+  }, []);
+
+  const handleRateApp = useCallback(() => {
+    setIsRatingVisible(true);
+  }, []);
+
+  const closeRatingModal = useCallback(() => {
+    setIsRatingVisible(false);
+  }, []);
+
+  const handleReportIssue = useCallback(() => {
+    setIsIssueReportingVisible(true);
+  }, []);
+
+  const closeIssueReportingModal = useCallback(() => {
+    setIsIssueReportingVisible(false);
+  }, []);
+
   return (
     <>
+      {/* Modals */}
+      <SettingsModal
+        visible={isSettingsVisible}
+        onClose={closeSettingsModal}
+        onRateApp={handleRateApp}
+        onReportIssue={handleReportIssue}
+      />
+
+      <FeatureRatingModal
+        visible={isRatingVisible}
+        onClose={closeRatingModal}
+        onSuccess={closeRatingModal}
+      />
+
+      <IssueReportingModal
+        visible={isIssueReportingVisible}
+        onClose={closeIssueReportingModal}
+      />
+
       {/* Header */}
-      <PureFlowLogo />
+      <PureFlowLogo onSettingsPress={openSettingsModal} />
 
       <NotificationsScreenComponent />
     </>

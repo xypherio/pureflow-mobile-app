@@ -1,24 +1,27 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
 // UI Components
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
 import WeatherBanner from "@ui/WeatherBanner";
+import SettingsModal from "@components/modals/SettingsModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 
 // Custom Hooks
-import useForecastService from "@hooks/useForecastService";
 import useForecastInsights from "@hooks/useForecastInsights";
+import useForecastService from "@hooks/useForecastService";
 
 // Services
 import ForecastService from "@services/core/ForecastService";
 
 // Sub-components
-import ForecastErrorMessages from "@components/sections/ForecastErrorMessagesSection";
 import DataSourceIndicator from "@components/sections/ForecastDataSourceIndicatorSection";
-import ForecastParameters from "@components/sections/ForecastParametersSection";
-import ParameterDetails from "@components/sections/ForecastParameterDetailsSection";
+import ForecastErrorMessages from "@components/sections/ForecastErrorMessagesSection";
 import ForecastInsights from "@components/sections/ForecastInsightsSection";
+import ParameterDetails from "@components/sections/ForecastParameterDetailsSection";
+import ForecastParameters from "@components/sections/ForecastParametersSection";
 
 export default function ForecastScreen() {
   // Core forecast data and logic
@@ -73,10 +76,58 @@ export default function ForecastScreen() {
     return cleanup;
   }, []); // empty deps for interval setup
 
+  // Modal states
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [isRatingVisible, setIsRatingVisible] = useState(false);
+  const [isIssueReportingVisible, setIsIssueReportingVisible] = useState(false);
+
+  const openSettingsModal = useCallback(() => {
+    setIsSettingsVisible(true);
+  }, []);
+
+  const closeSettingsModal = useCallback(() => {
+    setIsSettingsVisible(false);
+  }, []);
+
+  const handleRateApp = useCallback(() => {
+    setIsRatingVisible(true);
+  }, []);
+
+  const closeRatingModal = useCallback(() => {
+    setIsRatingVisible(false);
+  }, []);
+
+  const handleReportIssue = useCallback(() => {
+    setIsIssueReportingVisible(true);
+  }, []);
+
+  const closeIssueReportingModal = useCallback(() => {
+    setIsIssueReportingVisible(false);
+  }, []);
+
   return (
     <>
+      {/* Modals */}
+      <SettingsModal
+        visible={isSettingsVisible}
+        onClose={closeSettingsModal}
+        onRateApp={handleRateApp}
+        onReportIssue={handleReportIssue}
+      />
+
+      <FeatureRatingModal
+        visible={isRatingVisible}
+        onClose={closeRatingModal}
+        onSuccess={closeRatingModal}
+      />
+
+      <IssueReportingModal
+        visible={isIssueReportingVisible}
+        onClose={closeIssueReportingModal}
+      />
+
       {/* Header */}
-      <PureFlowLogo />
+      <PureFlowLogo onSettingsPress={openSettingsModal} />
 
       <GlobalWrapper style={{ flex: 1 }}>
         {/* Weather Summary Section */}
