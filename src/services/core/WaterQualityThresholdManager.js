@@ -13,27 +13,27 @@ export class WaterQualityThresholdManager {
       const thresholds = await getWaterQualityThresholdsFromSettings();
 
       // Convert to the format expected by the rest of the system
-      // Add critical thresholds based on the normal ranges
+      // Use critical thresholds from constants
       this.thresholds = {
         ph: {
           min: thresholds.pH.min,
           max: thresholds.pH.max,
-          critical: { min: thresholds.pH.min - 0.5, max: thresholds.pH.max + 0.5 }
+          critical: thresholds.pH.critical
         },
         temperature: {
           min: thresholds.temperature.min,
           max: thresholds.temperature.max,
-          critical: { min: thresholds.temperature.min - 6, max: thresholds.temperature.max + 5 }
+          critical: thresholds.temperature.critical
         },
         turbidity: {
           min: thresholds.turbidity.min,
           max: thresholds.turbidity.max,
-          critical: { max: 60 }
+          critical: thresholds.turbidity.critical
         },
         salinity: {
           min: thresholds.salinity.min,
           max: thresholds.salinity.max,
-          critical: { max: thresholds.salinity.max * 2 }
+          critical: thresholds.salinity.critical
         },
         tds: { max: 500, critical: { max: 1000 } } // TDS not in thresholds.js, keeping existing
       };

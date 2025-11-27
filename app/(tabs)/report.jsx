@@ -165,12 +165,7 @@ const ReportScreen = () => {
     );
   }
 
-  // Render error state
-  if (showError) {
-    return <ReportErrorState error={error} reportData={reportData} onRefresh={onRefresh} />;
-  }
-
-  // Render main content
+  // Render main content (fallback to default view on errors)
   return (
     <>
       {/* Modals */}

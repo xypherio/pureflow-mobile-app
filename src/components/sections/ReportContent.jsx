@@ -98,16 +98,16 @@ const ReportContent = ({
               <View style={styles.noParametersCard}>
                 <View style={styles.noParametersHeader}>
                   <View style={[styles.noParametersIcon, { backgroundColor: '#dbeafe' }]}>
-                    <History size={28} color="#2563eb" />
+                    <History size={28} color="#3b82f6" />
                   </View>
-                  <View style={styles.noParametersHeaderText}>
+                  <View style={styles.noParametersH3b82f6eaderText}>
                     <Text style={styles.noParametersTitle}>Parameters Unavailable</Text>
                     <Text style={styles.noParametersSubtitle}>Waiting for sensor data to generate parameter report</Text>
                   </View>
                 </View>
 
                 <View style={[styles.noParametersBanner, { backgroundColor: '#dbeafe' }]}>
-                  <Text style={[styles.noParametersStatus, { color: '#2563eb' }]}>
+                  <Text style={[styles.noParametersStatus, { color: '#3b82f6' }]}>
                     Data Collection Pending
                   </Text>
                   <Text style={styles.noParametersDescription}>
