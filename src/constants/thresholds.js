@@ -8,16 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export function getWaterQualityThresholds(fishpondType = 'freshwater') {
   const thresholds = {
     freshwater: {
-      pH: { min: 6.5, max: 8.5 },
-      temperature: { min: 26, max: 30 },
-      salinity: { min: 0, max: 5 },
-      turbidity: { min: 0, max: 50 }
+      pH: { min: 6.5, max: 8.5, critical: { min: 6.0, max: 9.0 } },
+      temperature: { min: 26, max: 30, critical: { min: 20, max: 35 } },
+      salinity: { min: 0, max: 5, critical: { max: 10 } },
+      turbidity: { min: 0, max: 50, critical: { max: 60 } }
     },
     saltwater: {
-      pH: { min: 7.5, max: 8.5 },
-      temperature: { min: 24, max: 30 },
-      salinity: { min: 15, max: 35 },
-      turbidity: { min: 0, max: 60 }
+      pH: { min: 7.5, max: 8.5, critical: { min: 7.0, max: 9.0 } },
+      temperature: { min: 24, max: 30, critical: { min: 18, max: 35 } },
+      salinity: { min: 15, max: 35, critical: { max: 70 } },
+      turbidity: { min: 0, max: 60, critical: { max: 60 } }
     }
   };
 

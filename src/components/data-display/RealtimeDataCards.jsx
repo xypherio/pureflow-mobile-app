@@ -159,8 +159,7 @@ export default function RealTimeData() {
       const thresholdStatus = hasValidValue ? evaluateParameter(key, Number(value)) : "normal";
 
       // Get threshold ranges for display
-      const paramKey = key.toLowerCase();
-      const thresholdRange = thresholds[paramKey] || null;
+      const thresholdRange = thresholds[key] || null;
 
       return {
         label,
