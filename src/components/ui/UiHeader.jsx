@@ -1,7 +1,6 @@
 import { globalStyles } from "@styles/globalStyles.js";
 import { useRouter } from "expo-router";
 import { CloudRain, CloudSun, RefreshCw, Sun } from "lucide-react-native";
-import { useEffect } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useWeather } from "../../contexts/WeatherContext";
 
@@ -39,15 +38,8 @@ export default function PureFlowLogo({
   const router = useRouter();
 
   // Use weather from context, or fallback to prop if provided
-  const { weather: contextWeather, isLoadingWeather, error: weatherError, refetchWeather } = useWeather();
+  const { weather: contextWeather, isLoadingWeather, error: weatherError } = useWeather();
   const weather = propWeather || contextWeather;
-
-  // Ensure weather data is fresh when component mounts
-  useEffect(() => {
-    if (!propWeather && (weather.label === "Loading..." || weather.label === "Weather unavailable")) {
-      refetchWeather();
-    }
-  }, [weather.label, propWeather, refetchWeather]);
 
   return (
     <View style={styles.container}>
