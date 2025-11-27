@@ -1,6 +1,6 @@
-import React from "react";
-import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
 import InsightsCard from "@dataDisplay/InsightsCard";
+import React from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 /**
  * Section displaying AI insights and recommendations

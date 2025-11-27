@@ -1110,22 +1110,15 @@ const PdfGenerator = async (exportData) => {
 
   console.log("PDF saved to:", pdfUri);
 
-  // Try to auto-open the file
-  try {
-    await FileSystem.openDocumentAsync(pdfUri);
-    console.log("PDF opened successfully");
-  } catch (openError) {
-    console.error("Failed to open PDF:", openError);
-    // Fallback to sharing if auto-open fails
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(pdfUri);
-    } else if (Print.isAvailableAsync()) {
-      await Print.printAsync({
-        uri: pdfUri,
-      });
-    } else {
-      alert("File saved but cannot be opened or shared automatically.");
-    }
+  // Share or print the PDF
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(pdfUri);
+  } else if (Print.isAvailableAsync()) {
+    await Print.printAsync({
+      uri: pdfUri,
+    });
+  } else {
+    alert("PDF saved to device. Check your device's files or app storage.");
   }
 };
 
