@@ -11,6 +11,25 @@ export const useWeather = () => {
   return context;
 };
 
+const formatForecastWeather = (forecastData, currentWeather) => {
+  // Get the first forecast entry (current/next few hours)
+  const currentForecast = forecastData.detailed[0];
+
+  if (!currentForecast) {
+    // Fallback to current weather
+    return currentWeather;
+  }
+
+  return {
+    label: currentForecast.description,
+    temp: `${Math.round(currentForecast.temp)}°C`,
+    icon: currentForecast.icon,
+    city: currentWeather.city,
+    country: currentWeather.country,
+    raw: forecastData
+  };
+};
+
 export const WeatherProvider = ({ children }) => {
   const [weather, setWeather] = useState({
     label: "Loading...",
@@ -25,10 +44,29 @@ export const WeatherProvider = ({ children }) => {
     setError(false);
 
     try {
-      // You can also use coordinates if you have location permissions
-      // const weatherData = await weatherService.getCurrentWeather(10.3157, 123.9223); // Mandaue coordinates
-      const weatherData = await weatherService.getCurrentWeatherByCity('Bogo City');
-      setWeather(weatherData);
+      // First get current weather to obtain coordinates
+      const currentWeather = await weatherService.getCurrentWeatherByCity('Bogo City');
+
+      if (!currentWeather.raw?.coord) {
+        throw new Error('Unable to get coordinates for forecast');
+      }
+
+      // Get forecast data using coordinates
+      const forecastData = await weatherService.getForecast(
+        currentWeather.raw.coord.lat,
+        currentWeather.raw.coord.lon
+      );
+
+      if (!forecastData) {
+        // Fallback to current weather if forecast unavailable
+        setWeather(currentWeather);
+        return;
+      }
+
+      // Format forecast data for display
+      const formattedForecast = formatForecastWeather(forecastData, currentWeather);
+
+      setWeather(formattedForecast);
     } catch (err) {
       console.error('Weather fetch error:', err);
       setError(true);
