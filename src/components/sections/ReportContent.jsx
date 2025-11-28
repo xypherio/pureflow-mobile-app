@@ -3,9 +3,9 @@ import InsightsCard from "@dataDisplay/InsightsCard";
 import ParameterCard from "@dataDisplay/ParameterCard";
 import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
 import { useRouter } from "expo-router";
-import { AlertCircle, History } from "lucide-react-native";
+import { AlertCircle, History, AlertTriangle } from "lucide-react-native";
 import React from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { globalStyles } from "../../styles/globalStyles";
 
 const ReportContent = ({
@@ -21,9 +21,39 @@ const ReportContent = ({
 }) => {
   const router = useRouter();
 
+  console.log('📊 [ReportContent] Rendering with data:', {
+    activeFilter,
+    isLoading: loading,
+    reportDataKeys: Object.keys(reportData || {}),
+    reportDataLength: Object.keys(reportData || {}).length,
+    processedParametersLength: processedParameters?.length || 0,
+    processedParametersSample: processedParameters?.[0] ? {
+      parameter: processedParameters[0].parameter,
+      averageValue: processedParameters[0].averageValue,
+      hasChartData: processedParameters[0]?.chartData?.datasets?.[0]?.data?.length > 0
+    } : null,
+    reportHasParameters: !!(reportData?.parameters && Object.keys(reportData.parameters).length > 0),
+    isSwitchingFilter
+  });
+
   const navigateToDashboard = () => {
     router.push("/");
   };
+
+  const EmptyState = ({ icon, title, description, buttonText, onPress, style, iconSize = 48, iconColor = "#3b82f6" }) => (
+    <View style={[styles.emptyStateContainer, style]}>
+      <View style={[styles.emptyStateIcon, { backgroundColor: '#dbeafe' }]}>
+        <AlertTriangle size={iconSize} color={iconColor} />
+      </View>
+      <Text style={styles.emptyStateTitle}>{title}</Text>
+      <Text style={styles.emptyStateDescription}>{description}</Text>
+      {buttonText && onPress && (
+        <TouchableOpacity style={styles.emptyStateButton} onPress={onPress}>
+          <Text style={styles.emptyStateButtonText}>{buttonText}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
   return (
     <ScrollView
@@ -100,7 +130,7 @@ const ReportContent = ({
                   <View style={[styles.noParametersIcon, { backgroundColor: '#dbeafe' }]}>
                     <History size={28} color="#3b82f6" />
                   </View>
-                  <View style={styles.noParametersH3b82f6eaderText}>
+                  <View style={styles.noParametersHeaderText}>
                     <Text style={styles.noParametersTitle}>Parameters Unavailable</Text>
                     <Text style={styles.noParametersSubtitle}>Waiting for sensor data to generate parameter report</Text>
                   </View>
@@ -296,6 +326,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4B5563",
     textAlign: "center",
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyStateIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateDescription: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

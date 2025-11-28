@@ -50,14 +50,34 @@ export const useNotificationsData = () => {
     setError(null);
 
     try {
-      const result = await historicalAlertsService.fetchPaginatedAlerts({
-        batchSize: 30
-      });
+      // First, check if we have prefetched alerts available
+      const prefetchedAlerts = historicalAlertsService.getPrefetchedAlerts();
+      let alertsData;
+      let usePrefetched = false;
+
+      if (prefetchedAlerts && prefetchedAlerts.length > 0) {
+        console.log('🎯 Using prefetched alerts for initial load');
+        // Use prefetched alerts directly
+        alertsData = {
+          alerts: prefetchedAlerts,
+          lastDocumentId: prefetchedAlerts.length > 0 ? prefetchedAlerts[prefetchedAlerts.length - 1].id : null,
+          hasMore: true // Assume there are more since we only prefetched 50
+        };
+        usePrefetched = true;
+      } else {
+        console.log('🌐 Prefetched alerts not available, fetching fresh data');
+        // Fall back to fetching fresh data
+        const result = await historicalAlertsService.fetchPaginatedAlerts({
+          batchSize: 50 // Use same batch size for consistency
+        });
+        alertsData = result;
+        usePrefetched = false;
+      }
 
       const newAlerts = [];
       const newSignatures = new Set();
 
-      for (const alert of result.alerts) {
+      for (const alert of alertsData.alerts) {
         const signature = `${alert.parameter}-${alert.type}-${alert.title}-${Math.round((alert.value || 0) * 100) / 100}`;
         if (!newSignatures.has(signature)) {
           newSignatures.add(signature);
@@ -67,8 +87,8 @@ export const useNotificationsData = () => {
 
       setAccumulatedAlerts(newAlerts);
       setSeenSignatures(newSignatures);
-      setLastDocId(result.lastDocumentId);
-      setHasMoreData(result.hasMore);
+      setLastDocId(alertsData.lastDocumentId);
+      setHasMoreData(alertsData.hasMore);
 
       // Process and set historicalData
       const filterSeverity = activeSeverity !== "all" ? mapUISeverityToDataSeverity(activeSeverity) : null;
@@ -76,7 +96,8 @@ export const useNotificationsData = () => {
       const processedData = historicalAlertsService.processAndSectionAlerts(newAlerts, null, filterSeverity, filterParameter);
       setHistoricalData({
         ...processedData,
-        hasMoreDataInDatabase: result.hasMore,
+        hasMoreDataInDatabase: alertsData.hasMore,
+        fromPrefetch: usePrefetched
       });
     } catch (err) {
       setError(err.message || "Failed to load alerts");
@@ -93,7 +114,7 @@ export const useNotificationsData = () => {
     try {
       const result = await historicalAlertsService.fetchPaginatedAlerts({
         startAfterDocumentId: lastDocId,
-        batchSize: 30
+        batchSize: 50 // Match batch size with initial load
       });
 
       const newAlerts = [];

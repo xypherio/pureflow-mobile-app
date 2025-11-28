@@ -398,12 +398,104 @@ class HistoricalAlertsService {
   }
 
   /**
+   * Prefetch alerts for immediate availability during app launch
+   * Uses a larger batch size and longer cache duration for better UX
+   */
+  async prefetchAlerts(options = {}) {
+    const {
+      limitCount = 50,
+      cacheDuration = 30 * 60 * 1000, // 30 minutes for prefetched data
+      useCache = false  // Don't use cache for prefetch, always fetch fresh
+    } = options;
+
+    return await performanceMonitor.measureAsync('historicalAlerts.prefetch', async () => {
+      try {
+        // Use a separate prefetch cache key to avoid conflict with regular fetches
+        const prefetchCacheKey = 'prefetch_alerts';
+        const now = Date.now();
+
+        // Check if we have valid prefetched data
+        if (useCache && this.cache.prefetch && this.cache.prefetch.alerts && this.cache.prefetch.timestamp) {
+          const cacheAge = now - this.cache.prefetch.timestamp;
+          if (cacheAge < cacheDuration) {
+            console.log('📦 Using prefetched alerts cache');
+            return { success: true, count: this.cache.prefetch.alerts.length };
+          }
+        }
+
+        console.log('🔄 Prefetching historical alerts from Firebase...');
+
+        // Fetch up to 50 alerts for prefetching
+        const alerts = await fetchAllDocuments('alerts', {
+          useCache: false,
+          limitCount, // 50 alerts
+          orderByField: 'timestamp',
+          orderDirection: 'desc'
+        });
+
+        console.log(`✅ Prefetched ${alerts.length} historical alerts`);
+
+        // Store in prefetch-specific cache
+        if (!this.cache.prefetch) {
+          this.cache.prefetch = {};
+        }
+        this.cache.prefetch = {
+          alerts,
+          timestamp: Date.now(),
+          duration: cacheDuration
+        };
+
+        // Also store in main cache for compatibility (shorter TTL)
+        this.cache = {
+          alerts,
+          timestamp: Date.now(),
+        };
+
+        return {
+          success: true,
+          count: alerts.length,
+          cacheUntil: new Date(Date.now() + cacheDuration).toISOString()
+        };
+
+      } catch (error) {
+        console.error('❌ Error prefetching alerts:', error);
+
+        // Don't fail the entire operation if prefetch fails
+        return {
+          success: false,
+          error: error.message,
+          count: 0
+        };
+      }
+    });
+  }
+
+  /**
+   * Get prefetched alerts (used by notifications hook)
+   */
+  getPrefetchedAlerts() {
+    if (this.cache.prefetch && this.cache.prefetch.alerts) {
+      const cacheAge = Date.now() - this.cache.prefetch.timestamp;
+      if (cacheAge < this.cache.prefetch.duration) {
+        console.log('📦 Returning prefetched alerts for notifications');
+        return this.cache.prefetch.alerts;
+      } else {
+        console.log('⏰ Prefetched alerts cache expired, will fetch fresh');
+        // Clear expired prefetch cache
+        this.cache.prefetch = null;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Clear the cache
    */
   clearCache() {
     this.cache = {
       alerts: null,
       timestamp: null,
+      prefetch: null
     };
     console.log('🧹 Historical alerts cache cleared');
   }

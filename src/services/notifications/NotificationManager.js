@@ -453,6 +453,24 @@ class NotificationManager {
   }
 
   /**
+   * Send a test notification (for debugging)
+   */
+  async sendTestNotification() {
+    console.log('🧪 Sending test notification...');
+
+    return await this.sendLocalNotification({
+      title: 'PureFlow Test Notification',
+      body: 'This is a test of the local notification system. If you see this, notifications are working!',
+      data: {
+        type: 'test',
+        timestamp: new Date().toISOString()
+      },
+      categoryId: 'updates',
+      priority: 'default'
+    });
+  }
+
+  /**
    * Get current notification badge count
    */
   async getBadgeCount() {

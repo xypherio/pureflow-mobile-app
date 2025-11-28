@@ -851,150 +851,146 @@ export const generateWaterQualityReport = async (readings, timeRange = "weekly")
   );
 
   // Analyze each parameter
-  const parameters = ["pH", "temperature", "salinity", "turbidity"].reduce(
-    async (acc, param) => {
-      // Handle case-insensitive parameter access
-      const paramLower = param.toLowerCase();
-      const paramKey =
-        Object.keys(aggregatedData.datasets || {}).find(
-          (key) => key.toLowerCase() === paramLower
-        ) || paramLower; // Fallback to lowercase if not found
+  const parameters = {};
+  for (const param of ["pH", "temperature", "salinity", "turbidity"]) {
+    // Handle case-insensitive parameter access
+    const paramLower = param.toLowerCase();
+    const paramKey =
+      Object.keys(aggregatedData.datasets || {}).find(
+        (key) => key.toLowerCase() === paramLower
+      ) || paramLower; // Fallback to lowercase if not found
 
-      const displayName = param; // Keep original for display
+    const displayName = param; // Keep original for display
 
-      // Debug: Log all available dataset keys and their types
-      console.log(
-        "Available dataset keys:",
-        Object.entries(aggregatedData.datasets || {}).map(([key, values]) => ({
-          key,
-          type: Array.isArray(values) ? "array" : typeof values,
-          length: Array.isArray(values) ? values.length : "N/A",
-        }))
+    // Debug: Log all available dataset keys and their types
+    console.log(
+      "Available dataset keys:",
+      Object.entries(aggregatedData.datasets || {}).map(([key, values]) => ({
+        key,
+        type: Array.isArray(values) ? "array" : typeof values,
+        length: Array.isArray(values) ? values.length : "N/A",
+      }))
+    );
+
+    // Get values with case-insensitive access
+    const values = Array.isArray(aggregatedData.datasets?.[paramKey])
+      ? aggregatedData.datasets[paramKey]
+      : [];
+
+    // Filter out invalid values for chart/trend analysis
+    const validValues = values
+      .map((v) => {
+        const num = parseFloat(v);
+        return isNaN(num) ? null : num;
+      })
+      .filter((v) => v !== null);
+
+    // Prefer aggregated period statistics when available
+    const periodStatsForParam =
+      aggregatedData?.periodStats?.[displayName] ||
+      aggregatedData?.periodStats?.[paramKey] ||
+      null;
+
+    let avgValue =
+      typeof periodStatsForParam?.average === "number"
+        ? periodStatsForParam.average
+        : null;
+    let minValue =
+      typeof periodStatsForParam?.min === "number"
+        ? periodStatsForParam.min
+        : null;
+    let maxValue =
+      typeof periodStatsForParam?.max === "number"
+        ? periodStatsForParam.max
+        : null;
+    let sampleCount =
+      typeof periodStatsForParam?.count === "number"
+        ? periodStatsForParam.count
+        : 0;
+
+    if (avgValue === null || !Number.isFinite(avgValue)) {
+      const fallbackStats = filteredReadingsForStats.reduce(
+        (acc, reading) => {
+          const value = reading?.[param];
+          if (value === null || value === undefined) {
+            return acc;
+          }
+
+          const numericValue = Number(value);
+          if (!Number.isFinite(numericValue)) {
+            return acc;
+          }
+
+          const weightCandidate = reading?.counts?.[param];
+          const weight =
+            typeof weightCandidate === "number" &&
+            Number.isFinite(weightCandidate) &&
+            weightCandidate > 0
+              ? weightCandidate
+              : 1;
+
+          acc.sum += numericValue * weight;
+          acc.count += weight;
+          acc.min =
+            acc.min === null ? numericValue : Math.min(acc.min, numericValue);
+          acc.max =
+            acc.max === null ? numericValue : Math.max(acc.max, numericValue);
+          return acc;
+        },
+        { sum: 0, count: 0, min: null, max: null }
       );
 
-      // Get values with case-insensitive access
-      const values = Array.isArray(aggregatedData.datasets?.[paramKey])
-        ? aggregatedData.datasets[paramKey]
-        : [];
-
-      // Filter out invalid values for chart/trend analysis
-      const validValues = values
-        .map((v) => {
-          const num = parseFloat(v);
-          return isNaN(num) ? null : num;
-        })
-        .filter((v) => v !== null);
-
-      // Prefer aggregated period statistics when available
-      const periodStatsForParam =
-        aggregatedData?.periodStats?.[displayName] ||
-        aggregatedData?.periodStats?.[paramKey] ||
-        null;
-
-      let avgValue =
-        typeof periodStatsForParam?.average === "number"
-          ? periodStatsForParam.average
-          : null;
-      let minValue =
-        typeof periodStatsForParam?.min === "number"
-          ? periodStatsForParam.min
-          : null;
-      let maxValue =
-        typeof periodStatsForParam?.max === "number"
-          ? periodStatsForParam.max
-          : null;
-      let sampleCount =
-        typeof periodStatsForParam?.count === "number"
-          ? periodStatsForParam.count
-          : 0;
-
-      if (avgValue === null || !Number.isFinite(avgValue)) {
-        const fallbackStats = filteredReadingsForStats.reduce(
-          (acc, reading) => {
-            const value = reading?.[param];
-            if (value === null || value === undefined) {
-              return acc;
-            }
-
-            const numericValue = Number(value);
-            if (!Number.isFinite(numericValue)) {
-              return acc;
-            }
-
-            const weightCandidate = reading?.counts?.[param];
-            const weight =
-              typeof weightCandidate === "number" &&
-              Number.isFinite(weightCandidate) &&
-              weightCandidate > 0
-                ? weightCandidate
-                : 1;
-
-            acc.sum += numericValue * weight;
-            acc.count += weight;
-            acc.min =
-              acc.min === null ? numericValue : Math.min(acc.min, numericValue);
-            acc.max =
-              acc.max === null ? numericValue : Math.max(acc.max, numericValue);
-            return acc;
-          },
-          { sum: 0, count: 0, min: null, max: null }
+      if (fallbackStats.count > 0) {
+        avgValue = parseFloat(
+          (fallbackStats.sum / fallbackStats.count).toFixed(2)
         );
-
-        if (fallbackStats.count > 0) {
-          avgValue = parseFloat(
-            (fallbackStats.sum / fallbackStats.count).toFixed(2)
-          );
-          minValue =
-            fallbackStats.min !== null
-              ? parseFloat(fallbackStats.min.toFixed(2))
-              : null;
-          maxValue =
-            fallbackStats.max !== null
-              ? parseFloat(fallbackStats.max.toFixed(2))
-              : null;
-          sampleCount = fallbackStats.count;
-        } else {
-          avgValue = null;
-          minValue = null;
-          maxValue = null;
-          sampleCount = 0;
-        }
+        minValue =
+          fallbackStats.min !== null
+            ? parseFloat(fallbackStats.min.toFixed(2))
+            : null;
+        maxValue =
+          fallbackStats.max !== null
+            ? parseFloat(fallbackStats.max.toFixed(2))
+            : null;
+        sampleCount = fallbackStats.count;
+      } else {
+        avgValue = null;
+        minValue = null;
+        maxValue = null;
+        sampleCount = 0;
       }
+    }
 
-      console.log(`Calculated average for ${displayName}:`, avgValue);
+    console.log(`Calculated average for ${displayName}:`, avgValue);
 
-      const evaluation =
-        typeof avgValue === "number"
-          ? await evaluateParameter(displayName, avgValue)
-          : {
-              status: "unknown",
-              message: "No data available for this parameter",
-            };
-      const trend = analyzeTrend(values, aggregatedData.labels);
+    const evaluation =
+      typeof avgValue === "number"
+        ? await evaluateParameter(displayName, avgValue)
+        : {
+            status: "unknown",
+            message: "No data available for this parameter",
+          };
+    const trend = analyzeTrend(values, aggregatedData.labels);
 
-      // Use the original parameter name as the key in the result
-      acc[displayName] = {
-        average: avgValue,
-        min: minValue,
-        max: maxValue,
-        status: evaluation.status,
-        trend: {
-          change: trend.change,
-          direction: trend.direction,
-          message: trend.message,
-        },
-        chartData: {
-          labels: aggregatedData.labels,
-          values: values,
-          timeRange: timeRange,
-          sampleCount,
-        },
-      };
-
-      return acc;
-    },
-    {}
-  );
+    // Use the original parameter name as the key in the result
+    parameters[displayName] = {
+      average: avgValue,
+      min: minValue,
+      max: maxValue,
+      status: evaluation.status,
+      trend: {
+        change: trend.change,
+        direction: trend.direction,
+        message: trend.message,
+      },
+      chartData: {
+        labels: aggregatedData.labels,
+        values: values,
+        timeRange: timeRange,
+        sampleCount,
+      },
+    };
+  }
 
   // Determine overall status
   const statuses = Object.values(parameters).map((p) => p.status);
