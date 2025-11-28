@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   insightsLabel: {
     fontSize: 12,
     color: "#1a2d51",
-    marginBottom: 5,
+    marginBottom: 10,
   },
   loadingIndicator: {
     marginTop: 20,

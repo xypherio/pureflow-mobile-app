@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import ForecastCard from "@dataDisplay/ForecastCard";
 
 // Utils
-import { formatValue, FORECAST_PARAMETERS, getParameterTheme } from "@utils/forecastUtils";
+import { FORECAST_PARAMETERS, formatValue, getParameterTheme } from "@utils/forecastUtils";
 
 const ForecastParameters = ({
   forecastPredicted,
@@ -36,13 +36,13 @@ const ForecastParameters = ({
 
 const styles = StyleSheet.create({
   forecastParametersContainer: {
-    marginBottom: 10,
+    marginBottom: 15,
+    marginTop: 15
   },
   sectionTitle: {
     fontSize: 12,
     color: "#1a2d51",
-    fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 10,
   },
 });
 

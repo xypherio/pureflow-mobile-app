@@ -38,8 +38,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     color: "#1a2d51",
-    fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 5,
   },
   loadingIndicator: {
     marginTop: 20,

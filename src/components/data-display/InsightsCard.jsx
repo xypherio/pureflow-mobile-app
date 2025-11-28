@@ -433,9 +433,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    color: "#1a2d51",
-    fontWeight: "600",
-    marginBottom: 5,
+    color: "#1a2d51"
   },
 
   // Card container styles

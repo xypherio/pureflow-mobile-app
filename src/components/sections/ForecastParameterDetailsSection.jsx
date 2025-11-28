@@ -1,3 +1,4 @@
+import { Pointer } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -15,17 +16,14 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
         <View style={[styles.container, styles.promptContainer]}>
           <View style={styles.gradientOverlay} />
 
-          <View style={styles.contentContainer}>
-            <View style={[styles.iconContainer, { backgroundColor: '#dbeafe' }]}>
-              <Text style={styles.promptIcon}>👆</Text>
+          <View style={styles.promptContent}>
+            <View style={styles.promptIconContainer}>
+              <Pointer size={35} color="#3B82F6" style={styles.promptIcon} />
             </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.promptTitle}>Select a Parameter</Text>
-              <Text style={styles.promptText}>
-                Tap any parameter card above to view detailed forecast information, insights, and recommendations.
-              </Text>
-            </View>
+            <Text style={styles.promptTitle}>Select a Parameter</Text>
+            <Text style={styles.promptText}>
+              Tap any parameter card above to view detailed forecast information, insights, and recommendations.
+            </Text>
           </View>
         </View>
       </View>
@@ -122,9 +120,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    color: "#1a2d51",
-    fontWeight: "600",
-    marginBottom: 5,
+    color: "#1a2d51"
   },
 
   // Card container styles
@@ -140,6 +136,7 @@ const styles = StyleSheet.create({
   promptContainer: {
     borderColor: '#3B82F6',
     borderStyle: 'dashed',
+    height: 200,
   },
   gradientOverlay: {
     position: 'absolute',
@@ -158,6 +155,12 @@ const styles = StyleSheet.create({
   },
   noIconContent: {
     flexDirection: 'column',
+  },
+  promptContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
   iconContainer: {
     width: 48,
@@ -192,9 +195,13 @@ const styles = StyleSheet.create({
   },
 
   // Prompt styles (for no selection state)
+  promptIconContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   promptIcon: {
-    fontSize: 24,
-    color: '#3B82F6',
+    fontSize: 30,
   },
   promptTitle: {
     fontSize: 18,

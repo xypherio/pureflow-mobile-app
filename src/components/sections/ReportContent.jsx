@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     color: "#1a2d51",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   noParametersCard: {
     backgroundColor: "#fff",
