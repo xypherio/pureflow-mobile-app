@@ -204,19 +204,24 @@ export const addAlertToFirestore = async (alerts) => {
   }
 };
 
-export const addForecastToFirestore = async (forecastData) => {
+export const addForecastToFirestore = async (forecastData, trends = null) => {
   try {
     if (!forecastData || typeof forecastData !== 'object') {
       throw new Error('Invalid forecast data provided');
     }
 
-    // Prepare forecast document with metadata
+    // Prepare forecast document with metadata and optional trends
     const forecastDocument = {
       ...sanitizeObject(forecastData),
       timestamp: Timestamp.now(),
       type: 'water_quality_forecast',
       version: '1.0'
     };
+
+    // Only include trends if they were provided
+    if (trends && typeof trends === 'object') {
+      forecastDocument.trends = sanitizeObject(trends);
+    }
 
     const docRef = await addDoc(collection(db, "forecasts"), forecastDocument);
     console.log("Forecast data added with ID: ", docRef.id);

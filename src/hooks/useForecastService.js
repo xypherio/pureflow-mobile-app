@@ -102,8 +102,8 @@ const useForecastService = () => {
         // Save current forecast to Firebase for future comparisons
         try {
           const { addForecastToFirestore } = await import("@services/firebase/firestore");
-          await addForecastToFirestore(result.data);
-          console.log("📤 Forecast data saved to Firebase");
+          await addForecastToFirestore(result.data, newTrends);
+          console.log("📤 Forecast data and trends saved to Firebase");
         } catch (saveError) {
           console.warn("⚠️ Failed to save forecast to Firebase:", saveError);
         }
@@ -196,11 +196,22 @@ const useForecastService = () => {
       const fallbackData = await getMostRecentForecast();
 
       if (fallbackData) {
-        // Filter out Firebase metadata before setting in state
-        const { timestamp, type, version, id, ...forecastOnly } = fallbackData;
+        // Extract trends before filtering metadata
+        const { trends: savedTrends, timestamp, type, version, id, ...forecastOnly } = fallbackData;
+
+        // Set forecast data
         setForecastPredicted(forecastOnly);
         setDataSource('firebase'); // Mark as coming from Firebase
         setForecastDataAvailable(true);
+
+        // Restore saved trends if they exist
+        if (savedTrends && typeof savedTrends === 'object') {
+          setTrends(savedTrends);
+          console.log("📊 Restored saved trends from Firebase:", savedTrends);
+        } else {
+          // Reset trends if not available in fallback data
+          setTrends({});
+        }
 
         console.log("✅ Successfully loaded fallback forecast from Firebase");
         return true;

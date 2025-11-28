@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { Bug, Droplets, Save, Star, X } from "lucide-react-native";
+import { checkUserRated } from "../../services/firebase/ratingService";
 import { colors } from "../../constants/colors";
 
 const Firebase = { collection: () => ({ addDoc: () => Promise.resolve() }) };
@@ -28,11 +29,13 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [setupLocked, setSetupLocked] = useState(false);
   const [daysUntilUnlock, setDaysUntilUnlock] = useState(0);
+  const [hasUserRated, setHasUserRated] = useState(false);
 
-  // Load saved settings on mount
+  // Load saved settings and rating status on mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadSettingsAndRating = async () => {
       try {
+        // Load settings
         const savedSettings = await AsyncStorage.getItem("pureflowSettings");
         if (savedSettings) {
           const parsedSettings = JSON.parse(savedSettings);
@@ -56,13 +59,17 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
 
           setSettings(parsedSettings);
         }
+
+        // Check if user has already rated
+        const userHasRated = await checkUserRated();
+        setHasUserRated(userHasRated);
       } catch (error) {
-        console.error("Error loading settings:", error);
+        console.error("Error loading settings or rating status:", error);
       }
     };
 
     if (visible) {
-      loadSettings();
+      loadSettingsAndRating();
     }
   }, [visible]);
 
@@ -274,13 +281,23 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
               </View>
 
               <View style={styles.optionsContainer}>
-                <TouchableOpacity
-                  style={styles.optionButton}
-                  onPress={handleRateApp}
-                >
-                  <Star size={20} color={colors.primary} />
-                  <Text style={styles.optionButtonText}> Rate PureFlow</Text>
-                </TouchableOpacity>
+                {!hasUserRated && (
+                  <TouchableOpacity
+                    style={styles.optionButton}
+                    onPress={handleRateApp}
+                  >
+                    <Star size={20} color={colors.primary} />
+                    <Text style={styles.optionButtonText}> Rate PureFlow</Text>
+                  </TouchableOpacity>
+                )}
+
+                {hasUserRated && (
+                  <View style={styles.optionButtonDisabled}>
+                    <Star size={20} color="#9CA3AF" />
+                    <Text style={styles.optionButtonTextDisabled}> Already Rated!</Text>
+                    <Text style={styles.feedbackSubmitted}> ❤️ Thanks for your feedback</Text>
+                  </View>
+                )}
 
                 <TouchableOpacity
                   style={styles.optionButton}
@@ -420,6 +437,28 @@ const styles = StyleSheet.create({
   },
   optionIcon: {
     fontSize: 20,
+  },
+  optionButtonDisabled: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    backgroundColor: "#F9FAFB",
+  },
+  optionButtonTextDisabled: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginLeft: 12,
+  },
+  feedbackSubmitted: {
+    fontSize: 12,
+    color: "#EF4444",
+    fontStyle: "italic",
+    position: "absolute",
+    right: 16,
   },
   inputContainer: {
     marginBottom: 16,

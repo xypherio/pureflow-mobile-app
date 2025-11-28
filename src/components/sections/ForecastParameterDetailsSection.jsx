@@ -1,108 +1,145 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Cloud, Lightbulb } from "lucide-react-native";
 
 // Utils
-import { getParameterTheme, hexToRgba } from "@utils/forecastUtils";
+import { getParameterTheme } from "@utils/forecastUtils";
 
 const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) => {
   if (!selectedParam) {
     return (
-      <View style={styles.promptCard}>
-        <Text style={styles.promptIcon}>👆</Text>
-        <Text style={styles.promptTitle}>Select a Parameter</Text>
-        <Text style={styles.promptText}>
-          Tap any parameter card above to view detailed forecast information, insights, and recommendations.
-        </Text>
+      <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Parameter Details</Text>
+        </View>
+
+        <View style={[styles.container, styles.promptContainer]}>
+          <View style={styles.gradientOverlay} />
+
+          <View style={styles.contentContainer}>
+            <View style={[styles.iconContainer, { backgroundColor: '#dbeafe' }]}>
+              <Text style={styles.promptIcon}>👆</Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.promptTitle}>Select a Parameter</Text>
+              <Text style={styles.promptText}>
+                Tap any parameter card above to view detailed forecast information, insights, and recommendations.
+              </Text>
+            </View>
+          </View>
+        </View>
       </View>
     );
   }
 
   const theme = getParameterTheme(selectedParam);
 
-  return (
-    <View style={[styles.detailsContainer, { borderColor: theme.color, shadowColor: theme.color }]}>
-      {/* Gradient overlay */}
-      <View style={[styles.gradientOverlay, { backgroundColor: theme.color }]} />
+  const getFactorsData = () => {
+    const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
+    return suggestion?.influencingFactors || [
+      "Rainfall intensity affecting water dilution",
+      "Temperature fluctuations impacting solubility",
+      "Low sunlight reducing photosynthesis"
+    ];
+  };
 
-      <Text style={[styles.sectionTitle, { backgroundColor: hexToRgba(theme.color, 1.0) }]}>Influencing Factors</Text>
-      <View style={styles.factorsList}>
-        {(() => {
-          const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
-          const factors = suggestion?.influencingFactors || [
-            "Rainfall intensity affecting water dilution",
-            "Temperature fluctuations impacting solubility",
-            "Low sunlight reducing photosynthesis"
-          ];
-          return factors.map((factor, index) => (
-            <View key={index} style={styles.factorItem}>
-              <Cloud size={16} color="#555" />
-              <Text style={styles.factorText}>{factor}</Text>
-            </View>
-          ));
-        })()}
+  const getActionsData = () => {
+    const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
+    return suggestion?.recommendedActions || [
+      "Adjust feeding schedules based on water conditions",
+      "Increase aeration to maintain oxygen levels",
+      "Regularly check ammonia and nitrite levels"
+    ];
+  };
+
+  return (
+    <View style={styles.sectionContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Parameter Details</Text>
       </View>
 
-      <Text style={[styles.sectionTitle, { backgroundColor: hexToRgba(theme.color, 1.0) }]}>Recommended Actions</Text>
-      <View style={styles.actionsList}>
-        {(() => {
-          const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
-          const actions = suggestion?.recommendedActions || [
-            "Adjust feeding schedules based on water conditions",
-            "Increase aeration to maintain oxygen levels",
-            "Regularly check ammonia and nitrite levels"
-          ];
-          return actions.map((action, index) => (
-            <View key={index} style={styles.actionItem}>
-              <Lightbulb size={16} color="#333" />
-              <Text style={styles.actionText}>{action}</Text>
+      <View style={[styles.container, { borderColor: theme.color }]}>
+        <View style={[styles.gradientOverlay, { backgroundColor: theme.color }]} />
+
+        <View style={[styles.contentContainer, styles.noIconContent]}>
+          <Text style={styles.title}>
+            {selectedParam} Forecast Analysis
+          </Text>
+
+          <Text style={styles.description}>
+            Detailed insights for {selectedParam.toLowerCase()} parameter including influencing factors and recommended actions.
+          </Text>
+
+          {/* Influencing Factors */}
+          <View style={styles.recommendationsCard}>
+            <View style={styles.recommendationsContainer}>
+              <Text style={[styles.recommendationsTitle, { color: theme.color }]}>
+                🌧️ Influencing Factors:
+              </Text>
+              {getFactorsData().map((factor, index) => (
+                <Text key={index} style={styles.recommendationItem}>
+                  • {factor}
+                </Text>
+              ))}
             </View>
-          ));
-        })()}
+          </View>
+
+          {/* Recommended Actions */}
+          <View style={[styles.recommendationsCard, { borderLeftColor: theme.color }]}>
+            <View style={styles.recommendationsContainer}>
+              <Text style={[styles.recommendationsTitle, { color: theme.color }]}>
+                💡 Recommended Actions:
+              </Text>
+              {getActionsData().map((action, index) => (
+                <Text key={index} style={styles.recommendationItem}>
+                  • {action}
+                </Text>
+              ))}
+            </View>
+          </View>
+
+          {/* Status indicator */}
+          <View style={styles.statusIndicator}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>Parameter Analysis</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  promptCard: {
-    backgroundColor: "#fff",
-    padding: 20,
-    marginVertical: 10,
-    borderRadius: 12,
+  // Section styles (matching InsightsCard)
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#007bff",
-    borderStyle: "dashed",
-  },
-  promptIcon: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
-  promptTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#007bff",
     marginBottom: 8,
   },
-  promptText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    lineHeight: 20,
+  sectionTitle: {
+    fontSize: 12,
+    color: "#1a2d51",
+    fontWeight: "600",
+    marginBottom: 5,
   },
-  detailsContainer: {
+
+  // Card container styles
+  container: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: 20,
     marginVertical: 5,
     borderWidth: 1,
+    borderTopWidth: 1,
     position: 'relative',
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  promptContainer: {
+    borderColor: '#3B82F6',
+    borderStyle: 'dashed',
   },
   gradientOverlay: {
     position: 'absolute',
@@ -112,88 +149,124 @@ const styles = StyleSheet.create({
     height: 4,
     opacity: 0.3,
   },
-  factorsList: {
-    marginBottom: 15,
-  },
-  factorItem: {
+
+  // Content layout styles
+  contentContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    padding: 20,
+  },
+  noIconContent: {
+    flexDirection: 'column',
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  factorText: {
-    fontSize: 14,
-    color: "#555",
-    marginLeft: 10,
-    flex: 1,
+
+  // Typography styles
+  title: {
+    color: '#0f172a',
+    marginBottom: 12,
+    fontWeight: '700',
+    letterSpacing: -0.025,
+    lineHeight: 24,
+    fontSize: 18,
+  },
+  description: {
+    color: '#374151',
     lineHeight: 20,
-  },
-  actionsList: {
-    marginBottom: 15,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  actionText: {
-    fontSize: 14,
-    color: "#333",
-    marginLeft: 10,
-    flex: 1,
-    lineHeight: 20,
+    marginBottom: 12,
     fontWeight: '500',
+    fontSize: 14,
+    letterSpacing: 0.025,
   },
-  aiInsight: {
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 10,
+
+  // Prompt styles (for no selection state)
+  promptIcon: {
+    fontSize: 24,
+    color: '#3B82F6',
   },
-  insightText: {
-    fontSize: 15,
-    color: "#fff",
+  promptTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+    marginBottom: 8,
+  },
+  promptText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
     lineHeight: 20,
   },
-  insightTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "white",
-    borderRadius: 8,
+
+  // Recommendations styles
+  recommendationsCard: {
+    marginTop: 16,
     marginBottom: 8,
-    backgroundColor: "white",
-    color: "#1A3F7A",
-    textAlign: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    width: "100%",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#9ca3af',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  sectionTitle: {
+  recommendationsContainer: {
+    paddingLeft: 4,
+  },
+  recommendationsTitle: {
     fontSize: 14,
-    color: "white",
-    fontWeight: "600",
-    borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    width: "100%",
-    textAlign: "center",
+    fontWeight: '700',
+    color: '#374151',
     marginBottom: 8,
+    letterSpacing: 0.025,
+  },
+  recommendationItem: {
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+    marginLeft: 12,
+    marginBottom: 4,
+    paddingLeft: 4,
+  },
+
+  // Status indicator
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 6,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+    backgroundColor: '#10B981',
+  },
+  statusText: {
+    fontSize: 10,
+    color: '#6b7280',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
 
