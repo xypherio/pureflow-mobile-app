@@ -49,6 +49,16 @@ export default function AppInitializer({ children }) {
         // Initialize the optimized data manager
         await optimizedDataManager.initialize();
 
+        setProgress('Prefetching recent alerts...');
+        // Prefetch alerts for faster notifications tab loading
+        const { historicalAlertsService } = await import('./services/historicalAlertsService');
+        const prefetchResult = await historicalAlertsService.prefetchAlerts({ limitCount: 50 });
+        if (prefetchResult.success) {
+          console.log(`📡 Prefetched ${prefetchResult.count} alerts for immediate availability`);
+        } else {
+          console.warn('⚠️ Alert prefetch failed, will fetch on-demand:', prefetchResult.error);
+        }
+
         setProgress('Initialization complete');
         setIsInitialized(true);
 

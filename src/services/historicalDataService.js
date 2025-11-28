@@ -345,7 +345,7 @@ class HistoricalDataService {
     const aggregated = {};
     const parameters = ['pH', 'temperature', 'turbidity', 'salinity'];
     let skippedCount = 0;
-    
+
     // Log data sample for debugging
     if (data.length > 0) {
       console.log('📋 [aggregateBy2Hour] Data sample (first 2 items):', {
@@ -378,28 +378,28 @@ class HistoricalDataService {
 
       // Create date in local timezone
       const localDate = new Date(reading.datetime);
-      
+
       // Handle timezone offset to ensure consistent local time
       const tzOffset = localDate.getTimezoneOffset() * 60000; // in milliseconds
       const localTime = new Date(localDate - tzOffset);
-      
+
       // Calculate 2-hour block in local time
       const localHour = localTime.getHours();
       const twoHourBlock = Math.floor(localHour / 2) * 2;
-      
+
       // Create a consistent key in local time
-      const key = localTime.toISOString().split('T')[0] + 
+      const key = localTime.toISOString().split('T')[0] +
                  `T${String(twoHourBlock).padStart(2, '0')}:00:00`;
 
       if (!aggregated[key]) {
         aggregated[key] = {
           datetime: new Date(key),
-          count: 0,
-          pH: { sum: 0, count: 0 },
-          temperature: { sum: 0, count: 0 },
-          turbidity: { sum: 0, count: 0 },
-          salinity: { sum: 0, count: 0 }
+          count: 0
         };
+        // Initialize parameter aggregation objects
+        parameters.forEach(param => {
+          aggregated[key][param] = { sum: 0, count: 0 };
+        });
       }
 
       // Process each parameter with case-insensitive access and validation
@@ -633,13 +633,29 @@ class HistoricalDataService {
       aggregated[key].count += 1;
     });
 
-    return Object.values(aggregated).map(block => ({
+    const result = Object.values(aggregated).map(block => ({
       datetime: block.datetime,
-      pH: block.pH.count > 0 ? block.pH.sum / block.pH.count : null,
-      temperature: block.temperature.count > 0 ? block.temperature.sum / block.temperature.count : null,
-      turbidity: block.turbidity.count > 0 ? block.turbidity.sum / block.turbidity.count : null,
-      salinity: block.salinity.count > 0 ? block.salinity.sum / block.salinity.count : null
-    }));
+      pH: block.pH && block.pH.count > 0 ? block.pH.sum / block.pH.count : null,
+      temperature: block.temperature && block.temperature.count > 0 ? block.temperature.sum / block.temperature.count : null,
+      turbidity: block.turbidity && block.turbidity.count > 0 ? block.turbidity.sum / block.turbidity.count : null,
+      salinity: block.salinity && block.salinity.count > 0 ? block.salinity.sum / block.salinity.count : null
+    }))    // Sort by datetime to ensure consistent ordering
+    .sort((a, b) => a.datetime - b.datetime);
+
+    console.log('✅ [aggregateByDay] Aggregation completed:', {
+      originalCount: data.length,
+      aggregatedCount: result.length,
+      skippedReadings: skippedCount,
+      firstBlock: result[0] ? {
+        datetime: result[0].datetime.toISOString(),
+        pH: result[0].pH,
+        temperature: result[0].temperature,
+        turbidity: result[0].turbidity,
+        salinity: result[0].salinity
+      } : 'No data'
+    });
+
+    return result;
   }
 
   /**

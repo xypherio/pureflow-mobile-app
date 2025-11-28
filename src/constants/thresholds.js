@@ -16,7 +16,7 @@ export function getWaterQualityThresholds(fishpondType = 'freshwater') {
     saltwater: {
       pH: { min: 7.5, max: 8.5, critical: { min: 7.0, max: 9.0 } },
       temperature: { min: 24, max: 30, critical: { min: 18, max: 35 } },
-      salinity: { min: 15, max: 35, critical: { max: 70 } },
+      salinity: { min: 15, max: 35, critical: { max: 40 } },
       turbidity: { min: 0, max: 60, critical: { max: 60 } }
     }
   };

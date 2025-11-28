@@ -63,11 +63,32 @@ export const useReportData = (activeFilter) => {
           }
 
           const report = await generateWaterQualityReport(chartData, activeFilter);
-          setReportData({
+
+          console.log('📋 [useReportData] Generated report from generateWaterQualityReport:', {
+            hasReport: !!report,
+            reportKeys: Object.keys(report || {}),
+            hasParameters: !!(report?.parameters),
+            parameterKeys: report?.parameters ? Object.keys(report.parameters) : [],
+            parameterSample: report?.parameters && Object.keys(report.parameters).length > 0 ?
+              { key: Object.keys(report.parameters)[0], data: report.parameters[Object.keys(report.parameters)[0]] } : null,
+            wqi: report?.wqi,
+            overallStatus: report?.overallStatus
+          });
+
+          const fullReportData = {
             ...report,
             generatedAt: new Date().toISOString(),
             timePeriod: activeFilter,
+          };
+
+          console.log('📋 [useReportData] Setting reportData:', {
+            fullReportKeys: Object.keys(fullReportData),
+            parametersLength: Object.keys(fullReportData.parameters || {}).length,
+            hasWqi: !!fullReportData.wqi,
+            overallStatus: fullReportData.overallStatus
           });
+
+          setReportData(fullReportData);
           setError(null);
         } catch (err) {
           setError({
@@ -122,7 +143,25 @@ export const useReportData = (activeFilter) => {
 
   // Memoized processed parameters
   const processedParameters = useMemo(() => {
-    return Object.entries(reportData.parameters || {}).map(([key, value]) => {
+    console.log('🔄 [processedParameters] Processing reportData.parameters:', {
+      hasParameters: !!reportData?.parameters,
+      parameterKeys: Object.keys(reportData?.parameters || {}),
+      parameterCount: Object.keys(reportData?.parameters || {}).length,
+      sampleParameter: Object.keys(reportData?.parameters || {})[0] ?
+        {
+          key: Object.keys(reportData.parameters)[0],
+          data: reportData.parameters[Object.keys(reportData.parameters)[0]]
+        } : null
+    });
+
+    const result = Object.entries(reportData.parameters || {}).map(([key, value]) => {
+      console.log(`🔄 [processedParameters] Processing parameter ${key}:`, {
+        hasAverage: typeof value?.average === "number",
+        isFinite: Number.isFinite(value?.average),
+        averageValue: value?.average,
+        configExists: !!PARAMETER_CONFIG[key]
+      });
+
       const config = PARAMETER_CONFIG[key] || {};
 
       const averageValue =
@@ -137,7 +176,7 @@ export const useReportData = (activeFilter) => {
         chartData = { labels: [], datasets: [{ data: [] }] };
       }
 
-      return {
+      const processedParam = {
         parameter: config.displayName || key,
         value: averageValue !== null ? averageValue.toFixed(2) : "N/A",
         averageValue,
@@ -165,7 +204,18 @@ export const useReportData = (activeFilter) => {
           ],
         },
       };
+
+      console.log(`✅ [processedParameters] Processed parameter ${key}:`, {
+        finalAverage: processedParam.averageValue,
+        hasChartData: processedParam.chartData?.datasets?.[0]?.data?.length > 0,
+        displayName: processedParam.parameter
+      });
+
+      return processedParam;
     });
+
+    console.log(`📊 [processedParameters] Final result: ${result.length} processed parameters`);
+    return result;
   }, [reportData]);
 
   // Find insight for parameter from geminiResponse
