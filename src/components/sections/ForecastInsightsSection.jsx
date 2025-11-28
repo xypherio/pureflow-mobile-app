@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
 
 // Components
 import InsightsCard from "@dataDisplay/InsightsCard";
@@ -12,11 +12,7 @@ const ForecastInsights = ({
   forecastPredicted
 }) => {
   return isGeminiLoading ? (
-    <ActivityIndicator
-      size="large"
-      color="#4a90e2"
-      style={styles.loadingIndicator}
-    />
+    <ForecastInsightsSkeleton />
   ) : geminiResponse ? (
     <InsightsCard
       type="info"

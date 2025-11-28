@@ -36,7 +36,7 @@ export function formatValue(key, value) {
  */
 export function getParameterIcon(param) {
   switch (param) {
-    case 'pH': return '⚖️';
+    case 'pH': return '⚗️';
     case 'Temperature': return '🌡️';
     case 'Turbidity': return '💧';
     case 'Salinity': return '🧂';
@@ -99,11 +99,11 @@ export function hexToRgba(hex, alpha) {
 export function getDataSourceInfo(dataSource) {
   switch (dataSource) {
     case 'api':
-      return 'Live forecast from API';
+      return 'Live Forecast from API';
     case 'firebase':
-      return 'Stored forecast data';
+      return 'Stored Forecast Data';
     case 'cached':
-      return 'Cached forecast data';
+      return 'Cached Forecast Data';
     default:
       return null;
   }

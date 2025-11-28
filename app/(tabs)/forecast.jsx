@@ -18,7 +18,6 @@ import ForecastService from "@services/core/ForecastService";
 
 // Sub-components
 import DataSourceIndicator from "@components/sections/ForecastDataSourceIndicatorSection";
-import ForecastErrorMessages from "@components/sections/ForecastErrorMessagesSection";
 import ForecastInsights from "@components/sections/ForecastInsightsSection";
 import ParameterDetails from "@components/sections/ForecastParameterDetailsSection";
 import ForecastParameters from "@components/sections/ForecastParametersSection";
@@ -134,12 +133,6 @@ export default function ForecastScreen() {
         <View>
           <WeatherBanner showCurrentWeather={true} city="Bogo City" />
         </View>
-
-        <ForecastErrorMessages
-          predictionError={predictionError}
-          hasEverFetchedOnce={hasEverFetchedOnce}
-          forecastDataAvailable={forecastDataAvailable}
-        />
 
         <DataSourceIndicator
           forecastDataAvailable={forecastDataAvailable}

@@ -286,7 +286,11 @@ export default function InsightsCard({
   };
 
   const renderRecommendations = () => {
-    if (!recommendations || recommendations.length === 0) return null;
+    const allRecommendations = recommendations && recommendations.length > 0
+      ? recommendations
+      : insight?.suggestions?.flatMap(s => s.recommendedActions || []).slice(0, 5) || [];
+
+    if (!allRecommendations || allRecommendations.length === 0) return null;
 
     return (
       <View style={[styles.recommendationsCard, {
@@ -296,7 +300,7 @@ export default function InsightsCard({
           <Text style={[styles.recommendationsTitle, { color: config.iconColor }]}>
             💡 Recommendations:
           </Text>
-          {recommendations.map((rec, index) => (
+          {allRecommendations.map((rec, index) => (
             <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>
               • {rec}
             </Text>
@@ -341,10 +345,6 @@ export default function InsightsCard({
         borderColor: displayConfig.borderColor,
         borderTopColor: displayConfig.borderColor + '80',
         padding: isLargeScreen ? 24 : 20,
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
       }]}>
 
         {/* Gradient overlay */}

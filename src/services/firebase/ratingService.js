@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from './config';
 import Constants from 'expo-constants';
@@ -15,18 +16,32 @@ export const getUserId = () => {
 };
 
 /**
- * Check if user has already submitted ratings
+ * Check if user has already submitted ratings (local cache first, then server)
  * @returns {Promise<boolean>} True if user has rated before
  */
 export const checkUserRated = async () => {
   try {
+    // Check local storage first for better UX
+    const localRatingStatus = await AsyncStorage.getItem('userHasRated');
+    if (localRatingStatus === 'true') {
+      return true;
+    }
+
+    // Fallback to server check
     const userId = getUserId();
     const q = query(
       collection(db, RATINGS_COLLECTION),
       where('userId', '==', userId)
     );
     const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty;
+    const hasRated = !querySnapshot.empty;
+
+    // Cache the result locally
+    if (hasRated) {
+      await AsyncStorage.setItem('userHasRated', 'true');
+    }
+
+    return hasRated;
   } catch (error) {
     console.error('Error checking user rating status:', error);
     // Return false on error to allow rating (fail gracefully)
@@ -87,6 +102,9 @@ export const submitRating = async (ratings, globalComment, globalSuggestions) =>
     };
 
     const docRef = await addDoc(collection(db, RATINGS_COLLECTION), ratingData);
+
+    // Cache locally that user has rated
+    await AsyncStorage.setItem('userHasRated', 'true');
 
     return {
       success: true,
