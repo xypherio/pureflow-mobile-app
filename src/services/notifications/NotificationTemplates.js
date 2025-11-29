@@ -370,6 +370,36 @@ class NotificationTemplates {
       priority: 'normal'
     };
   }
+
+  static monthlyMaintenanceReminder() {
+    return {
+      title: '🔧 Monthly Maintenance Check',
+      body: 'Time for your monthly maintenance checkup. Review equipment status and perform routine maintenance tasks.',
+      data: {
+        type: 'monthly_maintenance_reminder',
+        timestamp: new Date().toISOString(),
+        category: 'maintenance',
+        deepLink: 'pureflow://maintenance'
+      },
+      categoryId: 'maintenance',
+      priority: 'normal'
+    };
+  }
+
+  static monthlyCalibrationReminder() {
+    return {
+      title: '🔬 Monthly Sensor Calibration',
+      body: 'Monthly sensor calibration is due. Ensure accurate readings by calibrating all water quality sensors.',
+      data: {
+        type: 'monthly_calibration_reminder',
+        timestamp: new Date().toISOString(),
+        category: 'maintenance',
+        deepLink: 'pureflow://calibration'
+      },
+      categoryId: 'maintenance',
+      priority: 'normal'
+    };
+  }
 }
 
 export { NotificationTemplates };

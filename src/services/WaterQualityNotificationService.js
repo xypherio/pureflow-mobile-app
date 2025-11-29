@@ -150,139 +150,58 @@ class WaterQualityNotificationService {
   }
 
   /**
-   * Send device status notification
+   * Send device status notification - DISABLED
+   * Device status changes (online/offline/low battery) will not trigger push notifications
    */
   async sendDeviceStatusNotification(deviceName, status, additionalInfo = {}) {
     try {
-      let notification;
-      let severity = 'info';
+      console.log(`📱 Device status change detected: ${deviceName} - ${status} (notification disabled)`);
 
-      if (status === 'offline') {
-        const lastSeen = additionalInfo.lastSeen || 'Unknown';
-        notification = NotificationTemplates.deviceOffline(deviceName, lastSeen);
-        severity = 'warning';
-      } else if (status === 'online') {
-        notification = NotificationTemplates.deviceOnline(deviceName);
-        severity = 'info';
-      } else if (status === 'low_battery') {
-        const batteryLevel = additionalInfo.batteryLevel || 'Unknown';
-        notification = NotificationTemplates.lowBattery(deviceName, batteryLevel);
-        severity = 'warning';
-      } else if (status === 'system_alert') {
-        // Special handling for system alerts
-        notification = NotificationTemplates.systemStatus(
-          'system_alert',
-          additionalInfo.message || 'System alert triggered'
-        );
-        severity = 'high';
-      } else {
-        // Default to warning status for unknown status types
-        notification = NotificationTemplates.systemStatus(
-          'warning',
-          additionalInfo.message || `System status: ${status}`
-        );
-        severity = 'warning';
-      }
-
-      // Check for duplicate notifications
-      const notificationKey = `device_status_${deviceName}_${status}`;
-      if (!this.canSendNotification(notificationKey, severity)) {
-        console.log(`⏰ Skipping duplicate device status notification: ${deviceName} - ${status}`);
-        return { success: false, reason: 'duplicate' };
-      }
-
-      const result = await this.notificationService.send(notification, 'local');
-
-      if (result.success) {
-        // Record the notification to prevent duplicates
-        this.recordNotification(notificationKey, severity);
-        console.log(`📱 Device status notification sent: ${deviceName} - ${status}`);
-      }
-
-      return result;
+      // Device status notifications are disabled - just return success without sending
+      return {
+        success: true,
+        message: 'Device status notification disabled',
+        status: status,
+        deviceName: deviceName
+      };
     } catch (error) {
-      console.error('❌ Error sending device status notification:', error);
+      console.error('❌ Error processing device status notification:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Schedule maintenance reminder
+   * Schedule maintenance reminder - CHANGED TO MONTHLY
+   * Individual maintenance reminders now handled by monthly scheduled notifications
    */
   async scheduleMaintenanceReminder(task, dueDate, scheduleTime = null) {
-    try {
-      // Use scheduledNotificationManager for recurring/time-based scheduling
-      if (this.scheduledNotificationManager) {
-        const notification = NotificationTemplates.maintenanceReminder(task, dueDate);
+    console.log(`🔧 Maintenance reminder request for "${task}" scheduled for ${dueDate}`);
+    console.log(`📅 Note: Maintenance reminders now sent monthly on the 28th by ScheduledNotificationManager`);
 
-        let trigger = null;
-        if (scheduleTime) {
-          // Schedule for specific time
-          trigger = { date: new Date(scheduleTime) };
-        } else {
-          // Schedule for 1 day before due date
-          const reminderDate = new Date(dueDate);
-          reminderDate.setDate(reminderDate.getDate() - 1);
-          reminderDate.setHours(9, 0, 0, 0); // 9 AM
-
-          trigger = { date: reminderDate };
-        }
-
-        const result = await this.scheduledNotificationManager.scheduleCustomNotification(notification, trigger);
-
-        if (result.success) {
-          console.log(`⏰ Maintenance reminder scheduled: ${task} for ${dueDate}`);
-        }
-
-        return result;
-      } else {
-        // Fallback: Send immediate notification if scheduler not available
-        console.warn('⚠️ ScheduledNotificationManager not available, sending immediate notification instead');
-        const notification = NotificationTemplates.maintenanceReminder(task, dueDate);
-        const result = await this.notificationService.send(notification, 'local');
-
-        if (result.success) {
-          console.log(`📱 Immediate maintenance reminder sent: ${task}`);
-        }
-
-        return result;
-      }
-    } catch (error) {
-      console.error('❌ Error scheduling maintenance reminder:', error);
-      return { success: false, error: error.message };
-    }
+    // Return success without sending individual notifications (now monthly)
+    return {
+      success: true,
+      message: 'Maintenance reminders now scheduled monthly',
+      task: task,
+      dueDate: dueDate
+    };
   }
 
   /**
-   * Send calibration reminder
+   * Send calibration reminder - CHANGED TO MONTHLY
+   * Individual calibration reminders now handled by monthly scheduled notifications
    */
   async sendCalibrationReminder(parameter, lastCalibrated) {
-    try {
-      const notification = NotificationTemplates.calibrationNeeded(
-        parameter.charAt(0).toUpperCase() + parameter.slice(1),
-        lastCalibrated
-      );
+    console.log(`🔧 Calibration reminder request for parameter "${parameter}" (last calibrated: ${lastCalibrated})`);
+    console.log(`📅 Note: Calibration reminders now sent monthly on the 28th by ScheduledNotificationManager`);
 
-      // Check for duplicate calibration reminders
-      const notificationKey = `calibration_${parameter}`;
-      if (!this.canSendNotification(notificationKey, 'info')) {
-        console.log(`⏰ Skipping duplicate calibration reminder: ${parameter}`);
-        return { success: false, reason: 'duplicate' };
-      }
-
-      const result = await this.notificationService.send(notification, 'local');
-
-      if (result.success) {
-        // Record the notification to prevent duplicates
-        this.recordNotification(notificationKey, 'info');
-        console.log(`📱 Calibration reminder sent: ${parameter}`);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('❌ Error sending calibration reminder:', error);
-      return { success: false, error: error.message };
-    }
+    // Return success without sending individual notifications (now monthly)
+    return {
+      success: true,
+      message: 'Calibration reminders now scheduled monthly',
+      parameter: parameter,
+      lastCalibrated: lastCalibrated
+    };
   }
 
   /**
@@ -324,53 +243,37 @@ class WaterQualityNotificationService {
   }
 
   /**
-   * Process forecast data and send predictions
+   * Process forecast data - DISABLED
+   * Forecast alerts will not trigger push notifications
    */
   async processForecastData(forecastData) {
     if (!forecastData || typeof forecastData !== 'object') {
       return { success: false, error: 'Invalid forecast data' };
     }
 
-    const notifications = [];
-
     try {
+      // Process forecast data but don't send notifications
+      let breachCount = 0;
+      const alertedParameters = [];
+
       for (const [parameter, prediction] of Object.entries(forecastData)) {
         if (!prediction || typeof prediction !== 'object') continue;
 
-        // Check if forecast predicts breach
+        // Check if forecast predicts breach (for logging only)
         if (prediction.breachPredicted) {
-          const canSend = this.canSendNotification(`${parameter}_forecast`, 'warning');
-          
-          if (canSend) {
-            const notification = {
-              title: `Forecast Alert: ${parameter}`,
-              body: `${parameter} is predicted to breach safe levels. ${prediction.message || 'Take preventive action.'}`,
-              data: {
-                type: 'forecast_alert',
-                parameter,
-                prediction: prediction.value,
-                category: 'alerts'
-              },
-              categoryId: 'alerts',
-              priority: 'high'
-            };
-
-            const result = await this.notificationService.send(notification, 'local');
-            if (result.success) {
-              this.alertFacade.recordNotificationSent(`${parameter}_forecast`, 'warning');
-              notifications.push({
-                parameter,
-                type: 'forecast',
-                notificationId: result.notificationId
-              });
-            }
-          }
+          console.log(`📊 Forecast breach detected for ${parameter}: ${prediction.value} (notification disabled)`);
+          breachCount++;
+          alertedParameters.push(parameter);
         }
       }
 
+      console.log(`📊 Forecast processing complete: ${breachCount} breaches detected, notifications disabled`);
+
       return {
         success: true,
-        notifications
+        breachCount,
+        alertedParameters,
+        message: 'Forecast processing completed but notifications disabled'
       };
 
     } catch (error) {

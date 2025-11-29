@@ -1,13 +1,8 @@
-/**
- * Scheduled Notification Manager
- *
- * Handles recurring push notifications for daily reminders and scheduled alerts.
- * Manages notification scheduling, persistence, and automatic rescheduling.
- */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationManager } from './NotificationManager';
 import { NotificationTemplates } from './NotificationTemplates';
+import { addAlertToFirestore } from '../firebase/firestore';
 
 class ScheduledNotificationManager {
   constructor() {
@@ -19,7 +14,9 @@ class ScheduledNotificationManager {
     this.SCHEDULE_IDS = {
       FORECAST_REMINDER: 'forecast_reminder_10pm',
       REPORT_REMINDER: 'report_reminder_8pm',
-      MONITORING_REMINDER: 'monitoring_reminder_hourly'
+      MONITORING_REMINDER_6AM: 'monitoring_reminder_6am',
+      MONITORING_REMINDER_12PM: 'monitoring_reminder_12pm',
+      MONITORING_REMINDER_6PM: 'monitoring_reminder_6pm'
     };
 
     console.log('🔧 ScheduledNotificationManager constructed');
@@ -40,8 +37,12 @@ class ScheduledNotificationManager {
       // Schedule daily reminders
       await this.scheduleDailyReminders();
 
-      // Schedule monitoring reminders (every 4 hours by default)
-      await this.scheduleMonitoringReminders(4);
+      // Schedule monitoring reminders at fixed times (6 AM, 12 PM, 6 PM)
+      await this.scheduleMonitoringReminders();
+
+      // Schedule monthly maintenance and calibration reminders
+      await this.scheduleMonthlyMaintenanceReminders();
+      await this.scheduleMonthlyCalibrationReminders();
 
       this.isInitialized = true;
       console.log('✅ ScheduledNotificationManager initialized');
@@ -75,25 +76,27 @@ class ScheduledNotificationManager {
   }
 
   /**
-   * Schedule hourly monitoring reminders
+   * Schedule monthly maintenance reminders at end of month
    */
-  async scheduleMonitoringReminders(hoursInterval = 4) {
-    const scheduleId = this.SCHEDULE_IDS.MONITORING_REMINDER;
+  async scheduleMonthlyMaintenanceReminders() {
+    const scheduleId = 'monthly_maintenance_reminder';
 
     try {
-      // Cancel existing monitoring schedule if any
+      // Cancel existing if any
       if (this.schedules.has(scheduleId)) {
         await this.cancelNotification(scheduleId);
       }
 
-      // Create monitoring reminder notification
-      const monitoringNotification = NotificationTemplates.monitoringReminder();
+      // Create monthly maintenance reminder notification
+      const maintenanceNotification = NotificationTemplates.monthlyMaintenanceReminder();
 
-      // Schedule recurring notification every X hours
+      // Schedule for end of month (28th at 10 AM to be safe - February compatible)
       const result = await notificationManager.scheduleNotification(
-        monitoringNotification,
+        maintenanceNotification,
         {
-          seconds: hoursInterval * 60 * 60, // Convert hours to seconds
+          day: 28,
+          hour: 10,
+          minute: 0,
           repeats: true
         }
       );
@@ -101,20 +104,163 @@ class ScheduledNotificationManager {
       if (result.success) {
         this.schedules.set(scheduleId, {
           id: result.notificationId,
-          type: 'monitoring_reminder',
-          trigger: { seconds: hoursInterval * 60 * 60, repeats: true },
-          intervalHours: hoursInterval,
+          type: 'monthly_maintenance',
+          trigger: { day: 28, hour: 10, minute: 0, repeats: true },
           created: new Date().toISOString(),
           active: true
         });
 
         await this.saveSchedulesToStorage();
-        console.log(`⏰ Monitoring reminder scheduled every ${hoursInterval} hours`);
+
+        // Store as alert in Firestore
+        try {
+          const maintenanceAlert = {
+            type: 'maintenance_reminder',
+            title: 'Monthly Maintenance Reminder Scheduled',
+            message: 'Monthly maintenance reminder has been scheduled for the 28th of each month at 10 AM.',
+            parameter: 'system',
+            severity: 'info',
+            timestamp: new Date(),
+            category: 'maintenance',
+            scheduled: true,
+            recurrence: 'monthly'
+          };
+
+          await addAlertToFirestore(maintenanceAlert);
+          console.log('📝 Monthly maintenance reminder stored as alert in Firestore');
+        } catch (alertError) {
+          console.error('❌ Error storing maintenance alert in Firestore:', alertError);
+          // Don't fail the entire operation if alert storage fails
+        }
+
+        console.log('📅 Monthly maintenance reminder scheduled for 28th of each month at 10 AM');
       }
 
       return result;
     } catch (error) {
-      console.error('❌ Error scheduling monitoring reminder:', error);
+      console.error('❌ Error scheduling monthly maintenance reminder:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Schedule monthly calibration reminders at end of month
+   */
+  async scheduleMonthlyCalibrationReminders() {
+    const scheduleId = 'monthly_calibration_reminder';
+
+    try {
+      // Cancel existing if any
+      if (this.schedules.has(scheduleId)) {
+        await this.cancelNotification(scheduleId);
+      }
+
+      // Create monthly calibration reminder notification
+      const calibrationNotification = NotificationTemplates.monthlyCalibrationReminder();
+
+      // Schedule for end of month (28th at 11 AM)
+      const result = await notificationManager.scheduleNotification(
+        calibrationNotification,
+        {
+          day: 28,
+          hour: 11,
+          minute: 0,
+          repeats: true
+        }
+      );
+
+      if (result.success) {
+        this.schedules.set(scheduleId, {
+          id: result.notificationId,
+          type: 'monthly_calibration',
+          trigger: { day: 28, hour: 11, minute: 0, repeats: true },
+          created: new Date().toISOString(),
+          active: true
+        });
+
+        await this.saveSchedulesToStorage();
+
+        // Store as alert in Firestore
+        try {
+          const calibrationAlert = {
+            type: 'calibration_reminder',
+            title: 'Monthly Calibration Reminder Scheduled',
+            message: 'Monthly sensor calibration reminder has been scheduled for the 28th of each month at 11 AM.',
+            parameter: 'system',
+            severity: 'info',
+            timestamp: new Date(),
+            category: 'maintenance',
+            scheduled: true,
+            recurrence: 'monthly'
+          };
+
+          await addAlertToFirestore(calibrationAlert);
+          console.log('📝 Monthly calibration reminder stored as alert in Firestore');
+        } catch (alertError) {
+          console.error('❌ Error storing calibration alert in Firestore:', alertError);
+          // Don't fail the entire operation if alert storage fails
+        }
+
+        console.log('📅 Monthly calibration reminder scheduled for 28th of each month at 11 AM');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('❌ Error scheduling monthly calibration reminder:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Schedule monitoring reminders at fixed times (6 AM, 12 PM, 6 PM)
+   */
+  async scheduleMonitoringReminders() {
+    try {
+      // Cancel existing monitoring schedules if any
+      await this.cancelAllMonitoringReminders();
+
+      const monitoringTimes = [
+        { hour: 6, minute: 0, id: 'monitoring_reminder_6am' },   // 6 AM
+        { hour: 12, minute: 0, id: 'monitoring_reminder_12pm' }, // 12 PM
+        { hour: 18, minute: 0, id: 'monitoring_reminder_6pm' }   // 6 PM
+      ];
+
+      const results = [];
+
+      for (const { hour, minute, id } of monitoringTimes) {
+        // Create monitoring reminder notification
+        const monitoringNotification = NotificationTemplates.monitoringReminder();
+
+        // Schedule daily notification at specific time
+        const result = await notificationManager.scheduleNotification(
+          monitoringNotification,
+          {
+            hour: hour,
+            minute: minute,
+            repeats: true
+          }
+        );
+
+        if (result.success) {
+          this.schedules.set(id, {
+            id: result.notificationId,
+            type: 'monitoring_reminder',
+            trigger: { hour, minute, repeats: true },
+            created: new Date().toISOString(),
+            active: true
+          });
+
+          results.push({ id, result });
+          console.log(`⏰ Monitoring reminder scheduled for ${hour}:${minute.toString().padStart(2, '0')}`);
+        }
+      }
+
+      await this.saveSchedulesToStorage();
+      console.log('✅ All monitoring reminders scheduled at 6 AM, 12 PM, and 6 PM');
+
+      return { success: true, results };
+    } catch (error) {
+      console.error('❌ Error scheduling monitoring reminders:', error);
       return { success: false, error: error.message };
     }
   }
@@ -287,6 +433,33 @@ class ScheduledNotificationManager {
       return results;
     } catch (error) {
       console.error('❌ Error cancelling daily reminders:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Cancel all monitoring reminders (6AM, 12PM, 6PM)
+   */
+  async cancelAllMonitoringReminders() {
+    try {
+      const monitoringIds = [
+        this.SCHEDULE_IDS.MONITORING_REMINDER_6AM,
+        this.SCHEDULE_IDS.MONITORING_REMINDER_12PM,
+        this.SCHEDULE_IDS.MONITORING_REMINDER_6PM
+      ];
+
+      const results = [];
+      for (const scheduleId of monitoringIds) {
+        if (this.schedules.get(scheduleId)?.active) {
+          const result = await this.cancelNotification(scheduleId);
+          results.push({ scheduleId, ...result });
+        }
+      }
+
+      console.log('🧹 All monitoring reminders cancelled');
+      return results;
+    } catch (error) {
+      console.error('❌ Error cancelling monitoring reminders:', error);
       return { success: false, error: error.message };
     }
   }
