@@ -45,7 +45,7 @@ export const WeatherProvider = ({ children }) => {
 
   const fetchWeather = async (isRefetch = false) => {
     if (!isRefetch) setIsLoadingWeather(true);
-    if (!isRefetch) setError(false); // Only reset error for initial load
+    if (!isRefetch) setError(false);
 
     try {
       // Get custom city from settings, fallback to default

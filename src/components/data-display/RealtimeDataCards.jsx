@@ -153,7 +153,7 @@ export default function RealTimeData() {
 
     return PARAMETER_CONFIGS.map(({ key, label, unit, icon: Icon, color }) => {
       const value = sensorData[key];
-      const hasValidValue = value != null && !isNaN(value);
+      const hasValidValue = value != null && !isNaN(value) && value !== "";
 
       // Calculate threshold status using the loaded thresholds
       const thresholdStatus = hasValidValue ? evaluateParameter(key, Number(value)) : "normal";
