@@ -3,7 +3,7 @@ import InsightsCard from "@dataDisplay/InsightsCard";
 import ParameterCard from "@dataDisplay/ParameterCard";
 import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
 import { useRouter } from "expo-router";
-import { AlertCircle, History, AlertTriangle } from "lucide-react-native";
+import { AlertCircle, AlertTriangle, History } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { globalStyles } from "../../styles/globalStyles";
@@ -150,9 +150,6 @@ const ReportContent = ({
 
           {reportData && Object.keys(reportData.parameters || {}).length > 0 && processedParameters && processedParameters.length > 0 && (
             <View style={styles.insightsContainer}>
-              <Text style={styles.sectionLabel}>
-                AI Recommendations
-              </Text>
               {isGeminiLoading ? (
                 <ActivityIndicator
                   style={styles.insightsLoading}

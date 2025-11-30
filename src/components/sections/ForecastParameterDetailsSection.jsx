@@ -69,7 +69,7 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
           </Text>
 
           {/* Influencing Factors */}
-          <View style={styles.recommendationsCard}>
+          <View style={[styles.recommendationsCard, { borderLeftColor: theme.color }]}>
             <View style={styles.recommendationsContainer}>
               <Text style={[styles.recommendationsTitle, { color: theme.color }]}>
                 🌧️ Influencing Factors:
