@@ -1,6 +1,6 @@
 /**
  * App Initializer - Handles initial data loading during app launch
- * 
+ *
  * This component should be used at the root level to initialize the optimized data manager
  * and preload all necessary data before the main app components are rendered.
  */
@@ -11,6 +11,9 @@ import { optimizedDataManager } from './services/OptimizedDataManager';
 import { scheduledNotificationManager } from './services/notifications/ScheduledNotificationManager';
 import { OptimizedDataProvider } from './contexts/OptimizedDataContext';
 import { notificationManager } from './services/notifications/NotificationManager';
+import { fcmService } from './services/firebase/fcmService';
+import { notificationMonitor } from './services/notifications/NotificationMonitor';
+import { fcmHttpService } from './services/fcmService';
 
 export default function AppInitializer({ children }) {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -43,6 +46,47 @@ export default function AppInitializer({ children }) {
         } else {
           console.log('⚠️ Notification permissions not granted (user can grant later)');
           console.log('🔍 Permission status:', permissionResult.status);
+        }
+
+        setProgress('Initializing Firebase Cloud Messaging...');
+        // Initialize FCM service (this will request FCM permissions and get token)
+        try {
+          await fcmService.initialize();
+          console.log('✅ FCM service initialized successfully');
+        } catch (fcmError) {
+          console.warn('⚠️ FCM service initialization failed, continuing without FCM:', fcmError.message);
+          // Don't fail the entire app initialization if FCM fails
+        }
+
+        setProgress('Initializing FCM HTTP service...');
+        // Initialize FCM HTTP service for server communications
+        try {
+          await fcmHttpService.initialize();
+          console.log('✅ FCM HTTP service initialized successfully');
+        } catch (fcmHttpError) {
+          console.warn('⚠️ FCM HTTP service initialization failed, continuing without remote push:', fcmHttpError.message);
+          // Continue without FCM HTTP service - app will still work with local notifications
+        }
+
+        setProgress('Verifying scheduled notifications...');
+        // Verify scheduled notifications are active (already initialized above)
+        try {
+          const status = scheduledNotificationManager.getSchedulesStatus();
+          console.log(`📊 Scheduled notifications status: ${status.totalActive} active, ${status.isInitialized ? 'initialized' : 'not initialized'}`);
+
+          // Log current schedules for debugging
+          if (status.schedules && Object.keys(status.schedules).length > 0) {
+            console.log('📋 Current active schedules:');
+            Object.entries(status.schedules).forEach(([id, schedule]) => {
+              if (schedule.active) {
+                console.log(`  • ${id}: ${schedule.trigger?.hour || 'N/A'}:${schedule.trigger?.minute?.toString().padStart(2, '0') || 'N/A'}`);
+              }
+            });
+          } else {
+            console.warn('⚠️ No active scheduled notifications found');
+          }
+        } catch (statusError) {
+          console.warn('⚠️ Could not verify scheduled notification status:', statusError.message);
         }
 
         setProgress('Loading initial data...');

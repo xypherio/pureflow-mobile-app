@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationManager } from './NotificationManager';
 import { NotificationTemplates } from './NotificationTemplates';
 import { addAlertToFirestore } from '../firebase/firestore';
+import { fcmService } from '../../fcmService';
 
 class ScheduledNotificationManager {
   constructor() {
@@ -20,6 +21,45 @@ class ScheduledNotificationManager {
     };
 
     console.log('🔧 ScheduledNotificationManager constructed');
+  }
+
+  /**
+   * Check if FCM is enabled in user settings
+   */
+  async getFCMSettings() {
+    try {
+      const savedSettings = await AsyncStorage.getItem("pureflowSettings");
+      const settings = JSON.parse(savedSettings || "{}");
+      return settings.notifications?.fcmEnabled || false;
+    } catch (error) {
+      console.log('⚠️ Error reading FCM settings, defaulting to false:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Send FCM notification if enabled (used alongside scheduled local notifications)
+   */
+  async sendFCMIfEnabled(notification) {
+    try {
+      const fcmEnabled = await this.getFCMSettings();
+      if (fcmEnabled) {
+        console.log('📡 Sending FCM for scheduled notification');
+        await fcmService.sendCustomNotification(null, {
+          title: notification.title,
+          body: notification.body,
+          type: 'scheduled_reminder',
+          data: notification.data,
+          timestamp: new Date().toISOString()
+        });
+        console.log('✅ FCM notification sent');
+      } else {
+        console.log('🔕 FCM disabled for scheduled notifications');
+      }
+    } catch (error) {
+      console.error('❌ Error sending FCM notification:', error);
+      // Don't fail the main scheduling operation if FCM fails
+    }
   }
 
   /**
@@ -252,6 +292,9 @@ class ScheduledNotificationManager {
 
           results.push({ id, result });
           console.log(`⏰ Monitoring reminder scheduled for ${hour}:${minute.toString().padStart(2, '0')}`);
+        } else {
+          console.error(`❌ Failed to schedule monitoring reminder for ${hour}:${minute.toString().padStart(2, '0')}:`, result.error);
+          results.push({ id, result });
         }
       }
 

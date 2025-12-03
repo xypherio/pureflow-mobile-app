@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { getWaterQualityThresholdsFromSettings } from '../constants/thresholds';
+import { notificationManager } from '../services/notifications/NotificationManager';
+import { fcmService } from '../services/fcmService';
 
 // Static imports for alert messages (kept for now, will be lazy loaded later)
 import phMessages from '../constants/alertMessages/ph.json';
@@ -136,6 +138,90 @@ export function useAlertProcessor() {
     return messages[randomIndex];
   }, [messageCache]);
 
+  // Send FCM notification for alert (fire-and-forget pattern)
+  const sendFCMAlertNotification = useCallback(async (alert, sensorData) => {
+    try {
+      // Get current FCM token
+      const tokenResult = await notificationManager.getDeviceToken();
+      if (!tokenResult.success) {
+        console.log('⚠️ No FCM token available for push notifications');
+        return { success: false, reason: 'No FCM token' };
+      }
+
+      const fcmToken = tokenResult.token;
+
+      // Send water quality alert to FCM server
+      const result = await fcmService.sendWaterQualityAlert(fcmToken, {
+        sensorId: `sensor-${alert.parameter?.toLowerCase() || 'unknown'}`,
+        parameter: alert.parameter?.toLowerCase() || 'unknown',
+        value: alert.value || 0,
+        threshold: getThresholdForParameter(alert.parameter),
+        location: 'Main Pond', // Could be configurable
+        unit: getUnitForParameter(alert.parameter),
+        ...sensorData // Override with realtime data if provided
+      });
+
+      if (result.success) {
+        console.log('🚀 FCM alert sent successfully:', alert.title);
+        return { success: true, messageId: result.messageId };
+      } else {
+        console.warn('⚠️ FCM alert failed, falling back to local notification:', result.error);
+        // Still send local notification even if FCM fails
+        await sendLocalFallbackAlert(alert);
+        return { success: false, error: result.error, fallbackUsed: true };
+      }
+    } catch (error) {
+      console.error('❌ Error sending FCM alert:', error);
+      // Always fallback to local notification
+      await sendLocalFallbackAlert(alert);
+      return { success: false, error: error.message, fallbackUsed: true };
+    }
+  }, []);
+
+  // Send local notification as fallback
+  const sendLocalFallbackAlert = useCallback(async (alert) => {
+    try {
+      await notificationManager.sendLocalNotification({
+        title: alert.title,
+        body: alert.message,
+        data: {
+          type: 'alert',
+          parameter: alert.parameter,
+          value: alert.value,
+          severity: alert.severity,
+          timestamp: alert.timestamp
+        },
+        categoryId: 'alerts',
+        priority: alert.severity === 'high' ? 'high' : 'normal'
+      });
+      console.log('✅ Local notification sent as fallback');
+    } catch (localError) {
+      console.error('❌ Even local notification failed:', localError);
+    }
+  }, []);
+
+  // Helper to get threshold for parameter
+  const getThresholdForParameter = useCallback((parameter) => {
+    if (!parameter) return 0;
+    const paramKey = parameter.toLowerCase();
+    const paramThresholds = thresholds[parameter] || thresholds[paramKey];
+    if (!paramThresholds) return 0;
+
+    // Return max threshold for alerts
+    return paramThresholds.critical?.max || paramThresholds.max || 0;
+  }, [thresholds]);
+
+  // Helper to get unit for parameter
+  const getUnitForParameter = useCallback((parameter) => {
+    const unitMap = {
+      'ph': '',
+      'temperature': '°C',
+      'turbidity': 'NTU',
+      'salinity': 'ppt'
+    };
+    return unitMap[parameter?.toLowerCase()] || '';
+  }, []);
+
   // Process and normalize alerts
   const processAlerts = useCallback((alerts) => {
     if (!Array.isArray(alerts)) {
@@ -176,8 +262,14 @@ export function useAlertProcessor() {
     processAlerts,
     getRandomAlertMessage,
 
+    // FCM Notification functions
+    sendFCMAlertNotification,
+    sendLocalFallbackAlert,
+
     // Utilities
     thresholds,
-    messageCache
+    messageCache,
+    getThresholdForParameter,
+    getUnitForParameter
   };
 }

@@ -2,6 +2,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, initializeFirestore } from 'firebase/firestore';
+import messaging from '@react-native-firebase/messaging';
 import Constants from 'expo-constants';
 
 // Get Firebase config from app.json/app.config.js
@@ -29,6 +30,7 @@ if (missingConfigs.length > 0) {
 let app;
 let db;
 let auth;
+let fcm;
 
 // Check if Firebase app is already initialized
 try {
@@ -45,7 +47,10 @@ try {
     
     // Initialize Auth
     auth = getAuth(app);
-    
+
+    // Initialize FCM
+    fcm = messaging();
+
     console.log('Firebase services initialized successfully');
   } else {
     // If already initialized, use existing instances
@@ -59,10 +64,11 @@ try {
   throw new Error(`Failed to initialize Firebase: ${error.message}`);
 }
 
-export { app, auth, db };
+export { app, auth, db, fcm };
 
 export default {
   app,
   auth,
-  db
+  db,
+  fcm
 };

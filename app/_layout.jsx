@@ -29,8 +29,6 @@ if (typeof window !== "undefined") {
   ]);
 }
 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -190,38 +190,56 @@ export class PushNotificationProvider {
   }
 
   /**
-   * Get stored push tokens (integrate with your existing token storage)
-   * This should return an array of Expo push tokens
+   * Get stored push tokens (supports both Expo and FCM tokens)
+   * Returns an object with expo and fcm token arrays
    */
   async getStoredPushTokens() {
     try {
       // Import AsyncStorage for token retrieval
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
-      // First try to get array format
-      let storedTokens = await AsyncStorage.getItem('expo_push_tokens');
-
-      if (!storedTokens) {
+      // Get Expo tokens
+      let expoTokens = [];
+      const storedExpoTokens = await AsyncStorage.getItem('expo_push_tokens');
+      if (storedExpoTokens) {
+        expoTokens = JSON.parse(storedExpoTokens);
+        if (!Array.isArray(expoTokens)) expoTokens = [expoTokens];
+      } else {
         // Fall back to single token format for backward compatibility
         const singleToken = await AsyncStorage.getItem('expo_push_token');
         if (singleToken) {
+          expoTokens = [singleToken];
           // Convert single token to array and update storage
-          storedTokens = JSON.stringify([singleToken]);
-          await AsyncStorage.setItem('expo_push_tokens', storedTokens);
-          console.log('🔄 Migrated single token to array format');
+          await AsyncStorage.setItem('expo_push_tokens', JSON.stringify(expoTokens));
+          console.log('🔄 Migrated single Expo token to array format');
         }
       }
 
-      if (!storedTokens) {
-        return [];
+      // Get FCM tokens
+      let fcmTokens = [];
+      const storedFcmTokens = await AsyncStorage.getItem('fcm_tokens');
+      if (storedFcmTokens) {
+        fcmTokens = JSON.parse(storedFcmTokens);
+        if (!Array.isArray(fcmTokens)) fcmTokens = [fcmTokens];
       }
 
-      const tokens = JSON.parse(storedTokens);
-      return Array.isArray(tokens) ? tokens : [tokens];
+      return {
+        expo: expoTokens,
+        fcm: fcmTokens,
+        all: [...expoTokens, ...fcmTokens] // Combined array for backward compatibility
+      };
     } catch (error) {
       console.error('❌ Error retrieving push tokens:', error);
-      return [];
+      return { expo: [], fcm: [], all: [] };
     }
+  }
+
+  /**
+   * Legacy method for backward compatibility - returns all tokens as array
+   */
+  async getStoredPushTokensLegacy() {
+    const tokens = await this.getStoredPushTokens();
+    return tokens.all;
   }
 
   /**
@@ -289,6 +307,115 @@ export class PushNotificationProvider {
     // Expo push tokens start with "ExponentPushToken[" followed by alphanumeric characters and end with "]"
     const expoTokenRegex = /^ExponentPushToken\[[\w]+\]$/;
     return typeof token === 'string' && expoTokenRegex.test(token);
+  }
+
+  /**
+   * Store FCM token (called by FCM service)
+   */
+  async storeFCMToken(token) {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+
+      const existingTokens = await this.getStoredPushTokens();
+      const fcmTokens = existingTokens.fcm;
+
+      // Avoid duplicates
+      if (!fcmTokens.includes(token)) {
+        fcmTokens.push(token);
+        await AsyncStorage.setItem('fcm_tokens', JSON.stringify(fcmTokens));
+        console.log(`📱 Stored new FCM token: ${token.substring(0, 20)}...`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error storing FCM token:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Remove FCM token
+   */
+  async removeFCMToken(token) {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+
+      const existingTokens = await this.getStoredPushTokens();
+      const filteredTokens = existingTokens.fcm.filter(t => t !== token);
+
+      await AsyncStorage.setItem('fcm_tokens', JSON.stringify(filteredTokens));
+      console.log(`📱 Removed FCM token: ${token.substring(0, 20)}...`);
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error removing FCM token:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get FCM tokens only
+   */
+  async getFCMTokens() {
+    const tokens = await this.getStoredPushTokens();
+    return tokens.fcm;
+  }
+
+  /**
+   * Prepare FCM payload for backend sending
+   */
+  prepareFCMPayload(notification, fcmTokens) {
+    if (!fcmTokens || fcmTokens.length === 0) {
+      console.warn('🚫 No FCM tokens provided for payload preparation');
+      return null;
+    }
+
+    const payload = {
+      registration_ids: fcmTokens,
+      notification: {
+        title: notification.title,
+        body: notification.body,
+        sound: notification.sound || 'default'
+      },
+      data: {
+        ...notification.data,
+        type: 'fcm_push',
+        sentAt: new Date().toISOString(),
+        categoryId: notification.categoryId || 'updates'
+      },
+      ttl: notification.ttl || 86400,
+      priority: notification.priority === 'high' ? 'high' : 'normal'
+    };
+
+    // Add Android-specific configuration
+    if (notification.priority === 'high') {
+      payload.android = {
+        priority: 'high',
+        notification: {
+          channel_id: notification.categoryId || 'alerts',
+          priority: 'high',
+          sound: 'default',
+          vibrationTimingsMillis: [300, 500, 300, 500]
+        }
+      };
+    }
+
+    // Add iOS-specific configuration
+    payload.apns = {
+      payload: {
+        aps: {
+          alert: {
+            title: notification.title,
+            body: notification.body,
+            subtitle: notification.subtitle
+          },
+          badge: notification.badge || 1,
+          sound: notification.sound || 'default'
+        }
+      }
+    };
+
+    return payload;
   }
 
   /**
