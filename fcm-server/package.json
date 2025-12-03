@@ -7,9 +7,7 @@
     "dev": "node api/index.js",
     "start": "node api/index.js",
     "deploy": "vercel --prod",
-    "preview": "vercel",
-    "build": "echo 'Building API server...'",
-    "vercel-build": "npm install --production=false"
+    "preview": "vercel"
   },
   "keywords": ["firebase", "fcm", "notifications", "express", "serverless"],
   "author": "PureFlow Team",
@@ -29,6 +27,6 @@
     "vercel": "^32.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   }
 }
