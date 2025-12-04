@@ -36,8 +36,8 @@
       ]
     },
     "notification": {
-      "icon": "./assets/logo/logo-emblem.png",
-      "color": "#ffffff",
+      "icon": "./assets/logo/notif-logo.png",
+      "color": "#2455a9",
       "androidMode": "default",
       "androidCollapsedTitle": "#{unread_notifications} new interactions"
     },
@@ -57,7 +57,7 @@
         }
       ],
       "expo-router",
-      // REMOVED: expo-splash-screen plugin to disable native splash screen
+      "expo-splash-screen",
       "expo-web-browser",
       "expo-font",
       [

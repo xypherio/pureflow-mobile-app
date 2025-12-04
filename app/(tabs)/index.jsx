@@ -134,7 +134,6 @@ export default function HomeScreen() {
         onClose={closeIssueReportingModal}
       />
 
-      {/* Header */}
       <PureFlowLogo
         notificationBadge={unreadCount > 0 ? unreadCount : null}
         onSettingsPress={openSettingsModal}

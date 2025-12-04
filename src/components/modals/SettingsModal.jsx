@@ -17,7 +17,7 @@ import { Bug, Droplets, Save, Star, X } from "lucide-react-native";
 import { checkUserRated } from "../../services/firebase/ratingService";
 import { colors } from "../../constants/colors";
 
-const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
+const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChange }) => {
   const [settings, setSettings] = useState({
     nickname: "",
     fishpondType: "freshwater",
@@ -26,6 +26,7 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isSettingUp, setIsSettingUp] = useState(false);
   const [setupLocked, setSetupLocked] = useState(false);
   const [daysUntilUnlock, setDaysUntilUnlock] = useState(0);
   const [hasUserRated, setHasUserRated] = useState(false);
@@ -87,6 +88,9 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
     setIsSaving(true);
 
     try {
+      // Get the original city before saving
+      const originalCity = settings.customCity;
+
       // Set timestamp for setup if this is the first time saving setup fields
       let updatedSettings = { ...settings };
       if (
@@ -103,9 +107,24 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
         JSON.stringify(updatedSettings)
       );
 
+      // Check if city changed and trigger weather setup if needed
+      const cityChanged = updatedSettings.customCity !== originalCity;
+
+      if (cityChanged && onCityChange) {
+        setIsSettingUp(true);
+        try {
+          await onCityChange();
+        } catch (error) {
+          console.error("Error setting up weather:", error);
+          Alert.alert("Setup Warning", "Weather setup had an issue, but your settings were saved. Weather may update on next restart.");
+        } finally {
+          setIsSettingUp(false);
+        }
+      }
+
       Alert.alert(
         "Settings Saved",
-        "Your settings have been saved successfully!",
+        "Your settings have been saved successfully!" + (cityChanged ? " Weather data updated." : ""),
         [{ text: "OK", onPress: onClose }]
       );
     } catch (error) {
@@ -121,12 +140,25 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={handleClose}
-    >
+    <>
+      {/* Setup Loading Modal */}
+      {isSettingUp && (
+        <Modal visible={isSettingUp} transparent={true}>
+          <View style={styles.setupOverlay}>
+            <View style={styles.setupContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.setupText}>Setting up...</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleClose}
+      >
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Header */}
@@ -265,7 +297,7 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
                 />
                 <Text style={styles.helpText}>
                   Leave empty to use default location. Weather data will update
-                  on next app restart.
+                  immediately when saved.
                 </Text>
               </View>
             </View>
@@ -347,6 +379,7 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue }) => {
         </View>
       </View>
     </Modal>
+    </>
   );
 };
 
@@ -615,6 +648,30 @@ const styles = StyleSheet.create({
   },
   saveIcon: {
     marginRight: 8,
+  },
+  setupOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay.blur,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  setupContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    elevation: 10,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  setupText: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.text,
+    textAlign: "center",
   },
 });
 

@@ -1,8 +1,8 @@
-import React from "react";
-import { StyleSheet, View, Text } from "react-native";
 import AlertsCard from "@dataDisplay/AlertsCard";
 import LineChartCard from "@dataDisplay/LinechartCard";
 import RealtimeDataCards from "@dataDisplay/RealtimeDataCards";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 /**
  * Main dashboard section with alerts, real-time data, and historical trends
@@ -26,7 +26,7 @@ const DashboardSection = ({ alerts, realtimeData, sensorData }) => {
 
       {/* Real-Time Data Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Real-Time Parameters</Text>
+        <Text style={styles.sectionLabel}>Water Parameters</Text>
         <RealtimeDataCards data={sensorData} />
       </View>
 

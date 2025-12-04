@@ -1,28 +1,25 @@
-/**
- * System Status Section Component
- *
- * Displays device status and connection information
- */
-
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import StatusCard from "@ui/DeviceStatusCard";
 
 /**
- * Section displaying system/device status information
  * @param {Object} props - Component props
  * @param {boolean} props.isDatmActive - DATM active status
  * @param {boolean} props.isSolarPowered - Solar power status
  * @param {number} props.isRaining - Weather/rain status
- * @param {number|null} props.humidity - Humidity percentage from weather
+ * @param {number|null} props.deviceHumidity - Device humidity from Firebase
+ * @param {number|null} props.datmTemp - DATM temperature from Firebase
  */
-const SystemStatusSection = ({ isDatmActive, isSolarPowered, isRaining, humidity }) => {
+const SystemStatusSection = ({ isDatmActive, isSolarPowered, isRaining, deviceHumidity, datmTemp }) => {
+
+
   return (
     <View style={styles.container}>
       <StatusCard
         isDatmActive={isDatmActive}
         isRaining={isRaining}
-        humidity={humidity}
+        humidity={deviceHumidity}
+        temperature={datmTemp}
       />
     </View>
   );

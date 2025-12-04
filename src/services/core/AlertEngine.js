@@ -2,17 +2,22 @@ import phMessages from '../../constants/alertMessages/ph.json';
 import salinityMessages from '../../constants/alertMessages/salinity.json';
 import temperatureMessages from '../../constants/alertMessages/temperature.json';
 import turbidityMessages from '../../constants/alertMessages/turbidity.json';
+import humidityMessages from '../../constants/alertMessages/humidity.json';
+import datmTempMessages from '../../constants/alertMessages/datmTemp.json';
 
 export class AlertEngine {
   constructor(thresholdManager) {
     this.thresholdManager = thresholdManager;
 
-    // Message cache for random selection
+    // Message cache for random selection (water quality + device environment)
     this.messageCache = {
       ph: { low: phMessages.low, high: phMessages.high },
       temperature: { low: temperatureMessages.low, high: temperatureMessages.high },
       turbidity: { low: turbidityMessages.low, high: turbidityMessages.high },
       salinity: { low: salinityMessages.low, high: salinityMessages.high },
+      // Device environment parameters
+      humidity: { low: humidityMessages.low, high: humidityMessages.high },
+      datmTemp: { low: datmTempMessages.low, high: datmTempMessages.high },
     };
   }
 
@@ -205,6 +210,27 @@ export class AlertEngine {
           warning: `${flag} Salinity Falling - ${valueFormatted}`
         }
       },
+      // Device environment parameters
+      humidity: {
+        high: {
+          critical: `${flag} Device Humidity Critical - ${valueFormatted}`,
+          warning: `${flag} Device Humidity High - ${valueFormatted}`
+        },
+        low: {
+          critical: `${flag} Device Humidity Critical - ${valueFormatted}`,
+          warning: `${flag} Device Humidity Low - ${valueFormatted}`
+        }
+      },
+      datmTemp: {
+        high: {
+          critical: `${flag} Device Temp Critical - ${valueFormatted}`,
+          warning: `${flag} Device Temp High - ${valueFormatted}`
+        },
+        low: {
+          critical: `${flag} Device Temp Critical - ${valueFormatted}`,
+          warning: `${flag} Device Temp Low - ${valueFormatted}`
+        }
+      },
 
     };
 
@@ -235,6 +261,10 @@ export class AlertEngine {
         return `${numValue.toFixed(1)} NTU`;
       case 'salinity':
         return `${numValue.toFixed(1)} ppt`;
+      case 'humidity':
+        return `${numValue.toFixed(1)}%`;
+      case 'datmTemp':
+        return `${numValue.toFixed(1)}°C`;
       case 'israining':
         return this.getRainStatusText(numValue);
       default:
@@ -276,7 +306,7 @@ export class AlertEngine {
   }
 
   isWaterQualityParameter(parameter) {
-    const waterQualityParams = ['ph', 'temperature', 'turbidity', 'salinity', 'israining'];
-    return waterQualityParams.includes(parameter.toLowerCase());
+    const validParams = ['ph', 'temperature', 'turbidity', 'salinity', 'israining', 'humidity', 'datmTemp'];
+    return validParams.includes(parameter.toLowerCase());
   }
 }

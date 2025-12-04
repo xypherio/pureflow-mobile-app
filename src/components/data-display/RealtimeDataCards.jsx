@@ -6,7 +6,8 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { getWaterQualityThresholdsFromSettings } from "../../constants/thresholds";
 import waterQualityNotificationService from "../../services/WaterQualityNotificationService";
 
-// Parameter configuration
+// Parameter configuration - Water quality parameters only
+// Device environment parameters (humidity, datmTemp) are shown in DeviceStatusCard
 const PARAMETER_CONFIGS = [
   { key: "pH", label: "pH Level", unit: "PH", icon: Gauge, color: "#007bff" },
   {
@@ -63,7 +64,7 @@ export default function RealTimeData() {
     return `${Math.floor(ageSeconds / 3600)}h ago`;
   }, [realtimeData]);
 
-  // Check if we have valid data with any sensor readings
+  // Check if we have valid water quality data (humidity and datmTemp are shown in DeviceStatusCard only)
   const hasData =
     realtimeData &&
     (realtimeData.pH !== undefined ||

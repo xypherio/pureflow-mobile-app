@@ -3,7 +3,10 @@ import { addAlertToFirestore, fetchAllDocuments } from '@services/firebase/fires
 export class AlertRepository {
   constructor() {
     this.collectionName = 'alerts';
-    
+
+    // Track if we've logged timestamp warnings this session
+    this.hasLoggedTimestampWarning = false;
+
     // Bind methods to ensure 'this' context is preserved
     this.normalizeAlert = this.normalizeAlert.bind(this);
     this.parseTimestamp = this.parseTimestamp.bind(this);
@@ -126,7 +129,10 @@ export class AlertRepository {
     }
 
     // Fallback to current time for invalid timestamps
-    console.warn('⚠️ Using current timestamp for invalid alert timestamp:', timestamp);
+    if (!this.hasLoggedTimestampWarning) {
+      console.warn('⚠️ Using current timestamp for some alerts with invalid timestamps');
+      this.hasLoggedTimestampWarning = true;
+    }
     return new Date();
   }
 }

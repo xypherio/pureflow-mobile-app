@@ -1,24 +1,9 @@
 /**
- * AlertManagementFacade.js
- * 
- * A facade that provides a simplified interface for managing water quality alerts.
- * Coordinates between alert generation, processing, notification, and persistence.
- * 
- * Responsibilities:
- * - Process sensor data to generate alerts
- * - Manage alert lifecycle (creation, processing, resolution)
- * - Coordinate notifications for critical alerts
- * - Handle alert persistence and retrieval
- * 
  * @module AlertManagementFacade
  */
 
 import { performanceMonitor } from '@utils/performance-monitor';
 
-/**
- * Provides a high-level interface for managing the entire alert lifecycle.
- * This includes alert generation, processing, notification, and persistence.
- */
 export class AlertManagementFacade {
     /**
      * Creates a new AlertManagementFacade instance.
@@ -123,8 +108,17 @@ export class AlertManagementFacade {
             alert.severity === 'high' || alert.alertLevel === 'critical'
           );
 
+          // Separate device environment alerts for different notification handling
+          const deviceAlerts = highPriorityAlerts.filter(alert =>
+            alert.parameter === 'humidity' || alert.parameter === 'datmTemp'
+          );
+          const waterQualityAlerts = highPriorityAlerts.filter(alert =>
+            alert.parameter !== 'humidity' && alert.parameter !== 'datmTemp' &&
+            alert.parameter !== 'isRaining'
+          );
+
           // Send notifications for high-priority water quality alerts
-          for (const alert of highPriorityAlerts) {
+          for (const alert of waterQualityAlerts) {
             try {
               const notificationResult = await this.waterQualityNotifier.notifyWaterQualityAlert(
                 alert.parameter,
@@ -143,6 +137,51 @@ export class AlertManagementFacade {
               console.error(`❌ Error sending notification for alert ${alert.id}:`, error);
               results.errors.push({
                 type: 'notification_error',
+                alertId: alert.id,
+                message: error.message
+              });
+            }
+          }
+
+          // Send device alert notifications (use device status notifier for DATM alerts)
+          for (const alert of deviceAlerts) {
+            try {
+              const deviceName = 'DATM';
+              const severityText = alert.severity === 'high' ? 'Critical' : 'Warning';
+              const parameterName = alert.parameter === 'datmTemp' ? 'Device Temperature' :
+                                    alert.parameter === 'humidity' ? 'Device Humidity' :
+                                    alert.parameter.charAt(0).toUpperCase() + alert.parameter.slice(1);
+              const unit = alert.parameter === 'datmTemp' ? '°C' :
+                          alert.parameter === 'humidity' ? '%' : '';
+              const valueText = alert.value !== null && alert.value !== undefined ?
+                               `${alert.value}${unit}` : 'Unknown';
+
+              const statusMessage = `${severityText}: ${parameterName} is ${valueText} (${alert.alertLevel})`;
+
+              const notificationResult = await this.waterQualityNotifier.notifyDeviceStatus(
+                deviceName,
+                'device_status',
+                {
+                  message: statusMessage,
+                  parameter: alert.parameter,
+                  value: alert.value,
+                  severity: alert.severity
+                }
+              );
+
+              if (notificationResult.success) {
+                results.notifications.push({
+                  alertId: alert.id,
+                  parameter: alert.parameter,
+                  type: 'datm_status_alert',
+                  notificationId: notificationResult.notificationId
+                });
+                console.log(`📱 DATM Status Alert sent: ${statusMessage}`);
+              }
+            } catch (error) {
+              console.error(`❌ Error sending DATM status notification for alert ${alert.id}:`, error);
+              results.errors.push({
+                type: 'datm_status_notification_error',
                 alertId: alert.id,
                 message: error.message
               });
@@ -352,9 +391,28 @@ export class AlertManagementFacade {
 
     // Helper methods
     generateDisplayMessage(alert) {
-      const paramName = alert.parameter.charAt(0).toUpperCase() + alert.parameter.slice(1);
+      // Map parameter names to readable display names
+      const parameterNames = {
+        ph: 'pH Level',
+        temperature: 'Water Temperature',
+        turbidity: 'Turbidity',
+        salinity: 'Salinity',
+        humidity: 'Device Humidity',
+        datmTemp: 'Device Temperature'
+      };
+
+      const paramName = parameterNames[alert.parameter.toLowerCase()] ||
+                       alert.parameter.charAt(0).toUpperCase() + alert.parameter.slice(1);
       const severityText = alert.severity === 'high' ? 'Critical' : 'Warning';
-      return `${severityText}: ${paramName} is ${alert.value} (${alert.alertLevel})`;
+
+      // Add units for device parameters
+      let unitInfo = '';
+      if (alert.parameter === 'humidity') unitInfo = '%';
+      if (alert.parameter === 'datmTemp') unitInfo = '°C';
+
+      const valueText = unitInfo ? `${alert.value}${unitInfo}` : alert.value;
+
+      return `${severityText}: ${paramName} is ${valueText} (${alert.alertLevel})`;
     }
 
     getRainStatusText(value) {
@@ -395,12 +453,15 @@ export class AlertManagementFacade {
       else if (alert.severity === 'medium') priority += 50;
       else priority += 10;
   
-      // Adjust for parameter importance
+      // Adjust for parameter importance (water quality + device environment)
       const parameterWeights = {
         ph: 20,
         temperature: 15,
         turbidity: 10,
-        salinity: 5
+        salinity: 5,
+        // Device environment parameters
+        humidity: 12,    // Device health - important for moisture control
+        datmTemp: 18     // Device health - critical for electronic stability
       };
       priority += parameterWeights[alert.parameter.toLowerCase()] || 0;
   

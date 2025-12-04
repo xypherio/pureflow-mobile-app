@@ -28,6 +28,7 @@ export function DataProvider({ children, initialData = null }) {
   const isRefreshing = useRef(false);
   const lastRefreshTime = useRef(0);
   const lastProcessedDataSignature = useRef(null);
+  const hasLoggedDeduplicationWarning = useRef(false);
 
   /**
    * Generates a signature for sensor data to detect changes in actual values
@@ -49,6 +50,9 @@ export function DataProvider({ children, initialData = null }) {
       temperature: normalizeValue(sensorData.temperature),
       turbidity: normalizeValue(sensorData.turbidity),
       salinity: normalizeValue(sensorData.salinity),
+      // Device environment parameters for alerts
+      humidity: normalizeValue(sensorData.humidity),
+      datmTemp: normalizeValue(sensorData.datmTemp),
       isRaining: sensorData.isRaining || 0 // Include rain status in change detection
     };
 
@@ -177,12 +181,15 @@ export function DataProvider({ children, initialData = null }) {
       // Generate alerts only from real-time data to sync with real-time cards
       // Only process alerts when we have meaningful data (not null/undefined values)
       if (isMountedRef.current && realtimeDataForAlerts && realtimeDataForAlerts.timestamp) {
-        // Check if we have at least some valid, non-null parameter values
+        // Check if we have at least some valid, non-null parameter values (including device environment)
         const hasValidData = (
           (realtimeDataForAlerts.pH !== null && realtimeDataForAlerts.pH !== undefined && !isNaN(realtimeDataForAlerts.pH)) ||
           (realtimeDataForAlerts.temperature !== null && realtimeDataForAlerts.temperature !== undefined && !isNaN(realtimeDataForAlerts.temperature)) ||
           (realtimeDataForAlerts.turbidity !== null && realtimeDataForAlerts.turbidity !== undefined && !isNaN(realtimeDataForAlerts.turbidity)) ||
-          (realtimeDataForAlerts.salinity !== null && realtimeDataForAlerts.salinity !== undefined && !isNaN(realtimeDataForAlerts.salinity))
+          (realtimeDataForAlerts.salinity !== null && realtimeDataForAlerts.salinity !== undefined && !isNaN(realtimeDataForAlerts.salinity)) ||
+          // Device environment parameters for alert processing
+          (realtimeDataForAlerts.humidity !== null && realtimeDataForAlerts.humidity !== undefined && !isNaN(realtimeDataForAlerts.humidity)) ||
+          (realtimeDataForAlerts.datmTemp !== null && realtimeDataForAlerts.datmTemp !== undefined && !isNaN(realtimeDataForAlerts.datmTemp))
         );
 
         if (hasValidData) {
@@ -331,9 +338,9 @@ export function DataProvider({ children, initialData = null }) {
 
           // Register each alert with AlertFacade to prevent regeneration
           const alertFacade = serviceContainer.getAlertFacade();
-          for (const alert of initialData.alerts) {
-            // Note: AlertFacade handles deduplication automatically during processing
-            console.log(`📝 AlertFacade will handle alert deduplication automatically`);
+          if (!hasLoggedDeduplicationWarning.current) {
+            console.log(`📝 AlertFacade will handle alert deduplication automatically for ${initialData.alerts.length} preloaded alerts`);
+            hasLoggedDeduplicationWarning.current = true;
           }
 
           // Mark this data as processed to avoid duplicate alerts
@@ -369,7 +376,10 @@ export function DataProvider({ children, initialData = null }) {
               (freshRealtimeData.pH !== null && freshRealtimeData.pH !== undefined && !isNaN(freshRealtimeData.pH)) ||
               (freshRealtimeData.temperature !== null && freshRealtimeData.temperature !== undefined && !isNaN(freshRealtimeData.temperature)) ||
               (freshRealtimeData.turbidity !== null && freshRealtimeData.turbidity !== undefined && !isNaN(freshRealtimeData.turbidity)) ||
-              (freshRealtimeData.salinity !== null && freshRealtimeData.salinity !== undefined && !isNaN(freshRealtimeData.salinity))
+              (freshRealtimeData.salinity !== null && freshRealtimeData.salinity !== undefined && !isNaN(freshRealtimeData.salinity)) ||
+              // Device environment parameters for alert processing
+              (freshRealtimeData.humidity !== null && freshRealtimeData.humidity !== undefined && !isNaN(freshRealtimeData.humidity)) ||
+              (freshRealtimeData.datmTemp !== null && freshRealtimeData.datmTemp !== undefined && !isNaN(freshRealtimeData.datmTemp))
             );
 
             if (hasValidData) {
@@ -431,12 +441,15 @@ export function DataProvider({ children, initialData = null }) {
         setRealtimeData(newRealtimeData);
         setLastUpdate(Date.now());
 
-        // Check if we have valid sensor data for alert processing
+        // Check if we have valid sensor data for alert processing (including device environment)
         const hasValidData = (
           (newRealtimeData.pH !== null && newRealtimeData.pH !== undefined && !isNaN(newRealtimeData.pH)) ||
           (newRealtimeData.temperature !== null && newRealtimeData.temperature !== undefined && !isNaN(newRealtimeData.temperature)) ||
           (newRealtimeData.turbidity !== null && newRealtimeData.turbidity !== undefined && !isNaN(newRealtimeData.turbidity)) ||
-          (newRealtimeData.salinity !== null && newRealtimeData.salinity !== undefined && !isNaN(newRealtimeData.salinity))
+          (newRealtimeData.salinity !== null && newRealtimeData.salinity !== undefined && !isNaN(newRealtimeData.salinity)) ||
+          // Device environment parameters for alert processing
+          (newRealtimeData.humidity !== null && newRealtimeData.humidity !== undefined && !isNaN(newRealtimeData.humidity)) ||
+          (newRealtimeData.datmTemp !== null && newRealtimeData.datmTemp !== undefined && !isNaN(newRealtimeData.datmTemp))
         );
 
         if (hasValidData) {

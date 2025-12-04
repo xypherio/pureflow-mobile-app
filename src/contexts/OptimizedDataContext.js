@@ -13,7 +13,7 @@ const OptimizedDataContext = createContext();
 /**
  * Optimized Data Provider that manages data distribution efficiently
  */
-export function OptimizedDataProvider({ children }) {
+export function OptimizedDataProvider({ children, servicesReady = true }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [realtimeData, setRealtimeData] = useState(null);
@@ -23,10 +23,17 @@ export function OptimizedDataProvider({ children }) {
   const subscriberId = useRef(`provider_${Date.now()}`);
   const isMounted = useRef(true);
 
-  // Initialize the data manager
+  // Initialize the data manager only when services are ready
   useEffect(() => {
+    // Wait for services to be ready before initializing
+    if (!servicesReady) {
+      console.log('⏳ Waiting for services to be ready before initializing OptimizedDataManager...');
+      return;
+    }
+
     const initializeData = async () => {
       try {
+        console.log('🚀 Initializing OptimizedDataManager now that services are ready');
         await optimizedDataManager.initialize();
         setIsInitialized(true);
       } catch (error) {
@@ -41,7 +48,7 @@ export function OptimizedDataProvider({ children }) {
       isMounted.current = false;
       // Note: No need to unsubscribe here as it's handled in the second useEffect
     };
-  }, []);
+  }, [servicesReady]); // Add servicesReady as dependency
 
   // Subscribe to data updates
   useEffect(() => {
@@ -118,6 +125,12 @@ export function OptimizedDataProvider({ children }) {
     dataAge,
     isInitialized
   ]);
+
+  // Don't render children until services are ready and we're initialized
+  if (!servicesReady || !isInitialized) {
+    console.log('⏳ Waiting for services and initialization before rendering children');
+    return null; // Don't render anything until ready
+  }
 
   return (
     <OptimizedDataContext.Provider value={contextValue}>

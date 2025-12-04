@@ -124,6 +124,9 @@ class RealtimeDataService {
       temperature: null,
       turbidity: null,
       salinity: null,
+      // Device environmental sensor data
+      humidity: null,
+      datmTemp: null,
       // Status flags
       isRaining: false,
       // Metadata
@@ -225,6 +228,10 @@ class RealtimeDataService {
       temperature: rawData.temperature ? Number(rawData.temperature) : null,
       turbidity: rawData.turbidity ? Number(rawData.turbidity) : null,
       salinity: rawData.salinity ? Number(rawData.salinity) : null,
+
+      // Device environmental sensor data
+      humidity: rawData.humidity ? Number(rawData.humidity) : null,
+      datmTemp: rawData.datmTemp ? Number(rawData.datmTemp) : null,
 
       // Environmental data
       isRaining: rawData.isRaining ? Number(rawData.isRaining) : 0,
