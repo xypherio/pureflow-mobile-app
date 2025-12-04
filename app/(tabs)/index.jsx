@@ -60,14 +60,8 @@ export default function HomeScreen() {
   useWaterQualityNotifications();
   useNotificationSetup(isInitialized, addNotificationListener);
 
-  // Get weather context for humidity data
-  const { currentWeather } = useWeather();
-
-  // Get humidity from weather data
-  const humidity = useMemo(() =>
-    currentWeather?.humidity || null,
-    [currentWeather?.humidity]
-  );
+  // Get weather context for weather-related functionality
+  const { refetchWeather } = useWeather();
 
 
 
@@ -126,6 +120,7 @@ export default function HomeScreen() {
         onClose={closeSettingsModal}
         onRateApp={handleRateApp}
         onReportIssue={handleReportIssue}
+        onCityChange={refetchWeather}
       />
 
       <FeatureRatingModal
@@ -165,7 +160,8 @@ export default function HomeScreen() {
                 isDatmActive={isDatmActive}
                 isSolarPowered={isSolarPowered}
                 isRaining={realtimeData?.isRaining || 0}
-                humidity={humidity}
+                deviceHumidity={realtimeData?.humidity || null}
+                datmTemp={realtimeData?.datmTemp || null}
               />
             )}
           </ErrorBoundary>

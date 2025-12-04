@@ -54,7 +54,10 @@ export default function ForecastScreen() {
   const [selectedParam, setSelectedParam] = useState(null);
 
   // Forecast insights and AI logic
-  const { geminiResponse, isGeminiLoading } = useForecastInsights(forecastPredicted, dataSource);
+  const { geminiResponse, isGeminiLoading } = useForecastInsights(
+    forecastPredicted,
+    dataSource
+  );
 
   // Initial load and prediction setup
   useEffect(() => {

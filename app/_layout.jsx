@@ -143,7 +143,7 @@ export default function RootLayout() {
     <WeatherProvider>
       <NotificationProvider>
         <InsightsProvider>
-          <OptimizedDataProvider>
+          <OptimizedDataProvider servicesReady={servicesReady}>
             <DataProvider initialData={preloadedData}>
               <SuggestionProvider>
                 <Stack>
