@@ -14,16 +14,15 @@ import StatusCard from "@ui/DeviceStatusCard";
  * @param {boolean} props.isDatmActive - DATM active status
  * @param {boolean} props.isSolarPowered - Solar power status
  * @param {number} props.isRaining - Weather/rain status
+ * @param {number|null} props.humidity - Humidity percentage from weather
  */
-const SystemStatusSection = ({ isDatmActive, isSolarPowered, isRaining }) => {
+const SystemStatusSection = ({ isDatmActive, isSolarPowered, isRaining, humidity }) => {
   return (
     <View style={styles.container}>
       <StatusCard
-        status="Active"
-        battery="Low"
-        solarPowered={isSolarPowered}
         isDatmActive={isDatmActive}
         isRaining={isRaining}
+        humidity={humidity}
       />
     </View>
   );

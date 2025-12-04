@@ -1,18 +1,50 @@
 import {
   CloudDrizzle,
   CloudRain,
+  Droplet,
   Sun,
   Timer,
   Wifi,
   WifiOff,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function StatusCard({
-  isDatmActive = true,
-  isRaining = 0
+  isDatmActive: propIsDatmActive = true,
+  isRaining = 0,
+  humidity = null,
+  lastDataTimestamp
 }) {
+  const [isDatmActive, setIsDatmActive] = useState(propIsDatmActive);
+  const [dataStale, setDataStale] = useState(false);
+
+  // Calculate freshness without side effects
+  const checkDataFreshness = useCallback(() => {
+    if (!lastDataTimestamp) {
+      return { isStale: true, isActive: false }; 
+    }
+
+    const now = Date.now();
+    const lastUpdate = new Date(lastDataTimestamp).getTime();
+    const dataAge = now - lastUpdate;
+    const isStale = dataAge > 60 * 1000; // 1 minute threshold
+    
+    return { isStale, isActive: !isStale };
+  }, [lastDataTimestamp]);
+
+  // Update state based on freshness check
+  useEffect(() => {
+    const updateStatus = () => {
+      const { isStale, isActive } = checkDataFreshness();
+      setDataStale(isStale);
+      setIsDatmActive(isActive);
+    };
+
+    updateStatus();
+    const interval = setInterval(updateStatus, 5000);
+    return () => clearInterval(interval);
+  }, [checkDataFreshness]);
 
   const [countdown, setCountdown] = useState(30);
 
@@ -36,7 +68,7 @@ export default function StatusCard({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titleText}>DATM Status</Text>
+      <Text style={styles.titleText}>DATM</Text>
 
       <View style={styles.pillsContainer}>
         {/* Timer Pill */}
@@ -68,6 +100,14 @@ export default function StatusCard({
             <CloudRain size={18} color="#0d47a1" style={styles.icon} />
           )}
         </View>
+
+        {/* Humidity Pill */}
+        <View style={[styles.pill, { backgroundColor: '#e6f3ff' }]}>
+          <Droplet size={16} color="#0d6efd" style={styles.icon} />
+          <Text style={[styles.timerText, { color: '#0d6efd' }]}>
+            {humidity !== null ? `${Math.round(humidity)}%` : '--%'}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -84,8 +124,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   titleText: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 18,
+    fontWeight: "700",
     color: "#fff",
   },
   pillsContainer: {

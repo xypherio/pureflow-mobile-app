@@ -3,6 +3,7 @@ import { useDeviceStatus } from "@hooks/useDeviceStatus";
 import { useNotifications } from "@hooks/useNotifications";
 import { useNotificationSetup } from "@hooks/useNotificationSetup";
 import { useWaterQualityNotifications } from "@hooks/useWaterQualityNotifications";
+import { useWeather } from "@contexts/WeatherContext";
 import React, { Suspense, useCallback, useMemo, useState } from "react";
 
 import SystemStatusSection from "@components/sections/SystemStatusSection";
@@ -58,6 +59,15 @@ export default function HomeScreen() {
 
   useWaterQualityNotifications();
   useNotificationSetup(isInitialized, addNotificationListener);
+
+  // Get weather context for humidity data
+  const { currentWeather } = useWeather();
+
+  // Get humidity from weather data
+  const humidity = useMemo(() =>
+    currentWeather?.humidity || null,
+    [currentWeather?.humidity]
+  );
 
 
 
@@ -155,6 +165,7 @@ export default function HomeScreen() {
                 isDatmActive={isDatmActive}
                 isSolarPowered={isSolarPowered}
                 isRaining={realtimeData?.isRaining || 0}
+                humidity={humidity}
               />
             )}
           </ErrorBoundary>
