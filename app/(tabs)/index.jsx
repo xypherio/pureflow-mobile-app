@@ -99,9 +99,13 @@ export default function HomeScreen() {
     setIsIssueReportingVisible(false);
   }, []);
 
-  // Memoized refresh handler to prevent recreation
-  const handleRefresh = useCallback(() => {
-    refreshData();
+  // Memoized refresh handler to prevent recreation and useInsertionEffect warnings
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refreshData();
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    }
   }, [refreshData]);
 
   return (

@@ -401,6 +401,78 @@ The project follows a modular architecture promoting maintainability and scalabi
 - **Web:** `npx expo start --web`
 - **Production Build:** `expo build:android` / `expo build:ios`
 
+## Android Production Release (APK for Internal Distribution)
+
+### Prerequisites
+1. Java Development Kit (JDK) 11 or higher
+2. Android SDK Tools
+3. Gradle (included with Android SDK)
+
+### Generating a Release Signing Key
+
+If you don't already have a signing key, generate one using:
+
+```powershell
+keytool -genkey -v -keystore C:\path\to\release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias pureflow-key
+```
+
+**Important:** 
+- Replace `C:\path\to\release-key.jks` with your desired keystore location
+- Store the keystore file securely and **DO NOT commit it to version control**
+- Remember the store password and key password
+
+### Setting Up Environment Variables
+
+Add the following to your `.env` file (already configured):
+
+```env
+RELEASE_STORE_FILE=C:\path\to\release-key.jks
+RELEASE_STORE_PASSWORD=your-store-password
+RELEASE_KEY_ALIAS=pureflow-key
+RELEASE_KEY_PASSWORD=your-key-password
+```
+
+### Building the Signed APK
+
+1. Navigate to the project root directory:
+```powershell
+cd c:\Projects\pureflow-mobile
+```
+
+2. Build the signed release APK:
+```powershell
+cd android ; .\gradlew.bat assembleRelease
+```
+
+3. The APK will be generated at:
+```
+android/app/build/outputs/apk/release/PureFlow-v3.0.0.apk
+```
+
+### Distributing the APK Internally
+
+Once you have the signed APK:
+- **Direct Sharing:** Share the APK file directly via email or cloud storage (Google Drive, OneDrive, etc.)
+- **Private Server:** Host the APK on a private server for download
+- **Mobile Device Management (MDM):** Use MDM solutions for enterprise distribution
+- **QR Code:** Generate a QR code linking to the APK for easy distribution
+
+### Verifying the Signed APK
+
+To verify the APK is properly signed:
+
+```powershell
+jarsigner -verify -verbose -certs android\app\build\outputs\apk\release\PureFlow-v3.0.0.apk
+```
+
+### Security Notes
+
+- **Never commit** your keystore file (`.jks`) to version control
+- The `.gitignore` file should exclude keystore files
+- Keep your keystore password secure
+- Backup your keystore file in a secure location
+- Use the same keystore for all future updates to maintain app continuity
+
 ---
 
 **PureFlow Mobile** - Advanced water quality monitoring with AI-powered insights and production-ready architecture.

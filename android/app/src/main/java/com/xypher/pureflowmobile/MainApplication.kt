@@ -1,7 +1,10 @@
 package com.xypher.pureflowmobile
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.res.Configuration
+import android.os.Build
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -42,12 +45,69 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+
+    // Create notification channels for FCM
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      createNotificationChannels()
+    }
+
     SoLoader.init(this, OpenSourceMergedSoMapping)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
       load()
     }
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
+  }
+
+  private fun createNotificationChannels() {
+    val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+    // Alerts channel - High priority for critical notifications
+    val alertsChannel = NotificationChannel(
+      "alerts",
+      "Water Quality Alerts",
+      NotificationManager.IMPORTANCE_HIGH
+    ).apply {
+      description = "Critical water quality alerts and warnings"
+      enableLights(true)
+      enableVibration(true)
+      vibrationPattern = longArrayOf(0, 500, 200, 500)
+    }
+
+    // Updates channel - Normal priority for general updates
+    val updatesChannel = NotificationChannel(
+      "updates",
+      "Water Quality Updates",
+      NotificationManager.IMPORTANCE_DEFAULT
+    ).apply {
+      description = "General water quality updates"
+      enableLights(true)
+      enableVibration(true)
+    }
+
+    // Maintenance channel - Normal priority for maintenance reminders
+    val maintenanceChannel = NotificationChannel(
+      "maintenance",
+      "Maintenance Reminders",
+      NotificationManager.IMPORTANCE_DEFAULT
+    ).apply {
+      description = "System maintenance and calibration reminders"
+      enableLights(true)
+      enableVibration(true)
+    }
+
+    // Forecasts channel - Normal priority for forecast alerts
+    val forecastsChannel = NotificationChannel(
+      "forecasts",
+      "Water Quality Forecasts",
+      NotificationManager.IMPORTANCE_DEFAULT
+    ).apply {
+      description = "Water quality prediction alerts"
+      enableLights(true)
+      enableVibration(true)
+    }
+
+    notificationManager.createNotificationChannels(listOf(alertsChannel, updatesChannel, maintenanceChannel, forecastsChannel))
   }
 
   override fun onConfigurationChanged(newConfig: Configuration) {

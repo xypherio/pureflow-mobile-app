@@ -1,10 +1,18 @@
+// Load environment variables from .env in development
+try {
+  require('dotenv').config();
+} catch (err) {
+  // dotenv may not be installed or available; ignore if not
+}
+
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
 
 const { initializeFirebase, checkFirebaseHealth } = require('../lib/firebase-admin');
 const { sendNotification, sendWaterQualityAlert, sendMaintenanceReminder, sendForecastAlert, sendCustomNotification } = require('../lib/notification-service');
-const { authenticateApiKey, corsMiddleware, notificationRateLimit, requestLogger, validateNotificationRequest, validateWaterQualityAlert, errorHandler } = require('../lib/middleware');
+const { authenticateApiKey, corsMiddleware, notificationRateLimit, broadcastRateLimit, requestLogger, validateNotificationRequest, validateWaterQualityAlert, errorHandler } = require('../lib/middleware');
+const { addOrUpdateToken } = require('../lib/token-store');
 
 const app = express();
 
@@ -283,6 +291,79 @@ app.post('/custom', [
 });
 
 /**
+ * Register FCM Token (Stub implementation)
+ * POST /api/register
+ */
+app.post('/register', [
+  authenticateApiKey,
+  notificationRateLimit
+], async (req, res) => {
+  try {
+    const { fcmToken, userData = {} } = req.body;
+
+    if (!fcmToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing FCM token',
+        message: 'fcmToken required in request body'
+      });
+    }
+
+    // Persist token to token store
+    try {
+      const saved = await addOrUpdateToken(fcmToken, { userId: userData.userId, platform: userData.platform, deviceInfo: userData.deviceInfo });
+      console.log('📝 FCM token registered:', { tokenPrefix: fcmToken.substring(0, 10) + '...', userId: userData.userId, platform: userData.platform });
+
+      res.json({
+        success: true,
+        message: 'FCM token registered successfully',
+        token: saved.token,
+        lastSeen: saved.lastSeen
+      });
+    } catch (err) {
+      console.error('❌ Error saving token:', err.message);
+      res.status(500).json({ success: false, error: 'Failed to persist token' });
+    }
+  } catch (error) {
+    console.error('Error in /register:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Broadcast Notification (Stub implementation)
+ * POST /api/broadcast
+ */
+app.post('/broadcast', [
+  authenticateApiKey,
+  broadcastRateLimit
+], async (req, res) => {
+  try {
+    const { title = 'Broadcast', body = '', data = {} } = req.body;
+
+    // TODO: Retrieve registered tokens from database and send to all
+    console.log('📢 Broadcast requested but not implemented:', { title, body });
+
+    res.json({
+      success: true,
+      message: 'Broadcast not implemented yet',
+      recipientCount: 0
+    });
+  } catch (error) {
+    console.error('Error in /broadcast:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+/**
  * Service Information
  * GET /api/info
  */
@@ -290,7 +371,7 @@ app.get('/info', (req, res) => {
   res.json({
     success: true,
     service: 'PureFlow FCM Server',
-    version: '1.0.0',
+    version: '2.0.0',
     description: 'Firebase Cloud Messaging server for PureFlow water monitoring app',
     endpoints: [
       'GET /',
@@ -299,6 +380,8 @@ app.get('/info', (req, res) => {
       'POST /maintenance',
       'POST /forecast',
       'POST /custom',
+      'POST /register',
+      'POST /broadcast',
       'GET /info'
     ],
     supportedNotificationTypes: [
@@ -307,6 +390,7 @@ app.get('/info', (req, res) => {
       'forecast_alert',
       'custom_notification'
     ],
+    notificationChannels: ['alerts', 'updates', 'maintenance', 'forecasts'],
     timestamp: new Date().toISOString()
   });
 });

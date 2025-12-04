@@ -2,7 +2,7 @@
   "expo": {
     "name": "PureFlow",
     "slug": "pureflow-mobile",
-    "version": "2.3.0",
+    "version": "3.0.0",
     "owner": "xy_pher",
     "orientation": "portrait",
     "icon": "./assets/logo/pureflow-logo-apk-08.png",
@@ -57,25 +57,13 @@
         }
       ],
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/logo/logo-emblem.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#002d66",
-          "shadowColor": "none"
-        }
-      ],
+      // REMOVED: expo-splash-screen plugin to disable native splash screen
       "expo-web-browser",
       "expo-font",
       [
         "expo-build-properties",
         {
           "android": {
-            "splashScreen": {
-              "backgroundColor": "#002d66"
-            },
             "compileSdkVersion": 33,
             "targetSdkVersion": 33,
             "buildToolsVersion": "33.0.0"

@@ -12,18 +12,34 @@ function authenticateApiKey(req, res, next) {
     });
   }
 
-  const allowedApiKey = process.env.API_SECRET_KEY;
+  // Support either API_SECRET_KEY (server) or EXPO_PUBLIC_FCM_API_KEY (from .env for local/dev)
+  const allowedApiKey = process.env.API_SECRET_KEY || process.env.EXPO_PUBLIC_FCM_API_KEY;
   if (!allowedApiKey) {
-    console.warn('API_SECRET_KEY not set');
-    return res.status(500).json({ success: false, error: 'Server config error' });
+    console.warn('API key not configured. Set API_SECRET_KEY or EXPO_PUBLIC_FCM_API_KEY in environment.');
+    return res.status(500).json({ success: false, error: 'Server config error', message: 'Set API_SECRET_KEY or EXPO_PUBLIC_FCM_API_KEY in server environment' });
+  } else {
+    // For debugging clarity, log which env var is being used (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      const used = process.env.API_SECRET_KEY ? 'API_SECRET_KEY' : 'EXPO_PUBLIC_FCM_API_KEY';
+      console.log(`Using API key from env var: ${used}`);
+    }
   }
 
-  if (!crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(allowedApiKey))) {
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid API key',
-      message: 'API key is not valid'
-    });
+  try {
+    const apiKeyBuf = Buffer.from(apiKey);
+    const allowedBuf = Buffer.from(allowedApiKey);
+
+    // timingSafeEqual throws if buffers have different lengths — check length first
+    if (apiKeyBuf.length !== allowedBuf.length || !crypto.timingSafeEqual(apiKeyBuf, allowedBuf)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid API key',
+        message: 'API key is not valid'
+      });
+    }
+  } catch (err) {
+    console.warn('API key validation error:', err.message);
+    return res.status(401).json({ success: false, error: 'Invalid API key', message: 'API key is not valid' });
   }
 
   next();
@@ -99,11 +115,12 @@ function validateNotificationRequest(req, res, next) {
     });
   }
 
-  if (typeof fcmToken !== 'string' || fcmToken.length < 100) {
+  // Accept any non-empty string token. Token lengths vary across providers
+  if (typeof fcmToken !== 'string' || fcmToken.trim().length === 0) {
     return res.status(400).json({
       success: false,
       error: 'Invalid FCM token',
-      message: 'fcmToken must be valid Firebase token'
+      message: 'fcmToken must be a non-empty string'
     });
   }
 
