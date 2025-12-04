@@ -220,6 +220,9 @@ class FCMService {
 
       console.log('📤 Sending to FCM server:', endpoint, payload.fcmToken ? '[TOKEN]' : '');
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(`${this.serverUrl}${endpoint}`, {
         method: 'POST',
         headers: {
@@ -227,8 +230,11 @@ class FCMService {
           'x-api-key': this.apiKey,
           'User-Agent': 'PureFlowMobile/1.0'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       const result = await response.json();
 

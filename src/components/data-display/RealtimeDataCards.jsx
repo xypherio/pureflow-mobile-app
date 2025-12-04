@@ -163,7 +163,7 @@ export default function RealTimeData() {
 
       return {
         label,
-        value: hasValidValue ? Number(value).toFixed(1) : "--",
+        value: hasValidValue ? Number(value).toFixed(1) : "0.0",
         unit,
         icon: <Icon size={30} color={color} />,
         color,

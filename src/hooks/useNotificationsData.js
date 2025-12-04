@@ -275,7 +275,16 @@ export const useNotificationsData = () => {
   }, []);
 
   // Get alert level configuration for NotificationCard
-  const getAlertLevelConfig = useCallback((type) => {
+  const getAlertLevelConfig = useCallback((type, activeSeverity = null) => {
+    // If info filter is active, use light blue for all notifications
+    if (activeSeverity === 'info') {
+      return {
+        bg: "#e0f4fa",
+        iconColor: "#87ceeb"  // Light blue color
+      };
+    }
+
+    // Default configurations for other filters
     const configs = {
       success: { bg: "#e6f9ed", iconColor: "#22c55e" },
       warning: { bg: "#fef9c3", iconColor: "#eab308" },

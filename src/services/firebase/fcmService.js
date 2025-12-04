@@ -5,11 +5,11 @@
  * for Firebase Cloud Messaging push notifications.
  */
 
-import { fcm } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { notificationManager } from '../notifications/NotificationManager';
 import { PushNotificationProvider } from '../notifications/PushNotificationProvider';
-import { Platform } from 'react-native';
+import { fcm } from './config';
 
 class FCMService {
   constructor() {
@@ -110,6 +110,13 @@ class FCMService {
         const pushProvider = new PushNotificationProvider();
         await pushProvider.storeFCMToken(token);
 
+        // Try to register token with backend server
+        try {
+          await this.registerTokenWithServer({ deviceInfo: { source: 'app' } });
+        } catch (err) {
+          console.warn('⚠️ registerTokenWithServer failed:', err.message);
+        }
+
         console.log('✅ FCM token obtained:', token.substring(0, 20) + '...');
         return token;
       } else {
@@ -179,12 +186,20 @@ class FCMService {
 
     // Handle token refresh
     fcm.onTokenRefresh(async (token) => {
-      console.log('🔄 FCM token refreshed:', token.substring(0, 20) + '...');
-      this.fcmToken = token;
-      await AsyncStorage.setItem('fcm_token', token);
+      try {
+        console.log('🔄 FCM token refreshed:', token.substring(0, 20) + '...');
+        this.fcmToken = token;
+        await AsyncStorage.setItem('fcm_token', token);
 
-      // TODO: Send token to server for updates
-      // await this.updateServerToken(token);
+        // Persist locally and to push provider
+        const pushProvider = new PushNotificationProvider();
+        await pushProvider.storeFCMToken(token);
+
+        // Send updated token to backend
+        await this.registerTokenWithServer({ deviceInfo: { reason: 'refresh' } });
+      } catch (err) {
+        console.error('❌ Error handling token refresh:', err.message);
+      }
     });
 
     console.log('✅ FCM listeners set up');
@@ -291,28 +306,55 @@ class FCMService {
       return false;
     }
 
-    try {
-      // Prepare token registration payload
-      const payload = {
-        fcmToken: this.fcmToken,
+    const serverUrl = process.env.EXPO_PUBLIC_FCM_SERVER_URL || 'http://localhost:3001';
+    const apiKey = process.env.EXPO_PUBLIC_FCM_API_KEY || process.env.API_SECRET_KEY || 'dev-key';
+
+    const payload = {
+      fcmToken: this.fcmToken,
+      userData: {
         platform: Platform.OS,
         deviceInfo: {
-          appVersion: '2.3.0', // From app.json
+          appVersion: '2.3.0',
           timestamp: new Date().toISOString(),
           ...deviceInfo
         }
-      };
+      }
+    };
 
-      // TODO: Replace with your backend API call
-      console.log('📡 Register FCM token with server:', payload);
+    const url = `${serverUrl.replace(/\/$/, '')}/register`;
 
-      // Example: await fetch('https://your-api.com/register-token', { ... })
-      // For now, just log the payload
-      return true;
-    } catch (error) {
-      console.error('❌ Error registering token with server:', error);
-      return false;
+    // Simple retry logic with exponential backoff
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          console.log('📡 Token registered with server:', json);
+          return true;
+        }
+
+        const text = await res.text();
+        console.warn(`⚠️ registerTokenWithServer attempt ${attempt} failed: HTTP ${res.status} - ${text}`);
+      } catch (err) {
+        console.warn(`⚠️ registerTokenWithServer attempt ${attempt} error:`, err.message);
+      }
+
+      // Backoff
+      await new Promise(r => setTimeout(r, attempt * 500));
     }
+
+    console.error('❌ registerTokenWithServer: all attempts failed');
+    return false;
   }
 
   /**
@@ -349,9 +391,24 @@ class FCMService {
 
   /**
    * Check if FCM is supported on this device
+   * Returns a boolean; uses the messaging() API safely.
    */
-  isSupported() {
-    return fcm().isDeviceRegisteredForRemoteMessages;
+  async isSupported() {
+    try {
+      if (!fcm) return false;
+
+      // If the SDK exposes an async checker, call it and return the boolean result
+      if (typeof fcm.isDeviceRegisteredForRemoteMessages === 'function') {
+        const supported = await fcm.isDeviceRegisteredForRemoteMessages();
+        return !!supported;
+      }
+
+      // Fallback: coerce any property to boolean
+      return !!fcm.isDeviceRegisteredForRemoteMessages;
+    } catch (error) {
+      console.error('❌ Error checking FCM support:', error);
+      return false;
+    }
   }
 
   /**

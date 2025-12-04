@@ -48,7 +48,7 @@ const NotificationsList = ({
     const alertProps = createAlertItem(
       item,
       getNotificationIcon,
-      getAlertLevelConfig,
+      (type) => getAlertLevelConfig(type, activeSeverity),
       getParameterColor,
       getEnhancedMessage,
       getAlertDetails,

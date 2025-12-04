@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationManager } from './NotificationManager';
 import { NotificationTemplates } from './NotificationTemplates';
 import { addAlertToFirestore } from '../firebase/firestore';
-import { fcmService } from '../../fcmService';
+import { fcmService } from '../fcmService';
 
 class ScheduledNotificationManager {
   constructor() {
