@@ -1,11 +1,8 @@
 import ForecastService from "@services/core/ForecastService";
-import { useCallback, useState } from "react";
+import { getMostRecentForecast } from "@services/firebase/firestore";
+import { useCallback, useEffect, useState } from "react";
 
 /**
- * Custom hook for water quality prediction logic
- * Provides a clean interface between UI components and the ForecastService
- * Maintains the same interface as the original useWaterQualityPrediction hook
- * 
  * @returns {Object} - Prediction state and functions
  */
 const useForecastService = () => {
@@ -20,11 +17,30 @@ const useForecastService = () => {
   const [hasEverFetchedOnce, setHasEverFetchedOnce] = useState(false);
   const [forecastDataAvailable, setForecastDataAvailable] = useState(false);
 
-  const [dataSource, setDataSource] = useState(null); // 'api' | 'firebase' | 'cached' | null
+  const [dataSource, setDataSource] = useState(null); 
 
-  /**
-   * Loads historical sensor data using the ForecastService
-   */
+  // Load stored forecast data on initialization
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadStoredForecast = async () => {
+      try {
+        const storedForecast = await getMostRecentForecast();
+        if (isMounted && storedForecast) {
+          setForecastPredicted(storedForecast);
+          setLastSuccessfulPrediction(storedForecast);
+          setForecastDataAvailable(true);
+          setDataSource('cached');
+        }
+      } catch (error) {
+        console.error("Error loading stored forecast:", error);
+      }
+    };
+    
+    loadStoredForecast();
+    return () => { isMounted = false; };
+  }, []);
+
   const loadHistoricalData = useCallback(async () => {
     try {
       const result = await ForecastService.loadHistoricalData();
@@ -76,7 +92,6 @@ const useForecastService = () => {
       setPredictionError(null);
 
       // Fetch previous forecast for trend comparison
-      const { getMostRecentForecast } = await import("@services/firebase/firestore");
       const previousForecastDoc = await getMostRecentForecast();
       const previousForecast = previousForecastDoc ? (({ timestamp, type, version, id, ...forecast }) => forecast)(previousForecastDoc) : null;
 

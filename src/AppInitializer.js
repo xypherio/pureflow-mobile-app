@@ -1,10 +1,3 @@
-/**
- * App Initializer - Handles initial data loading during app launch
- *
- * This component should be used at the root level to initialize the optimized data manager
- * and preload all necessary data before the main app components are rendered.
- */
-
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { optimizedDataManager } from './services/OptimizedDataManager';

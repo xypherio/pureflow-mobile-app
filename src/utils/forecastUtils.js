@@ -68,7 +68,7 @@ export function getParameterTheme(param) {
     case 'pH':
       return { color: '#007bff' };
     case 'Temperature':
-      return { color: '#ef4444' };
+      return { color: '#e83e8c' };
     case 'Turbidity':
       return { color: '#28a745' };
     case 'Salinity':
