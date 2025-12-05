@@ -511,6 +511,17 @@ class ServiceContainer {
       );
     }
 
+    // Initialize scheduled notifications (monitoring reminders, maintenance, etc.)
+    if (scheduledNotificationManager && scheduledNotificationManager.initialize) {
+      try {
+        console.log('🔧 Initializing scheduled notifications...');
+        await scheduledNotificationManager.initialize();
+        console.log('✅ Scheduled notifications initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize scheduled notifications:', error);
+      }
+    }
+
     console.log('✅ Legacy service adapters post-initialized');
   }
 
