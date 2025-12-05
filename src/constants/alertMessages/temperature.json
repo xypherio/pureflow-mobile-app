@@ -1,26 +1,26 @@
 {
   "low": [
-    "Cold water below normal slows fish energy use, making them eat less and grow slower",
-    "Low temperature makes fish defenses weak, easier for parasites to attack them",
+    "Cold water below normal slows fish energy use, eat less and grow slower",
+    "Low temperature makes fish defenses weak, easier for parasites to attack",
     "Cold weather delays fish spawning and fewer baby fish eggs survive",
-    "Water too cold slows body processes, harder for fish to digest food and get nutrients",
-    "Cold water holds less oxygen, forcing fish to work harder to breathe",
-    "Low heat makes fish use more energy to stay warm, reducing harvest weights",
-    "Cold conditions make fish lose appetite, getting thin from lack of proper nutrition",
-    "Temperature too low affects baby-making chemicals, messing up breeding times",
-    "Cold temperature slows healing from wounds, increasing chance of other sicknesses",
-    "Cold weather slows germ breakdown, affecting food release for your plants"
+    "Water too cold slows body processes, harder digest food and nutrients",
+    "Cold water holds less oxygen, forcing fish work harder to breathe",
+    "Low heat makes fish use energy stay warm, reducing harvest weights",
+    "Cold conditions make fish lose appetite, getting thin from lack nutrition",
+    "Temperature too low affects baby-making chemicals, messing breeding times",
+    "Cold temperature slows healing from wounds, increasing sickness chance",
+    "Cold weather slows germ breakdown, affecting food release for plants"
   ],
   "high": [
-    "Hot water above normal shocks fish suddenly, hurting breathing parts and oxygen carrying",
-    "High temperature speeds up fish energy use, needing more oxygen and causing stress",
+    "Hot water above normal shocks fish suddenly, hurting breathing parts and oxygen",
+    "High temperature speeds fish energy use, needs more oxygen, causing stress",
     "Heat affects baby fish making, reducing egg quality and baby production",
-    "Water too hot weakens fish defenses, making them easy targets for diseases",
-    "Hot conditions push oxygen out of water, causing fish to suffocate and die",
-    "High heat makes harmful wastes more dangerous, poisoning fish bodies",
+    "Water too hot weakens fish defenses, making targets for diseases",
+    "Hot conditions push oxygen out water, causing fish suffocate and die",
+    "High heat makes harmful wastes dangerous, poisoning fish bodies",
     "Heat changes fish eating habits, eating less feed and losing weight",
-    "Temperature extremes grow bad germs fast, making water dirty and sickening plants",
-    "Hot water makes fish tired and lazy, harder to catch during harvest time",
-    "High temperatures grow bad algae fast, poisoning both fish and plant crops"
+    "Temperature extremes grow bad germs fast, making water dirty and sickening",
+    "Hot water makes fish tired and lazy, harder catch during harvest",
+    "High temperatures grow bad algae fast, poisoning fish and plant crops"
   ]
 }

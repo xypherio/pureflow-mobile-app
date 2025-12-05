@@ -11,19 +11,13 @@ export function getWaterQualityThresholds(fishpondType = 'freshwater') {
       pH: { min: 6.5, max: 8.5, critical: { min: 6.0, max: 9.0 } },
       temperature: { min: 26, max: 30, critical: { min: 20, max: 35 } },
       salinity: { min: 0, max: 5, critical: { max: 10 } },
-      turbidity: { min: 0, max: 50, critical: { max: 60 } },
-      // Device environment thresholds
-      humidity: { min: 30, max: 80, critical: { min: 20, max: 90 } },
-      datmTemp: { min: 15, max: 25, critical: { min: 10, max: 30 } }
+      turbidity: { min: 0, max: 50, critical: { max: 60 } }
     },
     saltwater: {
       pH: { min: 7.5, max: 8.5, critical: { min: 7.0, max: 9.0 } },
       temperature: { min: 24, max: 30, critical: { min: 18, max: 35 } },
       salinity: { min: 15, max: 35, critical: { max: 40 } },
-      turbidity: { min: 0, max: 60, critical: { max: 60 } },
-      // Device environment thresholds
-      humidity: { min: 30, max: 80, critical: { min: 20, max: 90 } },
-      datmTemp: { min: 15, max: 25, critical: { min: 10, max: 30 } }
+      turbidity: { min: 0, max: 60, critical: { max: 60 } }
     }
   };
 

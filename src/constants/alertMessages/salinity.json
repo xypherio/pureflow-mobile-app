@@ -1,26 +1,26 @@
 {
   "low": [
-    "Too little salt in water makes fish lose body water, making them sick and die",
-    "Freshwater makes fish body balance go wrong, hurting inside parts and causing damage",
-    "Water with no salt makes fish more likely to catch sicknesses easily",
-    "Low salt affects fish making babies, fewer eggs survive and grow",
-    "Freshwater problems hurt fish breathing parts, making them struggle to get air",
-    "Low salt disrupts body balance, making nerves and muscles work poorly",
-    "Fresh conditions make fish change how they eat, growing slower and wasting feed",
-    "Salt shortage affects body building, making fish bones and skin weak",
-    "Low salt lets bad wastes build up, poisoning fish and causing deaths",
-    "Freshwater reduces helpful living things, cutting down food for plant roots"
+    "Too little salt makes fish lose body water, get sick and die",
+    "Freshwater makes fish body balance wrong, hurting inside parts",
+    "Water with no salt makes fish catch sicknesses more easily",
+    "Low salt affects fish making babies, fewer eggs survive",
+    "Freshwater problems hurt fish breathing parts, struggle to get air",
+    "Low salt disrupts body balance, nerves and muscles work poorly",
+    "Fresh conditions make fish change eating habits, grow slower",
+    "Salt shortage affects body building, making fish bones weak",
+    "Low salt lets bad wastes build up, poisoning fish",
+    "Freshwater reduces helpful living things, cutting plant food"
   ],
   "high": [
-    "Too much salt makes fish lose body water too quickly, hurting their bodies",
-    "Salt level too high affects fish egg growing, fewer babies are born healthy",
-    "High salt hurts breathing part balance, making air exchange harder",
-    "Too much salt changes body chemicals, affecting growth and how they use food",
-    "Mixed salt conditions make fish use more energy to balance, growing slower",
-    "High salt raises stress signals, making fish more prone to illness",
-    "Too much salt affects food taste senses, making fish eat less",
-    "Salt-mixed water lets parasites grow more, hurting fish health and numbers",
-    "Salt extremes make body cells dry out, affecting organs and food use",
-    "High salt conditions put stress on cleaning systems and hurt plant water quality"
+    "Too much salt makes fish lose body water quickly, hurting bodies",
+    "Salt level too high affects fish egg growing, fewer babies healthy",
+    "High salt hurts breathing part balance, air exchange harder",
+    "Too much salt changes body chemicals, affecting growth and food use",
+    "Mixed salt conditions make fish use energy to balance, grow slower",
+    "High salt raises stress signals, fish more prone to illness",
+    "Too much salt affects food taste senses, making eat less",
+    "Salt-mixed water lets parasites grow more, hurting fish health",
+    "Salt extremes make body cells dry out, affecting organs",
+    "High salt conditions stress cleaning systems, hurt plant quality"
   ]
 }

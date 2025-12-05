@@ -8,6 +8,7 @@ import phMessages from '../constants/alertMessages/ph.json';
 import temperatureMessages from '../constants/alertMessages/temperature.json';
 import turbidityMessages from '../constants/alertMessages/turbidity.json';
 import salinityMessages from '../constants/alertMessages/salinity.json';
+import weatherMessages from '../constants/alertMessages/weather.json';
 
 /**
  * Custom hook to handle alert processing and generation logic
@@ -30,6 +31,7 @@ export function useAlertProcessor() {
     temperature: { low: temperatureMessages.low, high: temperatureMessages.high },
     turbidity: { low: turbidityMessages.low, high: turbidityMessages.high },
     salinity: { low: salinityMessages.low, high: salinityMessages.high },
+    weather: { low: weatherMessages.low, high: weatherMessages.high },
   }), []);
 
   // Helper function to map severity to type
@@ -93,7 +95,7 @@ export function useAlertProcessor() {
     const generatedAlerts = [];
     const actualSensorData = realtimeData.reading || realtimeData;
 
-    // Check each parameter
+    // Check each water quality parameter
     const parameters = ['pH', 'temperature', 'turbidity', 'salinity'];
     parameters.forEach(param => {
       const value = actualSensorData[param] || actualSensorData[param.toLowerCase()];
@@ -116,6 +118,34 @@ export function useAlertProcessor() {
         }
       }
     });
+
+    // Check weather conditions (isRaining)
+    const isRaining = actualSensorData.isRaining;
+    if (isRaining !== null && isRaining !== undefined && !isNaN(isRaining)) {
+      let weatherAlertType = null;
+      let severity = 'low';
+
+      // Define when to trigger weather alerts
+      if (isRaining === 1) { // Light rain
+        weatherAlertType = 'low'; // Minor weather event
+        severity = 'low';
+      } else if (isRaining === 2) { // Heavy rain
+        weatherAlertType = 'high'; // Severe weather
+        severity = 'high';
+      }
+
+      if (weatherAlertType) {
+        const message = getRandomAlertMessage('weather', weatherAlertType);
+        generatedAlerts.push({
+          parameter: 'isRaining',
+          type: weatherAlertType === 'high' ? 'error' : 'warning',
+          severity: severity,
+          title: `Weather Alert`,
+          message: message,
+          value: isRaining
+        });
+      }
+    }
 
     return generatedAlerts;
   }, [evaluateParameter, thresholds]);
@@ -150,7 +180,7 @@ export function useAlertProcessor() {
 
       const fcmToken = tokenResult.token;
 
-      // Send water quality alert to FCM server
+      // Send water quality alert to FCM server with category
       const result = await fcmService.sendWaterQualityAlert(fcmToken, {
         sensorId: `sensor-${alert.parameter?.toLowerCase() || 'unknown'}`,
         parameter: alert.parameter?.toLowerCase() || 'unknown',
@@ -158,11 +188,12 @@ export function useAlertProcessor() {
         threshold: getThresholdForParameter(alert.parameter),
         location: 'Main Pond', // Could be configurable
         unit: getUnitForParameter(alert.parameter),
+        category: getCategoryForParameter(alert.parameter), // Weather alerts are "general"
         ...sensorData // Override with realtime data if provided
       });
 
       if (result.success) {
-        console.log('🚀 FCM alert sent successfully:', alert.title);
+        console.log('🚀 FCM alert sent successfully:', alert.title, `(${getCategoryForParameter(alert.parameter)} category)`);
         return { success: true, messageId: result.messageId };
       } else {
         console.warn('⚠️ FCM alert failed, falling back to local notification:', result.error);
@@ -222,6 +253,20 @@ export function useAlertProcessor() {
     return unitMap[parameter?.toLowerCase()] || '';
   }, []);
 
+  // Helper to get category for parameter (for FCM)
+  const getCategoryForParameter = useCallback((parameter) => {
+    if (!parameter) return 'water-quality';
+    const paramKey = parameter.toLowerCase();
+
+    // Weather alerts (isRaining parameter) are categorized as "general"
+    if (paramKey === 'israining') {
+      return 'general';
+    }
+
+    // All water quality parameters are "water-quality"
+    return 'water-quality';
+  }, []);
+
   // Process and normalize alerts
   const processAlerts = useCallback((alerts) => {
     if (!Array.isArray(alerts)) {
@@ -270,6 +315,7 @@ export function useAlertProcessor() {
     thresholds,
     messageCache,
     getThresholdForParameter,
-    getUnitForParameter
+    getUnitForParameter,
+    getCategoryForParameter
   };
 }

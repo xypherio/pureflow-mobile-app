@@ -147,7 +147,7 @@ export default function RootLayout() {
           <OptimizedDataProvider servicesReady={servicesReady}>
             <DataProvider initialData={preloadedData}>
               <SuggestionProvider>
-                <Stack>
+                <Stack screenOptions={{ contentStyle: { backgroundColor: '#002d66' } }}>
                   <Stack.Screen
                     name="(tabs)"
                     options={{

@@ -1,26 +1,26 @@
 {
   "low": [
-    "Very clear water might mean not enough food nutrients for good algae to grow",
-    "Too-clear water gives baby fish no hiding places, increasing attacks from other animals",
-    "Clear water lets too much sun light hit fish, burning their skin and causing stress",
-    "No tiny particles in water reduces natural cleaning, affecting water stay-clear power",
-    "Crystal clear water may stress some fish types that need some murkiness to feel settled",
-    "Low cloudiness conditions reduce places for good germs to grow and help clean",
-    "Very clear conditions suggest over-cleaning, affecting use of compost plant food",
-    "Clear water environments increase fish worry about being seen, changing behaviors",
-    "Very low cloudiness reduces natural protection, possibly affecting fish activity",
-    "Clear conditions may hurt the natural food bits needed for healthy plant growth"
+    "Very clear water might mean not enough nutrients for good algae to grow",
+    "Too-clear water gives baby fish no hiding places, increasing predator attacks",
+    "Clear water lets too much sunlight hit fish, burning skin and causing stress",
+    "No tiny particles reduces natural cleaning, affecting water clarity",
+    "Crystal clear water may stress fish types that need some murkiness",
+    "Low cloudiness conditions reduce places for good germs to grow",
+    "Very clear conditions suggest over-cleaning, affecting compost plant food use",
+    "Clear water increases fish worry about being seen, changing behaviors",
+    "Very low cloudiness reduces natural protection, affecting fish activity",
+    "Clear conditions may hurt natural food bits needed for plant growth"
   ],
   "high": [
-    "Dirtiness above safe levels blocks sunlight from reaching, slowing algae for plant food",
-    "High dirtiness hurts fish breathing parts with floating particles, blocking air exchange",
-    "Muddy water blocks cleaning systems, hurting quality and needing extra care",
-    "Dirt-filled water limits fish vision, affecting hunting, eating, and baby making",
-    "High cloudiness increases germ sickness risks and speeds up oxygen use",
-    "Dirty water covers bottom creatures important for pond health balance",
-    "Floating dirt slows plant growing power, hurting oxygen output",
-    "High dirtiness hurts fish breathing and causes long-term stress, lowering fish size",
-    "Dirt buildup stays in fish breathing parts, leading to choking and deaths",
-    "Cloudy conditions spread sickness easier through poor water visibility and mixing"
+    "Dirtiness above safe levels blocks sunlight, slowing algae for plant food",
+    "High dirtiness hurts fish breathing with floating particles, blocking air",
+    "Muddy water blocks cleaning systems, hurting quality and needing care",
+    "Dirt-filled water limits fish vision, affecting hunting, eating, reproduction",
+    "High cloudiness increases germ sickness risks and speeds oxygen use",
+    "Dirty water covers bottom creatures important for pond balance",
+    "Floating dirt slows plant growth power, hurting oxygen output",
+    "High dirtiness hurts fish breathing, causes stress, lowering size",
+    "Dirt buildup stays in breathing parts, leading to deaths",
+    "Cloudy conditions spread sickness through poor visibility and mixing"
   ]
 }

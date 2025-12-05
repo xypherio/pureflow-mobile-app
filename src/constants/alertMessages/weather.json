@@ -1,18 +1,18 @@
 {
     "low": [
-    "Rain can potentially harm you hardware device, don;t foreget to take necessary precautions",
-    "Light rain adds a little extra dirt and nutrients from nearby areas to the water",
-    "Medium winds can make small waves, briefly lowering oxygen in surface water",
-    "Slow temperature changes mildly affect fish energy use and movement",
-    "Light clouds block some sunlight gently, slightly slowing algae food production",
-    "Small weather shifts may cause minor timing changes in fish breeding activity"
+    "Rain can potentially harm hardware device, take necessary precautions",
+    "Light rain adds extra dirt and nutrients from nearby areas to water",
+    "Medium winds make small waves, briefly lowering oxygen in surface water",
+    "Slow temperature changes mildly affect fish energy and movement",
+    "Light clouds block sunlight gently, slowing algae food production",
+    "Small weather shifts may cause timing changes in breeding activity"
     ],
     "high": [
-    "Severe weather breaks equipment and causes major water quality problems with losses",
-    "Extreme storms bring huge amounts of mud and dirt, ruining water quality badly",
+    "Severe weather breaks equipment and causes major water problems with losses",
+    "Extreme storms bring huge amounts mud and dirt, ruining water badly",
     "Strong winds physically hurt fish and damage pond structures severely",
-    "Very heavy rain causes nutrient overload, growing dangerous algae that poses health risks",
-    "Flooding carries harmful chemicals and sickness-causing agents, spreading disease widely",
-    "Sudden severe weather changes shock fish, causing many deaths and harvest losses"
+    "Very heavy rain causes nutrient overload, growing dangerous algae",
+    "Flooding carries harmful chemicals and sickness-causing agents, spreading disease",
+    "Sudden severe weather changes shock fish, causing deaths and harvest losses"
     ]
 }

@@ -237,10 +237,27 @@ export const useNotificationsData = () => {
       setDisplayLimit(20);
       setIsNearBottom(false);
 
+      // Special logic for info filter to include weather alerts
+      let filteredAlerts = accumulatedAlerts;
+      if (newSeverity === 'info') {
+        // Info filter includes both low severity alerts AND weather alerts (isRaining)
+        filteredAlerts = accumulatedAlerts.filter(alert =>
+          (alert.severity && alert.severity.toLowerCase() === 'low') ||
+          (alert.parameter && alert.parameter.toLowerCase() === 'israining')
+        );
+      }
+
       // Reprocess existing accumulated alerts with new filter
-      const filterSeverity = newSeverity !== "all" ? mapUISeverityToDataSeverity(newSeverity) : null;
+      const filterSeverity = newSeverity === 'info' ? null : (newSeverity !== "all" ? mapUISeverityToDataSeverity(newSeverity) : null);
       const filterParameter = activeParameter !== "all" ? activeParameter : null;
-      const processedData = historicalAlertsService.processAndSectionAlerts(accumulatedAlerts, null, filterSeverity, filterParameter);
+
+      // For info filter, use our pre-filtered alerts; for others use normal service filtering
+      const processedData = historicalAlertsService.processAndSectionAlerts(
+        newSeverity === 'info' ? filteredAlerts : accumulatedAlerts,
+        null,
+        filterSeverity,
+        filterParameter
+      );
       setHistoricalData({
         ...processedData,
         hasMoreDataInDatabase: hasMoreData,
