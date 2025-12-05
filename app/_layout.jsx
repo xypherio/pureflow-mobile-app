@@ -11,7 +11,6 @@ import {
   useFonts,
 } from "@expo-google-fonts/poppins";
 import { initializeServices } from '@services/ServiceContainer';
-import * as SplashScreen from 'expo-splash-screen';
 import SplashScreenComponent from "@ui/SplashScreen";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
@@ -57,8 +56,7 @@ export default function RootLayout() {
       const startTime = Date.now();
       console.log('🚀 Starting app preparation...');
 
-      // Prevent native splash from auto-hiding so we can control it
-      await SplashScreen.preventAutoHideAsync();
+
 
       try {
         console.log('🔧 Initializing application services...');
@@ -102,7 +100,7 @@ export default function RootLayout() {
           setServicesReady(true);
         }
       } finally {
-        // Native splash is now controlled manually with preventAutoHideAsync and hideAsync
+        // Services initialization completed
       }
     }
 
@@ -130,9 +128,6 @@ export default function RootLayout() {
       // Small delay for smooth transition
       await new Promise((resolve) => setTimeout(resolve, 500));
       setIsAppReady(true);
-
-      // Hide the native splash screen now that our custom splash is ready
-      await SplashScreen.hideAsync();
     } catch (error) {
       console.error("Error handling preloaded data:", error);
       // Continue anyway to prevent app from being stuck
@@ -140,8 +135,8 @@ export default function RootLayout() {
     }
   };
 
-  // Show custom splash screen while loading fonts and data
-  if (!fontsLoaded || !isAppReady) {
+  // Show custom splash screen while data is loading
+  if (!isAppReady) {
     return <SplashScreenComponent onDataLoaded={handleDataLoaded} servicesReady={servicesReady} />;
   }
 

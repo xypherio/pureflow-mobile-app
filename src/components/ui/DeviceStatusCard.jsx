@@ -1,7 +1,6 @@
 import {
   CloudDrizzle,
   CloudRain,
-  Droplet,
   Sun,
   Timer,
   Wifi,
@@ -13,7 +12,6 @@ import { StyleSheet, Text, View } from "react-native";
 export default function StatusCard({
   isDatmActive: propIsDatmActive = true,
   isRaining = 0,
-  humidity = null,
   temperature = null,
   lastDataTimestamp
 }) {
@@ -96,14 +94,6 @@ export default function StatusCard({
         <View style={[styles.pill, { backgroundColor: '#efe9fe' }]}>
           <Timer size={18} color="#8b5cf6" style={styles.icon} />
           <Text style={[styles.timerText, { color: '#8b5cf6' }]}>{countdown}s</Text>
-        </View>
-
-        {/* Humidity Pill */}
-        <View style={[styles.pill, { backgroundColor: '#e6f3ff' }]}>
-          <Droplet size={16} color="#0d6efd" style={styles.icon} />
-          <Text style={[styles.timerText, { color: '#0d6efd' }]}>
-            {humidity !== null ? `${Math.round(humidity)}%` : '--%'}
-          </Text>
         </View>
 
         {/* Weather Status Pill */}

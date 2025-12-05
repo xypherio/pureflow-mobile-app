@@ -8,9 +8,7 @@
     "icon": "./assets/logo/pureflow-logo-apk-08.png",
     "scheme": "pureflow",
     "splash": {
-      "image": "./assets/logo/logo-emblem.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#002d66"
+      "backgroundColor": "transparent"
     },
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
