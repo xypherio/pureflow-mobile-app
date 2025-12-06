@@ -1,13 +1,3 @@
-/**
- * Optimized Data Manager for efficient data fetching and distribution
- * 
- * This service implements a two-phase data loading strategy:
- * 1. Initial load: Fetch all historical data during app launch
- * 2. Incremental updates: Fetch only the most recent single record for updates
- * 
- * Components receive data through optimized contexts that prevent unnecessary re-renders
- */
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { historicalDataService } from './historicalDataService';
 import { realtimeDataService } from './realtimeDataService';
@@ -23,12 +13,13 @@ class OptimizedDataManager {
     this.subscribers = new Map();
     this.updateInterval = null;
     this.isUpdating = false;
-    
+    this.launchTime = Date.now(); // Track when the app was launched
+
     // Cache keys
     this.CHART_DATA_KEY = 'optimized_chart_data';
     this.REALTIME_DATA_KEY = 'optimized_realtime_data';
     this.INITIAL_DATA_KEY = 'optimized_initial_data';
-    
+
     console.log('🔧 OptimizedDataManager constructed');
   }
 
@@ -41,6 +32,9 @@ class OptimizedDataManager {
       console.log('⚠️ DataManager already initialized');
       return this.getCurrentData();
     }
+
+    // Reset launch time when we actually initialize (after app startup)
+    this.launchTime = Date.now();
 
     console.log('🚀 Initializing OptimizedDataManager...');
     
@@ -134,6 +128,15 @@ class OptimizedDataManager {
   }
 
   /**
+   * Check if we're within the app launch cooldown period (prevents immediate notifications)
+   */
+  isWithinLaunchCooldown() {
+    const APP_LAUNCH_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes cooldown after app launch
+    const elapsedSinceLaunch = Date.now() - this.launchTime;
+    return elapsedSinceLaunch < APP_LAUNCH_COOLDOWN_MS;
+  }
+
+  /**
    * Perform incremental update (single most recent record)
    * This is called periodically after initial load
    */
@@ -145,31 +148,36 @@ class OptimizedDataManager {
 
     this.isUpdating = true;
     console.log('🔄 Performing incremental update...');
-    
+
     try {
       // Fetch only the most recent data
       const newData = await realtimeDataService.getMostRecentData({ useCache: false });
-      
+
       if (!newData || !newData.timestamp) {
         console.log('⚠️ No new data available for incremental update');
         return;
       }
-      
+
       // Check if this is actually new data
       const newTimestamp = new Date(newData.timestamp).getTime();
       const lastTimestamp = this.realtimeData ? new Date(this.realtimeData.timestamp).getTime() : 0;
-      
+
       if (newTimestamp <= lastTimestamp) {
         console.log('⚠️ No new data since last update');
         return;
       }
-      
+
       // Monitor successful fetch
       waterQualityNotificationService.monitorDataFetch(true, { deviceName: 'DATM' });
 
-      // Process sensor data with threshold alerts
-      if (waterQualityNotificationService.processSensorDataWithThresholdAlerts) {
-        await waterQualityNotificationService.processSensorDataWithThresholdAlerts(newData);
+      // Skip alert processing during app launch cooldown period
+      if (!this.isWithinLaunchCooldown()) {
+        // Process sensor data with threshold alerts (only after cooldown)
+        if (waterQualityNotificationService.processSensorDataWithThresholdAlerts) {
+          await waterQualityNotificationService.processSensorDataWithThresholdAlerts(newData);
+        }
+      } else {
+        console.log('⏰ Skipping alert processing during app launch cooldown');
       }
 
       // Update real-time data

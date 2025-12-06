@@ -237,13 +237,12 @@ export const useNotificationsData = () => {
       setDisplayLimit(20);
       setIsNearBottom(false);
 
-      // Special logic for info filter to include weather alerts
+      // Special logic for info filter - includes both low and info severity alerts
       let filteredAlerts = accumulatedAlerts;
       if (newSeverity === 'info') {
-        // Info filter includes both low severity alerts AND weather alerts (isRaining)
+        // Info filter includes alerts with severity 'low' or 'info'
         filteredAlerts = accumulatedAlerts.filter(alert =>
-          (alert.severity && alert.severity.toLowerCase() === 'low') ||
-          (alert.parameter && alert.parameter.toLowerCase() === 'israining')
+          alert.severity && (alert.severity.toLowerCase() === 'low' || alert.severity.toLowerCase() === 'info')
         );
       }
 

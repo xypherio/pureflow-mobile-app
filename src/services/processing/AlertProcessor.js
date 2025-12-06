@@ -160,28 +160,33 @@ export class AlertProcessor {
   
     async enrichAlerts(alerts) {
       const enriched = [];
-  
+
       for (const alert of alerts) {
         const enrichedAlert = {
           ...alert,
           id: alert.id || this.generateAlertId(),
           timestamp: alert.timestamp || new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          severity: this.calculateSeverity(alert),
-          category: this.categorizeAlert(alert),
-          metadata: await this.getAlertMetadata(alert)
+          severity: alert.severity || this.calculateSeverity(alert), // Ensure severity is set
+          type: this.calculateType(alert) // Required for UI display
         };
-  
+
         enriched.push(enrichedAlert);
       }
-  
+
       return enriched;
     }
   
     generateAlertId() {
       return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
-  
+
+    calculateType(alert) {
+      // Compute type from alertLevel for UI display
+      if (alert.alertLevel === 'critical') return 'error';
+      if (alert.alertLevel === 'warning') return 'warning';
+      return 'info';
+    }
+
     calculateSeverity(alert) {
       if (alert.alertLevel === 'critical') return 'high';
       if (alert.alertLevel === 'warning') return 'medium';
@@ -498,13 +503,10 @@ export class AlertProcessor {
       ];
     }
   
+    // Remove categorizeAlerts step to keep alerts minimal for storage
+    // Priority, urgency, and displayOrder are computed on demand when displaying
     async categorizeAlerts(alerts) {
-      return alerts.map(alert => ({
-        ...alert,
-        priority: this.calculatePriority(alert),
-        urgency: this.calculateUrgency(alert),
-        displayOrder: this.calculateDisplayOrder(alert)
-      }));
+      return alerts; // Return alerts without additional computed fields
     }
   
     calculatePriority(alert) {

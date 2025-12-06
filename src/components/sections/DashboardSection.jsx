@@ -7,18 +7,18 @@ import { StyleSheet, Text, View } from "react-native";
 /**
  * Main dashboard section with alerts, real-time data, and historical trends
  * @param {Object} props - Component props
- * @param {Array} props.alerts - Active alerts data
+ * @param {Array} props.activeAlerts - Active alerts generated from current realtime data
  * @param {Object} props.realtimeData - Real-time sensor data
  * @param {Object} props.sensorData - Historical sensor data
  */
-const DashboardSection = ({ alerts, realtimeData, sensorData }) => {
+const DashboardSection = ({ activeAlerts, realtimeData, sensorData }) => {
   return (
     <View style={styles.container}>
       {/* Critical Alerts Section */}
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Active Alerts</Text>
         <AlertsCard
-          alerts={alerts}
+          alerts={activeAlerts}
           realtimeData={realtimeData}
           interval={2500}
         />

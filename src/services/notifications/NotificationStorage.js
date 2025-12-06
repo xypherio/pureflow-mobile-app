@@ -1,8 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/**
- * Service for storing and managing notification history locally
- */
 class NotificationStorage {
   constructor() {
     this.STORAGE_KEY = 'notification_history';

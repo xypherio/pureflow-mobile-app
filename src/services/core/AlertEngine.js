@@ -2,22 +2,17 @@ import phMessages from '../../constants/alertMessages/ph.json';
 import salinityMessages from '../../constants/alertMessages/salinity.json';
 import temperatureMessages from '../../constants/alertMessages/temperature.json';
 import turbidityMessages from '../../constants/alertMessages/turbidity.json';
-import humidityMessages from '../../constants/alertMessages/humidity.json';
-import datmTempMessages from '../../constants/alertMessages/datmTemp.json';
 
 export class AlertEngine {
   constructor(thresholdManager) {
     this.thresholdManager = thresholdManager;
 
-    // Message cache for random selection (water quality + device environment)
+    // Message cache for random selection (water quality parameters only)
     this.messageCache = {
       ph: { low: phMessages.low, high: phMessages.high },
       temperature: { low: temperatureMessages.low, high: temperatureMessages.high },
       turbidity: { low: turbidityMessages.low, high: turbidityMessages.high },
-      salinity: { low: salinityMessages.low, high: salinityMessages.high },
-      // Device environment parameters
-      humidity: { low: humidityMessages.low, high: humidityMessages.high },
-      datmTemp: { low: datmTempMessages.low, high: datmTempMessages.high },
+      salinity: { low: salinityMessages.low, high: salinityMessages.high }
     };
   }
 
@@ -65,10 +60,13 @@ export class AlertEngine {
         console.log(`🚨 AlertEngine: Parameter ${parameter} is valid water quality parameter`);
 
         if (parameter.toLowerCase() === 'israining') {
-          // Rain sensor: Always generate alert for rain status
-          const alert = this.createRainAlert(parameter, value, latestReading);
-          alerts.push(alert);
-          console.log(`🚨 AlertEngine: Created rain alert for ${parameter}:`, alert);
+          // Rain sensor: Only generate alerts for actual rain (values 1=light, 2=heavy)
+          const numValue = parseFloat(value);
+          if (numValue === 1 || numValue === 2) {
+            const alert = this.createRainAlert(parameter, value, latestReading);
+            alerts.push(alert);
+            console.log(`🚨 AlertEngine: Created rain alert for ${parameter}:`, alert);
+          }
         } else {
           // Traditional water quality parameters
           const alertLevel = this.thresholdManager.evaluateValue(parameter, value);
@@ -90,39 +88,28 @@ export class AlertEngine {
   }
 
   createRainAlert(parameter, value, reading) {
-    const rainStatus = this.getRainStatusText(value);
-    const alertLevel = value === 2 ? 'warning' : 'info';
-    const isWarning = alertLevel === 'warning';
-
     return {
       id: this.generateAlertId(),
-      parameter: 'weather',
+      parameter: 'isRaining', // Must match facade filter for weather notifications
       value: parseFloat(value),
-      alertLevel,
-      type: 'info',  // Always blue for weather alerts
+      alertLevel: 'info', // All weather conditions use info alert level
       title: this.generateRainAlertTitle(value),
       message: this.generateRainAlertMessage(value),
-      timestamp: reading.datetime || reading.timestamp || new Date(),
-      severity: isWarning ? 'medium' : 'low',
-      isWarning: alertLevel === 'warning'
+      timestamp: reading.datetime || reading.timestamp || new Date(), // Consistent timestamp fallback as other alerts
+      severity: 'info' // All weather alerts have info severity
     };
   }
 
   createAlert(parameter, value, alertLevel, reading) {
-    const threshold = this.thresholdManager.getThreshold(parameter);
-
     return {
       id: this.generateAlertId(),
       parameter: parameter.toLowerCase(),
       value: parseFloat(value),
       alertLevel,
-      type: alertLevel === 'critical' ? 'error' : 'warning',
       title: this.generateAlertTitle(parameter, value, alertLevel),
-      message: this.generateAlertMessage(parameter, value, threshold, alertLevel),
+      message: this.generateAlertMessage(parameter, value, this.thresholdManager.getThreshold(parameter), alertLevel),
       timestamp: reading.datetime || reading.timestamp || new Date(),
-      severity: alertLevel === 'critical' ? 'high' : 'medium',
-      threshold,
-      isWarning: alertLevel === 'warning'
+      severity: alertLevel === 'critical' ? 'high' : 'medium'
     };
   }
 
@@ -209,28 +196,7 @@ export class AlertEngine {
           critical: `${flag} Salinity Too Low - ${valueFormatted}`,
           warning: `${flag} Salinity Falling - ${valueFormatted}`
         }
-      },
-      // Device environment parameters
-      humidity: {
-        high: {
-          critical: `${flag} Device Humidity Critical - ${valueFormatted}`,
-          warning: `${flag} Device Humidity High - ${valueFormatted}`
-        },
-        low: {
-          critical: `${flag} Device Humidity Critical - ${valueFormatted}`,
-          warning: `${flag} Device Humidity Low - ${valueFormatted}`
-        }
-      },
-      datmTemp: {
-        high: {
-          critical: `${flag} Device Temp Critical - ${valueFormatted}`,
-          warning: `${flag} Device Temp High - ${valueFormatted}`
-        },
-        low: {
-          critical: `${flag} Device Temp Critical - ${valueFormatted}`,
-          warning: `${flag} Device Temp Low - ${valueFormatted}`
-        }
-      },
+      }
 
     };
 
@@ -306,7 +272,7 @@ export class AlertEngine {
   }
 
   isWaterQualityParameter(parameter) {
-    const validParams = ['ph', 'temperature', 'turbidity', 'salinity', 'israining', 'humidity', 'datmTemp'];
+    const validParams = ['ph', 'temperature', 'turbidity', 'salinity', 'israining'];
     return validParams.includes(parameter.toLowerCase());
   }
 }

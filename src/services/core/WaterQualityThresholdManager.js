@@ -35,17 +35,7 @@ export class WaterQualityThresholdManager {
           max: thresholds.salinity.max,
           critical: thresholds.salinity.critical
         },
-        // Device environment parameters - applies to both freshwater and saltwater
-        humidity: {
-          min: thresholds.humidity.min,
-          max: thresholds.humidity.max,
-          critical: thresholds.humidity.critical
-        },
-        datmTemp: {
-          min: thresholds.datmTemp.min,
-          max: thresholds.datmTemp.max,
-          critical: thresholds.datmTemp.critical
-        },
+        // Device environment parameters removed - no longer needed for alert generation
         tds: { max: 500, critical: { max: 1000 } } // TDS not in thresholds.js, keeping existing
       };
 
@@ -53,15 +43,12 @@ export class WaterQualityThresholdManager {
       console.log('ThresholdManager initialized with thresholds from constants:', this.thresholds);
     } catch (error) {
       console.error('Failed to initialize ThresholdManager:', error);
-      // Fallback to default values
+      // Fallback to default values (water quality parameters only)
       this.thresholds = {
         ph: { min: 6.5, max: 8.5, critical: { min: 6.0, max: 9.0 } },
         temperature: { min: 26, max: 30, critical: { min: 20, max: 35 } },
         turbidity: { min: 0, max: 50, critical: { max: 60 } },
         salinity: { min: 0, max: 5, critical: { max: 10 } },
-        // Device environment fallback thresholds
-        humidity: { min: 30, max: 80, critical: { min: 20, max: 90 } },
-        datmTemp: { min: 15, max: 25, critical: { min: 10, max: 30 } },
       };
       this.initialized = true;
     }

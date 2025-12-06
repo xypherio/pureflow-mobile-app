@@ -1,8 +1,3 @@
-// Water Quality Recommendation Engine
-// Extracted from AlertProcessor.js to provide configurable, maintainable recommendations
-
-// Water Quality Recommendation Engine - PascalCase class naming convention
-
 import {
   WATER_QUALITY_THRESHOLDS,
   ALERT_SEVERITY,
@@ -303,9 +298,6 @@ export class RecommendationEngine {
     return ['Monitor TDS levels and water quality parameters'];
   }
 
-  /**
-   * Get default recommendations for unsupported parameters
-   */
   getDefaultRecommendations(parameter, alertLevel) {
     const paramName = parameter.charAt(0).toUpperCase() + parameter.slice(1);
     const levelText = alertLevel.charAt(0).toUpperCase() + alertLevel.slice(1);

@@ -1,15 +1,5 @@
-/**
- * Generic Insights Service
- *
- * Provides insights generation for various data types beyond just forecast data.
- * This decouples insights from specific components and allows for reusability.
- */
-
 import { generateInsight } from '@services/ai/geminiAPI';
 
-/**
- * Generate insights for any water quality data
- */
 export const generateWaterQualityInsights = async (data, componentId = 'wq-insights') => {
   if (!data) {
     throw new Error('No data provided for insights generation');

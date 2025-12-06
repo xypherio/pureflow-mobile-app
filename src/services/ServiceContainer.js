@@ -511,15 +511,18 @@ class ServiceContainer {
       );
     }
 
-    // Initialize scheduled notifications (monitoring reminders, maintenance, etc.)
+    // Defer scheduled notification initialization (runs 5 seconds after app startup)
     if (scheduledNotificationManager && scheduledNotificationManager.initialize) {
-      try {
-        console.log('🔧 Initializing scheduled notifications...');
-        await scheduledNotificationManager.initialize();
-        console.log('✅ Scheduled notifications initialized successfully');
-      } catch (error) {
-        console.error('❌ Failed to initialize scheduled notifications:', error);
-      }
+      console.log('⏰ Scheduling deferred notification initialization (5 seconds after startup)...');
+      setTimeout(async () => {
+        try {
+          console.log('🔧 Initializing scheduled notifications (deferred)...');
+          await scheduledNotificationManager.initialize();
+          console.log('✅ Scheduled notifications initialized successfully');
+        } catch (error) {
+          console.error('❌ Failed to initialize scheduled notifications:', error);
+        }
+      }, 5000);
     }
 
     console.log('✅ Legacy service adapters post-initialized');

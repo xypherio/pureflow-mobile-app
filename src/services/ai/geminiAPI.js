@@ -11,13 +11,13 @@ const componentTimers = new Map();
 const FETCH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds - less aggressive
 
 // Request deduplication and batching
-const pendingRequests = new Map(); // key -> Promise
-const requestQueue = new Map(); // componentId -> queued requests
+const pendingRequests = new Map();
+const requestQueue = new Map(); 
 
 // Global quota management
 let isQuotaExceeded = false;
 let quotaResetTime = null;
-const QUOTA_COOLDOWN_PERIOD = 15 * 60 * 1000; // 15-minute cooldown
+const QUOTA_COOLDOWN_PERIOD = 15 * 60 * 1000; 
 
 // Cache keys
 const CACHE_PREFIX = 'gemini_insights_';
@@ -26,9 +26,9 @@ const CACHE_EXPIRY_PREFIX = 'gemini_insights_expiry_';
 // Intelligent error handling
 let circuitBreakerFailures = 0;
 let circuitBreakerLastFailure = null;
-let circuitBreakerState = 'closed'; // 'closed', 'open', 'half-open'
+let circuitBreakerState = 'closed';
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5;
-const CIRCUIT_BREAKER_TIMEOUT = 60 * 1000; // 1 minute
+const CIRCUIT_BREAKER_TIMEOUT = 60 * 1000;
 const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY = 1000; // 1 second
 const MAX_RETRY_DELAY = 10000; // 10 seconds

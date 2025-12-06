@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, Linking, Alert } from 'react-native';
 // Simple ID generator for React Native compatibility
 const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -527,6 +527,90 @@ class NotificationManager {
   }
 
   /**
+   * Request permissions with Android-specific guidance
+   */
+  async requestPermissionsWithGuidance() {
+    const result = await this.requestPermissions();
+
+    // Android-specific guidance if denied
+    if (Platform.OS === 'android' && !result.success && result.status === 'denied') {
+      Alert.alert(
+        'Enable Notifications',
+        'PureFlow needs notification permissions to alert you about water quality issues and scheduled reminders.\n\nWould you like to open Settings to enable them?',
+        [
+          {
+            text: 'Not Now',
+            style: 'cancel',
+          },
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              if (Platform.Version >= 26) { // Android 8.0+
+                Linking.openSettings();
+              } else {
+                // Try to open app settings using package name
+                Linking.openURL(`package:${require('../../../package.json').name || 'com.xypher.pureflowmobile'}`);
+              }
+            },
+          },
+        ],
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Check and guide user to enable notifications if needed (Android)
+   */
+  async checkAndGuideNotificationPermissions() {
+    if (Platform.OS !== 'android') {
+      return { guided: false, reason: 'Only available on Android' };
+    }
+
+    const permissionResult = await this.checkPermissions();
+
+    if (permissionResult.status === 'denied') {
+      // Show guidance
+      return new Promise((resolve) => {
+        Alert.alert(
+          'Enable Notifications for Alerts',
+          'PureFlow needs notification permissions to:\n\n• Alert you about water quality issues\n• Send maintenance reminders\n• Provide timely water monitoring updates\n\nHow would you like to enable notifications?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => resolve({ guided: false, cancelled: true }),
+            },
+            {
+              text: 'Try Again',
+              onPress: async () => {
+                const retryResult = await this.requestPermissions();
+                resolve({ guided: true, result: retryResult });
+              },
+            },
+            {
+              text: 'Open Settings',
+              style: 'default',
+              onPress: () => {
+                if (Platform.Version >= 26) { // Android 8.0+
+                  Linking.openSettings();
+                } else {
+                  // Try app settings
+                  Linking.openURL(`package:${require('../../../package.json').name || 'com.xypher.pureflowmobile'}`);
+                }
+                resolve({ guided: true, openedSettings: true });
+              },
+            },
+          ],
+        );
+      });
+    }
+
+    return { guided: false, alreadyGranted: permissionResult.status === 'granted' };
+  }
+
+  /**
    * Get current status and configuration
    */
   getStatus() {
@@ -536,7 +620,8 @@ class NotificationManager {
       permissionStatus: this.permissionStatus,
       isPhysicalDevice: Device.isDevice,
       platform: Platform.OS,
-      activeListeners: this.listeners.size
+      activeListeners: this.listeners.size,
+      androidVersion: Platform.OS === 'android' ? Platform.Version : null
     };
   }
 }

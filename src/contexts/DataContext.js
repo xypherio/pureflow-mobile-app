@@ -1,6 +1,13 @@
 import { realtimeDataService } from "@services/realtimeDataService";
 import serviceContainer from '@services/ServiceContainer';
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { getWaterQualityThresholdsFromSettings } from '../constants/thresholds';
+// Static imports for alert messages (kept for now, will be lazy loaded later)
+import phMessages from '../constants/alertMessages/ph.json';
+import temperatureMessages from '../constants/alertMessages/temperature.json';
+import turbidityMessages from '../constants/alertMessages/turbidity.json';
+import salinityMessages from '../constants/alertMessages/salinity.json';
+import weatherMessages from '../constants/alertMessages/weather.json';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const DataContext = createContext();
 
@@ -12,6 +19,7 @@ const DataContext = createContext();
  */
 export function DataProvider({ children, initialData = null }) {
   const [alerts, setAlerts] = useState(initialData?.alerts || []);
+  const [activeAlerts, setActiveAlerts] = useState([]);
   const [sensorData, setSensorData] = useState(initialData?.sensorData || []);
   const [dailyReport, setDailyReport] = useState(initialData?.dailyReport || null);
   const [realtimeData, setRealtimeData] = useState(null);
@@ -19,7 +27,35 @@ export function DataProvider({ children, initialData = null }) {
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(initialData ? Date.now() : null);
   const [alertStats, setAlertStats] = useState(null);
-  
+  const [thresholds, setThresholds] = useState({});
+
+  // Message cache for random selection
+  const messageCache = useMemo(() => ({
+    ph: { low: phMessages.low, high: phMessages.high },
+    temperature: { low: temperatureMessages.low, high: temperatureMessages.high },
+    turbidity: { low: turbidityMessages.low, high: turbidityMessages.high },
+    salinity: { low: salinityMessages.low, high: salinityMessages.high },
+    weather: { low: weatherMessages.low, high: weatherMessages.high },
+  }), []);
+
+  // Function to get random message for parameter
+  const getRandomAlertMessage = useCallback((parameter, alertType) => {
+    const paramKey = parameter.toLowerCase();
+    const paramMessages = messageCache[paramKey];
+
+    if (!paramMessages || !paramMessages[alertType]) {
+      return `${parameter.charAt(0).toUpperCase() + parameter.slice(1)} level is outside normal range and may affect aquaculture species.`;
+    }
+
+    const messages = paramMessages[alertType];
+    if (!messages || messages.length === 0) {
+      return `${parameter.charAt(0).toUpperCase() + parameter.slice(1)} level is outside normal range and may affect aquaculture species.`;
+    }
+
+    const randomIndex = Math.floor(Math.random() * messages.length);
+    return messages[randomIndex];
+  }, [messageCache]);
+
   const intervalRef = useRef(null);
   const realtimeIntervalRef = useRef(null);
   const realtimeUnsubscriberRef = useRef(null); // Real-time Firebase listener
@@ -29,6 +65,17 @@ export function DataProvider({ children, initialData = null }) {
   const lastRefreshTime = useRef(0);
   const lastProcessedDataSignature = useRef(null);
   const hasLoggedDeduplicationWarning = useRef(false);
+  const appLaunchTime = useRef(Date.now()); // Track app launch time for cooldown
+  const lastIsRaining = useRef(0); // Track last rain status for change detection
+
+  /**
+   * Check if we're within the app launch cooldown period (prevents immediate notifications)
+   */
+  const isWithinLaunchCooldown = useCallback(() => {
+    const APP_LAUNCH_COOLDOWN_MS = 1 * 60 * 1000; // 1 minute cooldown after app launch
+    const elapsedSinceLaunch = Date.now() - appLaunchTime.current;
+    return elapsedSinceLaunch < APP_LAUNCH_COOLDOWN_MS;
+  }, []);
 
   /**
    * Generates a signature for sensor data to detect changes in actual values
@@ -312,6 +359,139 @@ export function DataProvider({ children, initialData = null }) {
    * - Sets up refresh interval
    * - Handles component cleanup
    */
+  // Load thresholds on component mount
+  useEffect(() => {
+    const loadThresholds = async () => {
+      try {
+        const loadedThresholds = await getWaterQualityThresholdsFromSettings();
+        setThresholds(loadedThresholds);
+        console.log('✅ Thresholds loaded for active alerts');
+      } catch (error) {
+        console.warn('Failed to load thresholds for active alerts:', error);
+      }
+    };
+    loadThresholds();
+  }, []);
+
+  // Generate active alerts from realtimeData
+  useEffect(() => {
+    if (!realtimeData || !thresholds || Object.keys(thresholds).length === 0) {
+      setActiveAlerts([]);
+      return;
+    }
+
+    // Check if real-time data has valid parameter values
+    const hasValidData = (
+      (realtimeData.pH !== null && realtimeData.pH !== undefined && !isNaN(realtimeData.pH)) ||
+      (realtimeData.temperature !== null && realtimeData.temperature !== undefined && !isNaN(realtimeData.temperature)) ||
+      (realtimeData.turbidity !== null && realtimeData.turbidity !== undefined && !isNaN(realtimeData.turbidity)) ||
+      (realtimeData.salinity !== null && realtimeData.salinity !== undefined && !isNaN(realtimeData.salinity))
+    );
+
+    if (!hasValidData) {
+      setActiveAlerts([]);
+      return;
+    }
+
+    // Extract sensor data
+    const sensorData = realtimeData.reading || realtimeData;
+    const generatedAlerts = [];
+
+    // Evaluate each water quality parameter
+    const parameters = ['pH', 'temperature', 'turbidity', 'salinity'];
+    parameters.forEach(param => {
+      const value = sensorData[param] || sensorData[param.toLowerCase()];
+      if (value !== null && value !== undefined && !isNaN(value)) {
+        const evaluation = evaluateParameterForActiveAlerts(param, value);
+        if (evaluation && evaluation.type !== 'success') {
+          const paramDisplay = param.charAt(0).toUpperCase() + param.slice(1);
+          const message = getRandomAlertMessage(param, evaluation.alertType);
+          generatedAlerts.push({
+            parameter: paramDisplay,
+            type: evaluation.type,
+            severity: evaluation.level === 'critical' ? 'high' : 'medium',
+            title: `${paramDisplay} Alert`,
+            message: message,
+            value: value,
+            timestamp: new Date(),
+            id: `${paramDisplay}-${Date.now()}-${Math.random()}`
+          });
+        }
+      }
+    });
+
+    // Check weather conditions (isRaining)
+    const isRaining = sensorData.isRaining;
+    if (isRaining !== null && isRaining !== undefined && !isNaN(isRaining)) {
+      let weatherAlertType = null;
+      let severity = 'low';
+
+      if (isRaining === 1) {
+        weatherAlertType = 'warning';
+        severity = 'low';
+      } else if (isRaining === 2) {
+        weatherAlertType = 'error';
+        severity = 'high';
+      }
+
+      if (weatherAlertType) {
+        const weatherMessage = getRandomAlertMessage('weather', weatherAlertType === 'error' ? 'high' : 'low');
+        generatedAlerts.push({
+          parameter: 'Weather',
+          type: weatherAlertType,
+          severity: severity,
+          title: `Weather Alert`,
+          message: weatherMessage,
+          value: isRaining,
+          timestamp: new Date(),
+          id: `weather-${Date.now()}-${Math.random()}`
+        });
+      }
+    }
+
+    setActiveAlerts(generatedAlerts);
+    console.log(`🎯 Generated ${generatedAlerts.length} active alerts from current real-time data`);
+  }, [realtimeData, thresholds]);
+
+  // Helper function to evaluate parameter status against thresholds
+  const evaluateParameterForActiveAlerts = useCallback((parameter, value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return null;
+    }
+
+    const paramKey = parameter.toLowerCase();
+    const threshold = thresholds[parameter] || thresholds[paramKey];
+
+    if (!threshold) {
+      return { type: 'success', level: 'normal' };
+    }
+
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+      return { type: 'success', level: 'normal' };
+    }
+
+    // Check critical thresholds (if they exist)
+    if (threshold.critical) {
+      if (threshold.critical.min && numValue < threshold.critical.min) {
+        return { type: 'error', level: 'critical', alertType: 'low' };
+      }
+      if (threshold.critical.max && numValue > threshold.critical.max) {
+        return { type: 'error', level: 'critical', alertType: 'high' };
+      }
+    }
+
+    // Check normal thresholds
+    if (threshold.min && numValue < threshold.min) {
+      return { type: 'warning', level: 'warning', alertType: 'low' };
+    }
+    if (threshold.max && numValue > threshold.max) {
+      return { type: 'warning', level: 'warning', alertType: 'high' };
+    }
+
+    return { type: 'success', level: 'normal' };
+  }, [thresholds]);
+
   useEffect(() => {
     // Track component mount state to prevent state updates after unmount
     isMountedRef.current = true;
@@ -382,30 +562,35 @@ export function DataProvider({ children, initialData = null }) {
               (freshRealtimeData.datmTemp !== null && freshRealtimeData.datmTemp !== undefined && !isNaN(freshRealtimeData.datmTemp))
             );
 
-            if (hasValidData) {
-              const alertFacade = getAlertFacade();
-              
-              // Extract the actual sensor reading from the real-time data structure
-              let actualSensorData = freshRealtimeData;
-              if (freshRealtimeData.reading) {
-                actualSensorData = freshRealtimeData.reading;
-              }
-              
-              const realtimeAlerts = await alertFacade.processSensorData([{
-                ...actualSensorData,
-                datetime: actualSensorData.timestamp || freshRealtimeData.timestamp,
-              }]);
+            // Skip alert processing during app launch cooldown period
+            if (!isWithinLaunchCooldown()) {
+              if (hasValidData) {
+                const alertFacade = serviceContainer.getAlertFacade();
 
-              if (realtimeAlerts.newAlerts.length > 0) {
-                console.log(`🚨 ${realtimeAlerts.newAlerts.length} new alerts from initial real-time data`);
-                setAlerts(realtimeAlerts.processedAlerts);
+                // Extract the actual sensor reading from the real-time data structure
+                let actualSensorData = freshRealtimeData;
+                if (freshRealtimeData.reading) {
+                  actualSensorData = freshRealtimeData.reading;
+                }
+
+                const realtimeAlerts = await alertFacade.processSensorData([{
+                  ...actualSensorData,
+                  datetime: actualSensorData.timestamp || freshRealtimeData.timestamp,
+                }]);
+
+                if (realtimeAlerts.newAlerts.length > 0) {
+                  console.log(`🚨 ${realtimeAlerts.newAlerts.length} new alerts from initial real-time data`);
+                  setAlerts(realtimeAlerts.processedAlerts);
+                }
+              } else {
+                console.log('ℹ️ No valid real-time data for initial alert processing');
+                // Clear alerts if preloaded alerts exist but no real data
+                if (initialData?.alerts) {
+                  setAlerts([]);
+                }
               }
             } else {
-              console.log('ℹ️ No valid real-time data for initial alert processing');
-              // Clear alerts if preloaded alerts exist but no real data
-              if (initialData?.alerts) {
-                setAlerts([]);
-              }
+              console.log('🚨 Skipping alert processing during app launch cooldown (initial data)');
             }
           }
         } catch (error) {
@@ -441,6 +626,37 @@ export function DataProvider({ children, initialData = null }) {
         setRealtimeData(newRealtimeData);
         setLastUpdate(Date.now());
 
+        // Check for weather changes and send alerts
+        const currentIsRaining = newRealtimeData.isRaining || 0;
+        const previousIsRaining = lastIsRaining.current;
+
+        // Only trigger if isRaining has changed and is now raining (1 or 2)
+        if (currentIsRaining !== previousIsRaining && currentIsRaining > 0) {
+          // Send weather alert
+          (async () => {
+            try {
+              console.log(`🌧️ Weather condition changed: ${previousIsRaining} → ${currentIsRaining}, sending alert`);
+
+              // Create synthetic sensor data with just weather information
+              const weatherData = [{
+                isRaining: currentIsRaining,
+                datetime: newRealtimeData.timestamp || new Date().toISOString(),
+                timestamp: newRealtimeData.timestamp || new Date().toISOString()
+              }];
+
+              const alertResult = await serviceContainer.getAlertFacade().processSensorData(weatherData);
+
+              console.log(`🌧️ Weather alert sent: ${alertResult.notifications?.length || 0} notifications triggered`);
+
+            } catch (error) {
+              console.error('❌ Error sending weather alert:', error);
+            }
+          })();
+        }
+
+        // Update lastIsRaining ref
+        lastIsRaining.current = currentIsRaining;
+
         // Check if we have valid sensor data for alert processing (including device environment)
         const hasValidData = (
           (newRealtimeData.pH !== null && newRealtimeData.pH !== undefined && !isNaN(newRealtimeData.pH)) ||
@@ -462,23 +678,25 @@ export function DataProvider({ children, initialData = null }) {
 
           if (hasDataChanged) {
             // Process alerts from new real-time data asynchronously
-            (async () => {
-              try {
-                const sensorDataForAlerts = [{
-                  ...actualSensorData,
-                  datetime: actualSensorData.timestamp || newRealtimeData.timestamp,
-                }];
+            // Skip alert processing during app launch cooldown period
+            if (!isWithinLaunchCooldown()) {
+              (async () => {
+                try {
+                  const sensorDataForAlerts = [{
+                    ...actualSensorData,
+                    datetime: actualSensorData.timestamp || newRealtimeData.timestamp,
+                  }];
 
-                const alertResult = await serviceContainer.getAlertFacade().processSensorData(sensorDataForAlerts);
-                lastProcessedDataSignature.current = currentDataSignature;
+                  const alertResult = await serviceContainer.getAlertFacade().processSensorData(sensorDataForAlerts);
+                  lastProcessedDataSignature.current = currentDataSignature;
 
-                if (alertResult.newAlerts.length > 0) {
-                  console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
-                }
+                  if (alertResult.newAlerts.length > 0) {
+                    console.log(`🚨 ${alertResult.newAlerts.length} new alerts from real-time data refresh`);
+                  }
 
-                if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
-                  console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
-                }
+                  if (alertResult.resolvedAlerts && alertResult.resolvedAlerts.length > 0) {
+                    console.log(`✅ ${alertResult.resolvedAlerts.length} alerts resolved`);
+                  }
 
                 // Update state immediately and synchronously
                 if (isMountedRef.current) {
@@ -504,6 +722,9 @@ export function DataProvider({ children, initialData = null }) {
                 console.error('❌ Error processing alerts from real-time data:', error);
               }
             })();
+          } else {
+            console.log('🚨 Skipping alert processing - data has not changed during app launch cooldown');
+          }
           } else {
             console.log('🚨 Skipping alert processing - data has not changed since last real-time update');
           }
@@ -723,7 +944,8 @@ export function DataProvider({ children, initialData = null }) {
    */
   const contextValue = React.useMemo(() => ({
     // Core data state
-    alerts,              // Current active alerts
+    alerts,              // Historical alerts from repository
+    activeAlerts,        // Active alerts generated from current realtimeData
     sensorData,          // Historical sensor readings
     dailyReport,         // Processed daily report data
     realtimeData,        // Latest real-time sensor readings
@@ -750,7 +972,7 @@ export function DataProvider({ children, initialData = null }) {
     allAlerts: alerts,   // Alias for backward compatibility
   }), [
     // Dependencies array - context updates when any of these change
-    alerts, sensorData, dailyReport, realtimeData, loading,
+    alerts, activeAlerts, sensorData, dailyReport, realtimeData, loading,
     error, lastUpdate, refreshData, alertStats,
     getHomepageAlerts, getNotificationAlerts, getAlertStatistics,
     getPerformanceMetrics, testAlertProcessing

@@ -79,9 +79,7 @@ export class AlertManagementFacade {
           
           // Merge processor results with our results
           results.processedAlerts = processorResults.processed || [];
-          results.newAlerts = processorResults.processed.filter(alert => 
-            alert.status === 'new' || alert.status === 'escalated'
-          );
+          results.newAlerts = processorResults.processed; // All processed alerts are considered new
           results.errors = processorResults.errors || [];
           
           // Log processing summary
@@ -188,7 +186,7 @@ export class AlertManagementFacade {
             }
           }
 
-          // Send weather notifications for rain alerts (isRaining 1 or 2)
+          // Send weather notifications for rain alerts (isRaining 1=light rain, 2=heavy rain)
           const rainAlerts = processorResults.processed.filter(alert =>
             alert.parameter && alert.parameter.toLowerCase() === 'israining' &&
             (alert.value === 1 || alert.value === 2)
