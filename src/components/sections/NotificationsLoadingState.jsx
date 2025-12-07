@@ -13,14 +13,6 @@ const NotificationsLoadingState = ({
 }) => {
   return (
     <>
-      <PureFlowLogo
-        weather={{
-          label: "Light Rain",
-          temp: "30°C",
-          icon: "partly",
-        }}
-      />
-
       <GlobalWrapper disableScrollView>
         <View style={styles.filtersContainer}>
           <NotificationFilter

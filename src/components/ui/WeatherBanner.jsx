@@ -185,11 +185,11 @@ export default function WeatherBanner({
             </View>
           )}
 
-          {compactWeatherData.pressure && (
+          {compactWeatherData.uvIndex !== null && (
             <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Pressure</Text>
+              <Text style={styles.detailLabel}>UV</Text>
               <Text style={styles.detailValue}>
-                {compactWeatherData.pressure} hPa
+                {compactWeatherData.uvIndex}
               </Text>
             </View>
           )}
@@ -202,15 +202,6 @@ export default function WeatherBanner({
               </Text>
             </View>
           )}
-
-          {compactWeatherData.uvIndex !== null && (
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>UV</Text>
-              <Text style={styles.detailValue}>
-                {compactWeatherData.uvIndex}
-              </Text>
-            </View>
-          )}
         </View>
       </View>
     </View>
@@ -219,14 +210,14 @@ export default function WeatherBanner({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   compactCard: {
     backgroundColor: "#2455a9",
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    height: 100,
+    height: 110,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -276,7 +267,7 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   city: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#b3d4f1",
     fontWeight: "500",
     marginBottom: 2,
@@ -299,13 +290,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   detailLabel: {
-    fontSize: 8,
+    fontSize: 11,
     color: "#9bb5d1",
     fontWeight: "500",
     marginBottom: 1,
   },
   detailValue: {
-    fontSize: 9,
+    fontSize: 10,
     color: "#ddeefc",
     fontWeight: "600",
     textAlign: "center",

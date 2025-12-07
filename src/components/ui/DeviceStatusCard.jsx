@@ -91,9 +91,9 @@ export default function StatusCard({
       {/* Row 2: Status Pills */}
       <View style={styles.pillsContainer}>
         {/* Timer Pill */}
-        <View style={[styles.pill, { backgroundColor: '#efe9fe' }]}>
-          <Timer size={18} color="#8b5cf6" style={styles.icon} />
-          <Text style={[styles.timerText, { color: '#8b5cf6' }]}>{countdown}s</Text>
+        <View style={[styles.pill, { backgroundColor: '#f3e5f5' }]}>
+          <Timer size={18} color="#7b1fa2" style={styles.icon} />
+          <Text style={[styles.timerText, { color: '#7b1fa2' }]}>{countdown}s</Text>
         </View>
 
         {/* Weather Status Pill */}
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#2455a9",
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     flexDirection: "column", 
     justifyContent: "space-between",
     marginTop: 5,
@@ -147,18 +147,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    width: '100%', 
+    width: '100%',
+    gap: 10,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center", 
+    justifyContent: "center",
     backgroundColor: "#e0ecff",
-    paddingHorizontal: 12, 
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 10,
-    flex: 1, 
-    marginHorizontal: 5,
+    flex: 1,
     fontWeight: "700"
   },
   icon: {

@@ -88,15 +88,21 @@ export class AlertEngine {
   }
 
   createRainAlert(parameter, value, reading) {
+    const rainValue = parseFloat(value);
+
+    // Determine alert level and severity based on rain intensity
+    const alertLevel = rainValue === 2 ? 'warning' : 'info';
+    const severity = rainValue === 2 ? 'medium' : 'low';
+
     return {
       id: this.generateAlertId(),
       parameter: 'isRaining', // Must match facade filter for weather notifications
-      value: parseFloat(value),
-      alertLevel: 'info', // All weather conditions use info alert level
-      title: this.generateRainAlertTitle(value),
-      message: this.generateRainAlertMessage(value),
+      value: rainValue,
+      alertLevel, // warning for heavy rain (2), info for light rain (1)
+      title: this.generateRainAlertTitle(rainValue),
+      message: this.generateRainAlertMessage(rainValue),
       timestamp: reading.datetime || reading.timestamp || new Date(), // Consistent timestamp fallback as other alerts
-      severity: 'info' // All weather alerts have info severity
+      severity // medium for heavy rain, low for light rain
     };
   }
 

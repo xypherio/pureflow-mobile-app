@@ -60,7 +60,7 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
         <View style={[styles.gradientOverlay, { backgroundColor: theme.color }]} />
 
         <View style={[styles.contentContainer, styles.noIconContent]}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: theme.color }]}>
             {selectedParam} Forecast Analysis
           </Text>
 
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   promptContainer: {
     borderColor: '#3B82F6',
     borderStyle: 'dashed',
-    height: 200,
+    height: 250,
   },
   gradientOverlay: {
     position: 'absolute',
@@ -178,7 +178,6 @@ const styles = StyleSheet.create({
 
   // Typography styles
   title: {
-    color: '#0f172a',
     marginBottom: 12,
     fontWeight: '700',
     letterSpacing: -0.025,

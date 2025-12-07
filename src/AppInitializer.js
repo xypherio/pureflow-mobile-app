@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import Constants from 'expo-constants';
 import { optimizedDataManager } from './services/OptimizedDataManager';
 import { scheduledNotificationManager } from './services/notifications/ScheduledNotificationManager';
 import { OptimizedDataProvider } from './contexts/OptimizedDataContext';
@@ -22,9 +23,9 @@ export default function AppInitializer({ children }) {
         // Initialize notification system first
         await scheduledNotificationManager.initialize();
 
-        // Initialize basic notification manager and request permissions
+        // Initialize basic notification manager and request permissions with Android guidance
         await notificationManager.initialize();
-        const permissionResult = await notificationManager.requestPermissions();
+        const permissionResult = await notificationManager.requestPermissionsWithGuidance();
         if (permissionResult.success) {
           console.log('✅ Notification permissions granted automatically');
           console.log('🔍 Permission status:', permissionResult.status);
@@ -41,13 +42,33 @@ export default function AppInitializer({ children }) {
           console.log('🔍 Permission status:', permissionResult.status);
         }
 
+        console.log('🔧 DEBUG: Right before firebase cloud messaging section');
         setProgress('Initializing Firebase Cloud Messaging...');
         // Initialize FCM service (this will request FCM permissions and get token)
+        console.log('🔧 DEBUG: About to initialize FCM...');
+
+        // DEBUG: Check if FCM service is properly imported
+        try {
+          console.log('🔧 DEBUG: FCM service object:', typeof fcmService);
+          console.log('� DEBUG: FCM service initialize method:', typeof fcmService?.initialize);
+          console.log('🔧 DEBUG: FCM service imported from:', __filename);
+        } catch (importError) {
+          console.error('❌ FCM service import error:', importError.message);
+        }
+
+        console.log('�🔥 Starting FCM service initialization...');
         try {
           await fcmService.initialize();
           console.log('✅ FCM service initialized successfully');
         } catch (fcmError) {
-          console.warn('⚠️ FCM service initialization failed, continuing without FCM:', fcmError.message);
+          console.error('❌ FCM service initialization failed:', fcmError.message);
+          console.error('❌ FCM INIT ERROR details:', fcmError);
+          console.error('❌ FCM Error message:', fcmError.message);
+          console.error('❌ FCM Error stack:', fcmError.stack);
+          console.warn('⚠️ FCM initialization failed, push notifications may not work');
+          // Log additional debugging info
+          console.log('⚠️ Available Firebase config from constants:',
+            Constants.expoConfig?.extra?.firebase);
           // Don't fail the entire app initialization if FCM fails
         }
 
@@ -59,6 +80,26 @@ export default function AppInitializer({ children }) {
         } catch (fcmHttpError) {
           console.warn('⚠️ FCM HTTP service initialization failed, continuing without remote push:', fcmHttpError.message);
           // Continue without FCM HTTP service - app will still work with local notifications
+        }
+
+        setProgress('Setting up background message handler...');
+        // Set up background message handler for FCM
+        try {
+          fcmService.setBackgroundMessageHandler(async (remoteMessage) => {
+            console.log('🏠 Background FCM message received:', remoteMessage);
+
+            // Convert FCM message to local notification format
+            const localNotification = fcmService.convertFCMToLocalNotification(remoteMessage);
+            if (localNotification) {
+              console.log('📱 Converting FCM to local notification in background');
+              await notificationManager.sendLocalNotification(localNotification);
+            } else {
+              console.warn('⚠️ Could not convert FCM message to local notification');
+            }
+          });
+          console.log('✅ Background message handler set up');
+        } catch (backgroundError) {
+          console.warn('⚠️ Background message handler setup failed:', backgroundError.message);
         }
 
         setProgress('Verifying scheduled notifications...');

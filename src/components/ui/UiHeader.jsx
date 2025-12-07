@@ -27,7 +27,12 @@ export default function PureFlowLogo({
       />
 
       {/* Settings Icon */}
-      <TouchableOpacity onPress={handleSettingsPress} style={styles.settingsContainer}>
+      <TouchableOpacity
+        onPress={handleSettingsPress}
+        activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.settingsContainer}
+      >
         <Settings size={24} color="#2455a9" />
       </TouchableOpacity>
     </View>
@@ -44,7 +49,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 30,
     backgroundColor: "#e5f0f9",
-    zIndex: 9999,
+    zIndex: 10000,
   },
   settingsContainer: {
     marginLeft: 16,

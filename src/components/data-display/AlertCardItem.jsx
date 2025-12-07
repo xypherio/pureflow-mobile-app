@@ -25,18 +25,17 @@ const weatherIconMap = {
   heavyRain: CloudLightning,
 };
 
-/**
- * Individual alert card item component
- * Handles rendering of a single alert without animation logic
- */
 export default function AlertCardItem({ alert }) {
   // Check if this is a weather alert (should use blue theme)
-  const isWeatherAlert = alert.parameter === "Weather" ||
+  const isWeatherAlert =
+    alert.parameter === "Weather" ||
     alert.parameter?.toLowerCase() === "israining" ||
     alert.parameter?.toLowerCase() === "weather";
 
   // Use blue "info" theme for weather alerts, regular theme for others
-  const style = isWeatherAlert ? typeStyles.info : (typeStyles[alert.type] || typeStyles.error);
+  const style = isWeatherAlert
+    ? typeStyles.info
+    : typeStyles[alert.type] || typeStyles.error;
 
   // Function to get weather icon
   const getWeatherIcon = useCallback((parameter, value) => {
@@ -106,7 +105,7 @@ export default function AlertCardItem({ alert }) {
       return alert.title;
     }
     // Fallback for alerts without title
-    const param = capitalizeFirst(alert.parameter || 'Unknown');
+    const param = capitalizeFirst(alert.parameter || "Unknown");
     const value = alert.value;
     const unit = getUnit(alert.parameter);
     return `${param} Alert - ${value} ${unit}`.trim();

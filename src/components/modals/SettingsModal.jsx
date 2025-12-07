@@ -4,18 +4,18 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 
 import { Bug, Droplets, Save, Star, X } from "lucide-react-native";
-import { checkUserRated } from "../../services/firebase/ratingService";
 import { colors } from "../../constants/colors";
+import { checkUserRated } from "../../services/firebase/ratingService";
 
 const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChange }) => {
   const [settings, setSettings] = useState({
@@ -31,18 +31,15 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
   const [daysUntilUnlock, setDaysUntilUnlock] = useState(0);
   const [hasUserRated, setHasUserRated] = useState(false);
 
-  // Load saved settings and rating status on mount
   useEffect(() => {
     const loadSettingsAndRating = async () => {
       try {
-        // Load settings
         const savedSettings = await AsyncStorage.getItem("pureflowSettings");
         if (savedSettings) {
           const parsedSettings = JSON.parse(savedSettings);
 
-          // Check if setup is locked (7 days from first setup)
           if (parsedSettings.setupTimestamp) {
-            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
             const timeSinceSetup = Date.now() - parsedSettings.setupTimestamp;
             const daysRemaining = Math.ceil(
               (sevenDaysMs - timeSinceSetup) / (24 * 60 * 60 * 1000)
@@ -60,7 +57,6 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
           setSettings(parsedSettings);
         }
 
-        // Check if user has already rated
         const userHasRated = await checkUserRated();
         setHasUserRated(userHasRated);
       } catch (error) {
@@ -73,25 +69,22 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
     }
   }, [visible]);
 
-  // Handler functions passed from parent
   const handleRateApp = () => {
-    onClose(); // Close settings modal
-    onRateApp(); // Open rating modal
+    onClose();
+    onRateApp();
   };
 
   const handleReportIssue = () => {
-    onClose(); // Close settings modal
-    onReportIssue(); // Open issue reporting modal
+    onClose();
+    onReportIssue();
   };
 
   const handleSave = async () => {
     setIsSaving(true);
 
     try {
-      // Get the original city before saving
       const originalCity = settings.customCity;
 
-      // Set timestamp for setup if this is the first time saving setup fields
       let updatedSettings = { ...settings };
       if (
         !settings.setupTimestamp &&
@@ -101,13 +94,11 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
         setSettings(updatedSettings);
       }
 
-      // Save only setup fields to AsyncStorage
       await AsyncStorage.setItem(
         "pureflowSettings",
         JSON.stringify(updatedSettings)
       );
 
-      // Check if city changed and trigger weather setup if needed
       const cityChanged = updatedSettings.customCity !== originalCity;
 
       if (cityChanged && onCityChange) {
@@ -122,9 +113,17 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
         }
       }
 
+      const changes = [];
+      if (cityChanged) changes.push("weather location updated");
+
+      let message = "Your settings have been saved successfully!";
+      if (changes.length > 0) {
+        message += " (" + changes.join(", ") + ")";
+      }
+
       Alert.alert(
         "Settings Saved",
-        "Your settings have been saved successfully!" + (cityChanged ? " Weather data updated." : ""),
+        message,
         [{ text: "OK", onPress: onClose }]
       );
     } catch (error) {
@@ -141,7 +140,6 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
 
   return (
     <>
-      {/* Setup Loading Modal */}
       {isSettingUp && (
         <Modal visible={isSettingUp} transparent={true}>
           <View style={styles.setupOverlay}>
@@ -159,226 +157,203 @@ const SettingsModal = ({ visible, onClose, onRateApp, onReportIssue, onCityChang
         transparent={true}
         onRequestClose={handleClose}
       >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Settings</Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={handleClose}>
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Settings</Text>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Fishpond Setup Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Fishpond Setup</Text>
-                {setupLocked && (
-                  <Text style={styles.lockedText}>
-                    * Can edit again in {daysUntilUnlock} days *
-                  </Text>
-                )}
-              </View>
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Fishpond Setup</Text>
+                  {setupLocked && (
+                    <Text style={styles.lockedText}>
+                      * Can edit again in {daysUntilUnlock} days *
+                    </Text>
+                  )}
+                </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Custom Nickname</Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    setupLocked && styles.inputDisabled,
-                  ]}
-                  placeholder="My Fishpond"
-                  value={settings.nickname}
-                  onChangeText={(text) =>
-                    !setupLocked &&
-                    setSettings((prev) => ({ ...prev, nickname: text }))
-                  }
-                  maxLength={50}
-                  editable={!setupLocked}
-                />
-              </View>
-
-              <View style={styles.pickerContainer}>
-                <Text style={styles.inputLabel}>Water Type</Text>
-                <View style={styles.pickerButtons}>
-                  <TouchableOpacity
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Custom Alias/Nickname</Text>
+                  <TextInput
                     style={[
-                      styles.pickerButton,
-                      settings.fishpondType === "freshwater" &&
-                        styles.pickerButtonActive,
-                      setupLocked && styles.pickerDisabled,
+                      styles.textInput,
+                      setupLocked && styles.inputDisabled,
                     ]}
-                    onPress={() =>
+                    placeholder="My Alias"
+                    value={settings.nickname}
+                    onChangeText={(text) =>
                       !setupLocked &&
-                      setSettings((prev) => ({
-                        ...prev,
-                        fishpondType: "freshwater",
-                      }))
+                      setSettings((prev) => ({ ...prev, nickname: text }))
                     }
-                    disabled={setupLocked}
-                  >
-                    <Droplets
-                      size={16}
-                      color={
-                        settings.fishpondType === "freshwater"
-                          ? colors.white
-                          : colors.primary
-                      }
-                    />
-                    <Text
+                    maxLength={50}
+                    editable={!setupLocked}
+                  />
+                </View>
+
+                <View style={styles.pickerContainer}>
+                  <Text style={styles.inputLabel}>Water Type</Text>
+                  <View style={styles.pickerButtons}>
+                    <TouchableOpacity
                       style={[
-                        styles.pickerText,
+                        styles.pickerButton,
                         settings.fishpondType === "freshwater" &&
-                          styles.pickerTextActive,
+                          styles.pickerButtonActive,
+                        setupLocked && styles.pickerDisabled,
                       ]}
+                      onPress={() =>
+                        !setupLocked &&
+                        setSettings((prev) => ({
+                          ...prev,
+                          fishpondType: "freshwater",
+                        }))
+                      }
+                      disabled={setupLocked}
                     >
-                      Freshwater
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                      <Droplets
+                        size={16}
+                        color={
+                          settings.fishpondType === "freshwater"
+                            ? colors.white
+                            : colors.primary
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.pickerText,
+                          settings.fishpondType === "freshwater" &&
+                            styles.pickerTextActive,
+                        ]}
+                      >
+                        Freshwater
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.pickerButton,
+                        settings.fishpondType === "saltwater" &&
+                          styles.pickerButtonActive,
+                        setupLocked && styles.pickerDisabled,
+                      ]}
+                      onPress={() =>
+                        !setupLocked &&
+                        setSettings((prev) => ({
+                          ...prev,
+                          fishpondType: "saltwater",
+                        }))
+                      }
+                      disabled={setupLocked}
+                    >
+                      <Text
+                        style={[
+                          styles.pickerEmoji,
+                          settings.fishpondType === "saltwater" &&
+                            styles.pickerEmojiActive,
+                        ]}
+                      >
+                        🌊
+                      </Text>
+                      <Text
+                        style={[
+                          styles.pickerText,
+                          settings.fishpondType === "saltwater" &&
+                            styles.pickerTextActive,
+                        ]}
+                      >
+                        Saltwater
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>City for Weather (Optional)</Text>
+                  <TextInput
                     style={[
-                      styles.pickerButton,
-                      settings.fishpondType === "saltwater" &&
-                        styles.pickerButtonActive,
-                      setupLocked && styles.pickerDisabled,
+                      styles.textInput,
+                      setupLocked && styles.inputDisabled,
                     ]}
-                    onPress={() =>
+                    placeholder="Bogo City"
+                    value={settings.customCity}
+                    onChangeText={(text) =>
                       !setupLocked &&
-                      setSettings((prev) => ({
-                        ...prev,
-                        fishpondType: "saltwater",
-                      }))
+                      setSettings((prev) => ({ ...prev, customCity: text }))
                     }
-                    disabled={setupLocked}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerEmoji,
-                        settings.fishpondType === "saltwater" &&
-                          styles.pickerEmojiActive,
-                      ]}
-                    >
-                      🌊
-                    </Text>
-                    <Text
-                      style={[
-                        styles.pickerText,
-                        settings.fishpondType === "saltwater" &&
-                          styles.pickerTextActive,
-                      ]}
-                    >
-                      Saltwater
-                    </Text>
-                  </TouchableOpacity>
+                    maxLength={100}
+                    editable={!setupLocked}
+                  />
+                  <Text style={styles.helpText}>
+                    Leave empty to use default location. Weather data will update immediately when saved.
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
-                  City for Weather (Optional) 
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    setupLocked && styles.inputDisabled,
-                  ]}
-                  placeholder="Bogo City"
-                  value={settings.customCity}
-                  onChangeText={(text) =>
-                    !setupLocked &&
-                    setSettings((prev) => ({ ...prev, customCity: text }))
-                  }
-                  maxLength={100}
-                  editable={!setupLocked}
-                />
-                <Text style={styles.helpText}>
-                  Leave empty to use default location. Weather data will update
-                  immediately when saved.
-                </Text>
-              </View>
-            </View>
+              <View style={styles.separator} />
 
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Other Options</Text>
+                </View>
 
+                <View style={styles.optionsContainer}>
+                  {!hasUserRated && (
+                    <TouchableOpacity style={styles.optionButton} onPress={handleRateApp}>
+                      <Star size={20} color={colors.primary} />
+                      <Text style={styles.optionButtonText}>Rate PureFlow</Text>
+                    </TouchableOpacity>
+                  )}
 
-            {/* Section Separator */}
-            <View style={styles.separator} />
+                  {hasUserRated && (
+                    <View style={styles.optionButtonDisabled}>
+                      <Star size={20} color="#9CA3AF" />
+                      <Text style={styles.optionButtonTextDisabled}>Already Rated!</Text>
+                      <Text style={styles.feedbackSubmitted}> ❤️ Thanks for your feedback</Text>
+                    </View>
+                  )}
 
-            {/* Other Options Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Other Options</Text>
-              </View>
-
-              <View style={styles.optionsContainer}>
-                {!hasUserRated && (
-                  <TouchableOpacity
-                    style={styles.optionButton}
-                    onPress={handleRateApp}
-                  >
-                    <Star size={20} color={colors.primary} />
-                    <Text style={styles.optionButtonText}> Rate PureFlow</Text>
+                  <TouchableOpacity style={styles.optionButton} onPress={handleReportIssue}>
+                    <Bug size={20} color={colors.primary} />
+                    <Text style={styles.optionButtonText}>Report Issue</Text>
                   </TouchableOpacity>
-                )}
+                </View>
+              </View>
+            </ScrollView>
 
-                {hasUserRated && (
-                  <View style={styles.optionButtonDisabled}>
-                    <Star size={20} color="#9CA3AF" />
-                    <Text style={styles.optionButtonTextDisabled}> Already Rated!</Text>
-                    <Text style={styles.feedbackSubmitted}> ❤️ Thanks for your feedback</Text>
-                  </View>
-                )}
+            {!setupLocked && (
+              <View style={styles.buttonsContainer}>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={handleClose}
+                  disabled={isSaving}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.optionButton}
-                  onPress={handleReportIssue}
+                  style={[styles.button, styles.saveButton]}
+                  onPress={handleSave}
+                  disabled={isSaving}
                 >
-                  <Bug size={20} color={colors.primary} />
-                  <Text style={styles.optionButtonText}>Report Issue</Text>
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <>
+                      <Save size={18} color={colors.white} style={styles.saveIcon} />
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
+            )}
             </View>
-
-
-          </ScrollView>
-
-          {/* Action Buttons - Only show when setup is not locked */}
-          {!setupLocked && (
-            <View style={styles.buttonsContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={handleClose}
-                disabled={isSaving}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.saveButton]}
-                onPress={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <>
-                    <Save
-                      size={18}
-                      color={colors.white}
-                      style={styles.saveIcon}
-                    />
-                    <Text style={styles.saveButtonText}>Save</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
     </>
   );
 };
@@ -394,7 +369,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "90%",
-    minHeight: "80%",
+    minHeight: "76%",
   },
   header: {
     flexDirection: "row",
@@ -407,8 +382,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "600",
-    color: colors.text,
+    fontWeight: "700",
+    color: colors.primary,
   },
   closeButton: {
     padding: 4,
@@ -425,10 +400,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  sectionIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -440,48 +411,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     marginTop: 2,
     fontStyle: "italic",
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  notificationPreferences: {
-    gap: 16,
-  },
-  preferenceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  preferenceText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    flex: 1,
-  },
-  preferenceDescription: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    flex: 1,
-    marginHorizontal: 8,
-  },
-  toggle: {
-    backgroundColor: colors.surfaceSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  toggleTextActive: {
-    color: colors.primary,
   },
   inputDisabled: {
     backgroundColor: colors.surfaceSecondary,
@@ -512,9 +441,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     marginLeft: 12,
-  },
-  optionIcon: {
-    fontSize: 20,
   },
   optionButtonDisabled: {
     flexDirection: "row",
@@ -557,10 +483,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     minHeight: 48,
   },
-  textArea: {
-    minHeight: 96,
-    textAlignVertical: "top",
-  },
   helpText: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -602,16 +524,6 @@ const styles = StyleSheet.create({
   },
   pickerEmojiActive: {
     color: colors.white,
-  },
-  ratingContainer: {
-    alignItems: "center",
-    paddingVertical: 16,
-  },
-  ratingLabel: {
-    fontSize: 14,
-    color: colors.text,
-    marginBottom: 12,
-    textAlign: "center",
   },
   buttonsContainer: {
     flexDirection: "row",

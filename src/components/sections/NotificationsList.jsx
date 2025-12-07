@@ -48,7 +48,7 @@ const NotificationsList = ({
     const alertProps = createAlertItem(
       item,
       getNotificationIcon,
-      (type) => getAlertLevelConfig(type, activeSeverity),
+      (type) => getAlertLevelConfig(type, activeSeverity, item),
       getParameterColor,
       getEnhancedMessage,
       getAlertDetails,
@@ -58,7 +58,7 @@ const NotificationsList = ({
 
     return (
       <View style={styles.alertItemContainer}>
-        <NotificationCard {...alertProps} />
+        <NotificationCard {...alertProps} bg={alertProps.bg} iconColor={alertProps.iconColor} icon={alertProps.icon} />
       </View>
     );
   };
@@ -67,14 +67,6 @@ const NotificationsList = ({
 
   return (
     <>
-      <PureFlowLogo
-        weather={{
-          label: "Light Rain",
-          temp: "30°C",
-          icon: "partly",
-        }}
-      />
-
       <GlobalWrapper disableScrollView>
         <View style={styles.filtersContainer}>
           <NotificationFilter

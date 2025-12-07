@@ -1,9 +1,14 @@
 import {
   AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  Cloud,
   Droplet,
   Gauge,
+  Info,
   Thermometer,
-  Waves
+  Waves,
+  XCircle
 } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -43,6 +48,33 @@ const getAlertColors = (type) => {
   }
 };
 
+const getParameterIcon = (paramName, iconSize = 130) => {
+  const iconStyles = {
+    position: 'absolute',
+    bottom: 0,
+    right: -10,
+  };
+
+  if (!paramName) return null;
+
+  switch (paramName.toString().toLowerCase()) {
+    case 'ph':
+    case 'ph value':
+      return <Gauge size={iconSize} color="rgba(59, 130, 246, 0.08)" style={iconStyles} />;
+    case 'temperature':
+      return <Thermometer size={iconSize} color="rgba(216, 42, 113, 0.08)" style={iconStyles} />;
+    case 'turbidity':
+      return <Droplet size={iconSize} color="rgba(16, 185, 129, 0.08)" style={iconStyles} />;
+    case 'salinity':
+      return <Waves size={iconSize} color="rgba(139, 92, 246, 0.08)" style={iconStyles} />;
+    case 'weather':
+    case 'israining':
+      return <Cloud size={iconSize} color="rgba(59, 130, 246, 0.08)" style={iconStyles} />;
+    default:
+      return null;
+  }
+};
+
 export default NotificationCard = ({
   type = "info",
   title,
@@ -50,55 +82,76 @@ export default NotificationCard = ({
   timestamp,
   impact = null,
   recommendations = [],
-  parameter = null
+  parameter = null,
+  bg,
+  iconColor,
+  icon
 }) => {
-  const renderParameterIcon = () => {
-    let IconComponent = AlertCircle;
-    let iconColor = '#FFFFFF'; // White icon color for contrast
+  const getIconComponent = (iconName) => {
+    switch (iconName) {
+      case "x-circle": return XCircle;
+      case "alert-triangle": return AlertTriangle;
+      case "check-circle": return CheckCircle;
+      case "info": return Info;
+      case "cloud": return Cloud;
+      default: return AlertCircle;
+    }
+  };
 
-    // Parameter-based icons using specific colors from theme
+  const getParameterColor = () => {
     switch (parameter?.toLowerCase()) {
       case 'ph':
       case 'pH':
-        IconComponent = Gauge;
-        break;
+        return colors.phColor;
       case 'temperature':
       case 'temp':
-        IconComponent = Thermometer;
-        break;
+        return colors.tempColor;
       case 'turbidity':
-        IconComponent = Droplet;
-        break;
+        return colors.turbidityColor;
       case 'salinity':
-        IconComponent = Waves;
-        break;
+        return colors.salinityColor;
+      case 'weather':
+        return '#3B82F6';
       default:
-        IconComponent = AlertCircle;
+        return '#6B7280';
     }
+  };
 
-    // Get parameter color from theme
-    const getParameterColor = () => {
+  const renderParameterIcon = () => {
+    let IconComponent = AlertCircle;
+    let iconColorValue = '#FFFFFF';
+    let backgroundColor = getParameterColor();
+
+    if (bg && iconColor && icon) {
+      // Use new props for notifications
+      IconComponent = getIconComponent(icon);
+      iconColorValue = iconColor;
+      backgroundColor = bg;
+    } else {
+      // Fallback to old parameter-based logic
       switch (parameter?.toLowerCase()) {
         case 'ph':
         case 'pH':
-          return colors.phColor;
+          IconComponent = Gauge;
+          break;
         case 'temperature':
         case 'temp':
-          return colors.tempColor;
+          IconComponent = Thermometer;
+          break;
         case 'turbidity':
-          return colors.turbidityColor;
+          IconComponent = Droplet;
+          break;
         case 'salinity':
-          return colors.salinityColor;
-        case 'weather':
-          return '#3B82F6'; // Blue for weather alerts
+          IconComponent = Waves;
+          break;
         default:
-          return '#6B7280';
+          IconComponent = AlertCircle;
       }
-    };
+    }
 
     return (
-      <View style={[styles.parameterIconContainer, { backgroundColor: getParameterColor() }]}>
-        <IconComponent size={23} color={iconColor} strokeWidth={2} />
+      <View style={[styles.parameterIconContainer, { backgroundColor }]}>
+        <IconComponent size={23} color={iconColorValue} strokeWidth={2} />
       </View>
     );
   };
@@ -129,8 +182,15 @@ export default NotificationCard = ({
     }
   };
 
+  const backgroundIcon = getParameterIcon(parameter, 100); // Smaller than ParameterCard for notification cards
+
   return (
     <View style={[styles.container]}>
+      {backgroundIcon && (
+        <View style={styles.backgroundIconContainer}>
+          {backgroundIcon}
+        </View>
+      )}
       {renderParameterIcon()}
       <View style={styles.contentContainer}>
         <View style={styles.titleContainer}>
@@ -154,6 +214,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.05)",
     position: "relative",
+    overflow: 'hidden',
+  },
+  backgroundIconContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
   parameterIconContainer: {
     position: "absolute",

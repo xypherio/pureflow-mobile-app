@@ -20,7 +20,6 @@ const DashboardSection = ({ activeAlerts, realtimeData, sensorData }) => {
         <AlertsCard
           alerts={activeAlerts}
           realtimeData={realtimeData}
-          interval={2500}
         />
       </View>
 

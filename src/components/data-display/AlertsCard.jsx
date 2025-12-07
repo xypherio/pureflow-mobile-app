@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { View } from "react-native";
 import { useAlertProcessor } from "../../hooks/useAlertProcessor";
 import AlertCardItem from "./AlertCardItem";
 
-/**
- * Optimized AlertsCard component - handles animation cycling through alerts
- * Processing logic moved to useAlertProcessor hook
- * Rendering logic moved to AlertCardItem component
- */
-export default function AlertsCard({ alerts = [], realtimeData = null, interval = 4000 }) {
+export default function AlertsCard({
+  alerts = [],
+  realtimeData = null,
+  interval = 3500,
+}) {
   const [current, setCurrent] = useState(0);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(1)).current;
 
   // Use the alert processing hook
   const { processAlerts, generateAlertsFromRealtimeData } = useAlertProcessor();
@@ -33,65 +30,30 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
 
     // Default alert when no active alerts
     const keyParameters = ["pH", "Temperature", "Salinity"];
-    return [{
-      id: 'default',
-      parameter: "",
-      type: "success",
-      title: "All Parameters Normal",
-      message: `All parameters (${keyParameters.join(", ")}) are within the normal range.`,
-      isDefault: true
-    }];
+    return [
+      {
+        id: "default",
+        parameter: "",
+        type: "success",
+        title: "All Parameters Normal",
+        message: `All parameters (${keyParameters.join(", ")}) are within the normal range.`,
+        isDefault: true,
+      },
+    ];
   }, [alerts, realtimeData, processAlerts, generateAlertsFromRealtimeData]);
 
-  // Optimized animation logic - only runs when needed
+
   useEffect(() => {
     if (displayAlerts.length <= 1) return;
 
-    let isMounted = true;
-    const animateToNext = () => {
-      if (!isMounted) return;
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % displayAlerts.length);
+    }, interval);
 
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0.95,
-          duration: 280,
-          useNativeDriver: true,
-          easing: Easing.in(Easing.ease),
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 290,
-          useNativeDriver: true,
-          easing: Easing.in(Easing.ease),
-        }),
-      ]).start(() => {
-        if (!isMounted) return;
-        setCurrent((prev) => (prev + 1) % displayAlerts.length);
-        scaleAnim.setValue(1.05);
-        opacityAnim.setValue(0);
-        Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 270,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.ease),
-          }),
-          Animated.timing(opacityAnim, {
-            toValue: 1,
-            duration: 270,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.ease),
-          }),
-        ]).start();
-      });
-    };
-
-    const timer = setInterval(animateToNext, interval);
     return () => {
-      isMounted = false;
       clearInterval(timer);
     };
-  }, [displayAlerts.length, interval, scaleAnim, opacityAnim]);
+  }, [displayAlerts.length, interval]);
 
   // Reset current index when alerts change
   useEffect(() => {
@@ -107,14 +69,7 @@ export default function AlertsCard({ alerts = [], realtimeData = null, interval 
 
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
-      <Animated.View
-        style={{
-          opacity: opacityAnim,
-          transform: [{ scale: scaleAnim }],
-        }}
-      >
-        <AlertCardItem alert={alert} />
-      </Animated.View>
+      <AlertCardItem alert={alert} />
     </View>
   );
 }

@@ -44,6 +44,25 @@ export const useNotificationsData = () => {
   const isRefreshing = refreshing;
   const isLoadingMore = loadingMore;
 
+  // Utility function to lighten hex colors
+  const lightenColor = useCallback((hex, percent) => {
+    // Remove # if present
+    hex = hex.replace(/^#/, '');
+
+    // Parse hex to RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Lighten by mixing with white
+    const newR = Math.round(r + (255 - r) * (percent / 100));
+    const newG = Math.round(g + (255 - g) * (percent / 100));
+    const newB = Math.round(b + (255 - b) * (percent / 100));
+
+    // Convert back to hex
+    return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+  }, []);
+
   // Load initial batch of alerts
   const loadInitialBatch = useCallback(async () => {
     setLoading(true);
@@ -276,7 +295,13 @@ export const useNotificationsData = () => {
   }, []);
 
   // Get notification icon for NotificationCard
-  const getNotificationIcon = useCallback((type) => {
+  const getNotificationIcon = useCallback((type, item) => {
+    // Special case for weather alerts - use cloud icon
+    if (item?.parameter === 'isRaining' || item?.parameter?.toLowerCase() === 'weather' ||
+        item?.parameter?.toLowerCase() === 'israining') {
+      return "cloud";
+    }
+
     switch (type) {
       case "error":
         return "x-circle";
@@ -291,7 +316,16 @@ export const useNotificationsData = () => {
   }, []);
 
   // Get alert level configuration for NotificationCard
-  const getAlertLevelConfig = useCallback((type, activeSeverity = null) => {
+  const getAlertLevelConfig = useCallback((type, activeSeverity = null, item = null) => {
+    // Special case for weather alerts - always use blue background
+    if (item?.parameter === 'isRaining' || item?.parameter?.toLowerCase() === 'weather' ||
+        item?.parameter?.toLowerCase() === 'israining') {
+      return {
+        bg: "#dbeafe", // Blue background
+        iconColor: "#2563eb" // Blue cloud icon
+      };
+    }
+
     // If info filter is active, use light blue for all notifications
     if (activeSeverity === 'info') {
       return {
@@ -300,7 +334,17 @@ export const useNotificationsData = () => {
       };
     }
 
-    // Default configurations for other filters
+    // Use parameter-based colors for all other alerts
+    if (item?.parameter) {
+      const paramColor = getParameterColor(item.parameter);
+      const lightBg = lightenColor(paramColor, 75); // 75% lighter for background
+      return {
+        bg: lightBg,
+        iconColor: paramColor // Solid parameter color for icon
+      };
+    }
+
+    // Fallback to default configs for alerts without parameter
     const configs = {
       success: { bg: "#e6f9ed", iconColor: "#22c55e" },
       warning: { bg: "#fef9c3", iconColor: "#eab308" },
@@ -308,7 +352,7 @@ export const useNotificationsData = () => {
       info: { bg: "#dbeafe", iconColor: "#2563eb" },
     };
     return configs[type] || configs.info;
-  }, []);
+  }, [getParameterColor, lightenColor]);
 
   const getParameterColor = useCallback((parameter) => {
     switch (parameter) {

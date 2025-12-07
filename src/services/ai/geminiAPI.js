@@ -1,14 +1,16 @@
 import { GEMINI_API_KEY } from "@env";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { getWaterQualityThresholdsFromSettings, getWaterQualityThresholds } from '@constants/thresholds';
 
-const API_KEY = GEMINI_API_KEY;
+const API_KEY = Constants.expoConfig.extra?.GEMINI_API_KEY || GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Component-specific cache and timing
 const componentCache = new Map();
 const componentTimers = new Map();
-const FETCH_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds - less aggressive
+const FETCH_INTERVAL = 15 * 60 * 1000; 
 
 // Request deduplication and batching
 const pendingRequests = new Map();
@@ -17,7 +19,7 @@ const requestQueue = new Map();
 // Global quota management
 let isQuotaExceeded = false;
 let quotaResetTime = null;
-const QUOTA_COOLDOWN_PERIOD = 15 * 60 * 1000; 
+const QUOTA_COOLDOWN_PERIOD = 5 * 60 * 1000; 
 
 // Cache keys
 const CACHE_PREFIX = 'gemini_insights_';
@@ -30,8 +32,183 @@ let circuitBreakerState = 'closed';
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5;
 const CIRCUIT_BREAKER_TIMEOUT = 60 * 1000;
 const MAX_RETRIES = 3;
-const BASE_RETRY_DELAY = 1000; // 1 second
-const MAX_RETRY_DELAY = 10000; // 10 seconds
+const BASE_RETRY_DELAY = 10000;
+const MAX_RETRY_DELAY = 100000;
+
+// EMERGENCY DAILY RATE LIMITING - Gemini Free Tier: 20 requests/day
+const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_DAILY_REQUESTS = 12; // Increased to 12 (60% of 20/day limit) with prioritization
+let requestTimestamps = [];
+
+// Component prioritization - lower number = higher priority
+const COMPONENT_PRIORITIES = {
+  "home-overall-insight": 1,        // Highest priority - main user insights
+  "forecast-overall-insight": 3,    // Lower priority - forecast insights
+  "report": 2,                      // Medium priority - report generation
+  "parameter": 4,                   // Lowest priority - detailed parameters
+  "trend": 4,                       // Lowest priority - trends
+  "alert": 4,                       // Lowest priority - alerts
+  "default": 5                      // Fallback - very low priority
+};
+
+// Emergency AI disable flag - when quota is critically low
+let aiCompletelyDisabled = false;
+
+/**
+ * Generate intelligent static fallback responses when AI is unavailable
+ * Provides meaningful, personalized insights based on sensor data analysis
+ */
+const generateStaticFallbackResponse = async (sensorData, componentId = 'default') => {
+  let userNickname = null;
+  let fishpondType = 'freshwater';
+
+  try {
+    const savedSettings = await AsyncStorage.getItem('pureflowSettings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      userNickname = settings.nickname?.trim();
+      fishpondType = settings.fishpondType || 'freshwater';
+    }
+  } catch (error) {
+    // Continue without personalization
+  }
+
+  const user = userNickname ? userNickname : "my friend";
+
+  // Analyze water quality status using dynamic thresholds
+  const getQualityAssessment = async (data) => {
+    const params = ['pH', 'temperature', 'salinity', 'turbidity'];
+    const thresholds = await getWaterQualityThresholdsFromSettings();
+
+    const issues = [];
+    const warnings = [];
+    const approaching = [];
+
+    params.forEach(param => {
+      const value = data[param];
+      if (value != null && !isNaN(value)) {
+        const threshold = thresholds[param];
+        if (threshold) {
+          const distanceToMin = value - threshold.min;
+          const distanceToMax = threshold.max - value;
+
+          if (value < threshold.min) {
+            issues.push(`${param.toLowerCase()} is low (${value}, threshold: ${threshold.min}-${threshold.max})`);
+          } else if (value > threshold.max) {
+            issues.push(`${param.toLowerCase()} is high (${value}, threshold: ${threshold.min}-${threshold.max})`);
+          } else if (distanceToMin <= 0.3) { // Within 0.3 units of minimum threshold
+            approaching.push(`${param.toLowerCase()} is approaching minimum threshold (${value}, ideal: ${threshold.min}-${threshold.max})`);
+          } else if (distanceToMax <= 0.5) { // Within 0.5 units of maximum threshold
+            approaching.push(`${param.toLowerCase()} is approaching maximum threshold (${value}, ideal: ${threshold.min}-${threshold.max})`);
+          }
+        }
+      }
+    });
+
+    return { issues, warnings: approaching, thresholds };
+  };
+
+  const { issues, warnings } = await getQualityAssessment(sensorData);
+
+  // Generate personalized response based on assessment
+  let overallInsight;
+  let suggestions = [];
+
+  if (issues.length === 0) {
+    // Excellent water quality
+    overallInsight = `Excellent news, ${user}! Your pond water quality looks perfect. All parameters are within ideal ranges - keep up the great work managing your fish farm!`;
+
+    suggestions = [
+      {
+        parameter: "pH",
+        influencingFactors: ["Balanced fish food", "Proper pond maintenance"],
+        recommendedActions: ["Maintain current feeding schedule", "Test water weekly to confirm stability"],
+        status: "normal"
+      },
+      {
+        parameter: "temperature",
+        influencingFactors: ["Good weather patterns", "Adequate shade"],
+        recommendedActions: ["Continue providing shade during hot days", "Monitor for sudden weather changes"],
+        status: "normal"
+      }
+    ];
+  } else if (issues.length >= 2) {
+    // Critical situations
+    overallInsight = `Oh no, ${user}! There are several water quality concerns that need immediate attention. Your fish might be stressed - please address these issues right away to prevent health problems.`;
+
+    if (issues.some(issue => issue.includes('ph'))) {
+      suggestions.push({
+        parameter: "pH",
+        influencingFactors: ["Fish waste buildup", "Old water needing change"],
+        recommendedActions: ["Add baking soda (1 tsp per 10 gallons) daily until pH rises", "Do a 20% water change tomorrow", "Reduce fish food by half for 3 days"],
+        status: "critical"
+      });
+    }
+    if (issues.some(issue => issue.includes('temperature'))) {
+      suggestions.push({
+        parameter: "temperature",
+        influencingFactors: ["Too much sun exposure", "Hot weather"],
+        recommendedActions: ["Install shade cloth over pond immediately", "Add pond depth with new water if possible", "Provide extra aeration today"],
+        status: "critical"
+      });
+    }
+    if (issues.some(issue => issue.includes('turbidity'))) {
+      suggestions.push({
+        parameter: "turbidity",
+        influencingFactors: ["Bottom mud disturbance", "Too many fish", "Dirty filter"],
+        recommendedActions: ["Clean filter thoroughly right now", "Reduce feeding by half for 2 days", "Add a settling pond section if possible"],
+        status: "critical"
+      });
+    }
+  } else {
+    // Warning situations
+    overallInsight = `Hey ${user}, your water quality needs some attention but it's not critical yet. Addressing these concerns promptly will keep your fish healthy and happy.`;
+
+    if (issues.some(issue => issue.includes('ph'))) {
+      suggestions.push({
+        parameter: "pH",
+        influencingFactors: ["Gradual acid buildup"],
+        recommendedActions: ["Add baking soda (½ tsp per 10 gallons) daily for 3 days", "Test pH every other day to check progress"],
+        status: "warning"
+      });
+    }
+    if (issues.some(issue => issue.includes('temperature'))) {
+      suggestions.push({
+        parameter: "temperature",
+        influencingFactors: ["Summer heat approaching"],
+        recommendedActions: ["Add more shade cloth to pond", "Check water depth - aim for 3-4 feet", "Monitor temperature twice daily"],
+        status: "warning"
+      });
+    }
+    if (issues.some(issue => issue.includes('salinity'))) {
+      suggestions.push({
+        parameter: "salinity",
+        influencingFactors: ["Recent rainfall", "Salt not mixed evenly"],
+        recommendedActions: ["Add 2 tablespoons salt per 10 gallons of pond water", "Mix thoroughly and test in 24 hours", "Add salt gradually over several days"],
+        status: "warning"
+      });
+    }
+  }
+
+  // Add general maintenance suggestions
+  if (suggestions.length < 4) {
+    suggestions.push({
+      parameter: "maintenance",
+      influencingFactors: ["Regular pond care"],
+      recommendedActions: ["Clean filters weekly", "Test all water parameters every 3 days", "Feed fish according to stocking density"],
+      status: "normal"
+    });
+  }
+
+  return {
+    insights: {
+      overallInsight,
+      timestamp: new Date().toISOString(),
+      source: "static-fallback"
+    },
+    suggestions: suggestions.slice(0, 4) // Limit to 4 suggestions
+  };
+};
 
 // Environment check for production
 const isProduction = __DEV__ === false;
@@ -68,10 +245,35 @@ const getExpiryKey = (componentId) => {
 };
 
 /**
- * Create a simple hash of the sensor data for cache key
+ * Normalize sensor data values to reduce cache misses from minor fluctuations
+ */
+const normalizeSensorData = (sensorData) => {
+  const thresholds = {
+    pH: 0.1,        // Round to 1 decimal place (0.1 precision)
+    temperature: 1, // Round to 1°C precision
+    salinity: 0.5,  // Round to 0.5 precision
+    turbidity: 5,   // Round to 5 NTU precision
+  };
+
+  const normalized = { ...sensorData };
+
+  // Apply rounding to reduce cache misses from minor changes
+  Object.keys(thresholds).forEach(param => {
+    if (normalized[param] != null && !isNaN(normalized[param])) {
+      const precision = thresholds[param];
+      normalized[param] = Math.round(normalized[param] / precision) * precision;
+    }
+  });
+
+  return normalized;
+};
+
+/**
+ * Create a simple hash of the normalized sensor data for cache key
  */
 const createDataHash = (sensorData) => {
-  const dataString = JSON.stringify(sensorData);
+  const normalizedData = normalizeSensorData(sensorData);
+  const dataString = JSON.stringify(normalizedData);
   let hash = 0;
   for (let i = 0; i < dataString.length; i++) {
     const char = dataString.charCodeAt(i);
@@ -156,8 +358,16 @@ const updateComponentFetchTime = (componentId) => {
 
 /**
  * Generate insight using Gemini API with retry and circuit breaker
+ * @param {Object} sensorData - The sensor data to analyze
+ * @param {string} componentId - The component ID to determine which model to use
  */
-const generateInsightFromAPI = async (sensorData) => {
+const generateInsightFromAPI = async (sensorData, componentId) => {
+  // Check rate limiting first with component prioritization
+  if (shouldRateLimit(componentId)) {
+    silentLog(`🛑 Rate limit exceeded for component ${componentId} - returning rich fallback response`);
+    return await generateStaticFallbackResponse(sensorData, componentId);
+  }
+
   // Check circuit breaker first
   const circuitState = checkCircuitBreaker();
   if (circuitState === 'open') {
@@ -167,22 +377,15 @@ const generateInsightFromAPI = async (sensorData) => {
 
   // If quota was exceeded, check if cooldown is over
   if (isQuotaExceeded && quotaResetTime && Date.now() > quotaResetTime) {
-    isQuotaExceeded = false; // Cooldown finished, allow requests again
+    isQuotaExceeded = false;
     quotaResetTime = null;
     silentLog("✨ Gemini API cooldown finished. Resuming requests.");
   }
 
-  // If quota is still exceeded, return a fallback response immediately
+  // If quota is still exceeded, return rich static fallback response immediately
   if (isQuotaExceeded) {
     silentLog("🛑 Gemini API quota exceeded. Cooldown active.");
-    return {
-      insights: {
-        overallInsight: "AI features are temporarily unavailable due to high demand. Please try again later.",
-        timestamp: new Date().toISOString(),
-        source: "quota-fallback"
-      },
-      suggestions: []
-    };
+    return await generateStaticFallbackResponse(sensorData, componentId);
   }
 
   // Retrieve user settings for personalization
@@ -201,26 +404,28 @@ const generateInsightFromAPI = async (sensorData) => {
     fishpondType = 'freshwater';
   }
 
-  // Analyze overall water quality status for expressive responses
-  const getQualityStatus = (data) => {
+  // Analyze overall water quality status for expressive responses using dynamic thresholds
+  const getQualityStatus = async (data) => {
     const params = ['pH', 'temperature', 'salinity', 'turbidity'];
     let criticalCount = 0;
     let warningCount = 0;
+    let approachingCount = 0;
     let normalCount = 0;
+
+    const thresholds = await getWaterQualityThresholdsFromSettings();
 
     for (const param of params) {
       const value = data[param];
       if (value != null && !isNaN(value)) {
-        // Get thresholds for the user's fishpond type
-        const thresholds = {
-          freshwater: { pH: { min: 6.5, max: 8.5 }, temperature: { min: 26, max: 30 }, salinity: { min: 0, max: 5 }, turbidity: { min: 0, max: 50 } },
-          saltwater: { pH: { min: 7.5, max: 8.5 }, temperature: { min: 24, max: 30 }, salinity: { min: 15, max: 35 }, turbidity: { min: 0, max: 60 } }
-        };
-
-        const threshold = thresholds[fishpondType]?.[param];
+        const threshold = thresholds[param];
         if (threshold) {
+          const distanceToMin = value - threshold.min;
+          const distanceToMax = threshold.max - value;
+
           if (value < threshold.min || value > threshold.max) {
-            warningCount++;
+            criticalCount++;
+          } else if (distanceToMin <= 0.3 || distanceToMax <= 0.5) {
+            approachingCount++; // Parameters approaching limits
           } else {
             normalCount++;
           }
@@ -230,21 +435,27 @@ const generateInsightFromAPI = async (sensorData) => {
       }
     }
 
-    if (warningCount >= 2) return 'critical';
-    if (warningCount > 0) return 'warning';
+    if (criticalCount >= 2) return 'critical';
+    if (criticalCount > 0) return 'warning';
+    if (approachingCount > 0) return 'warning'; // Parameters approaching limits count as warnings
     if (normalCount > 0) return 'excellent';
     return 'unknown';
   };
 
-  const qualityStatus = getQualityStatus(sensorData);
+  const qualityStatus = await getQualityStatus(sensorData);
 
   // Use retry with exponential backoff for API calls
   return retryWithBackoff(async () => {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Select model based on component ID - home tab gets full power model
+    const modelName = componentId === "home-overall-insight"
+      ? "gemini-2.5-flash"
+      : "gemini-2.5-flash-lite";
+
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     // Determine the greeting style based on quality status
     const getGreetingStyle = (status, nickname) => {
-      const user = nickname ? nickname : "fish farmer";
+      const user = nickname ? nickname : "my friend";
 
       switch (status) {
         case 'excellent':
@@ -276,37 +487,51 @@ const generateInsightFromAPI = async (sensorData) => {
 
     const greetingStyle = getGreetingStyle(qualityStatus, userNickname);
 
+    // Get actual thresholds for analysis
+    const actualThresholds = await getWaterQualityThresholdsFromSettings();
+
     const prompt = `
     Based on the following pond/tank water quality sensor data, provide analysis and simple recommendations for FISH FARMERS.
     The data is: ${JSON.stringify(sensorData)}
+    Water quality thresholds for ${fishpondType} ponds: ${JSON.stringify(actualThresholds)}
 
     USER PERSONALIZATION:
     - User's nickname: ${userNickname || 'not set'}
+    - Fish pond type: ${fishpondType}
     - Overall quality status: ${qualityStatus}
     - Greeting style: ${greetingStyle.tone}
+    - Actual thresholds: ${JSON.stringify(actualThresholds)}
+
+    ANALYSIS REQUIREMENTS:
+    - Carefully analyze each parameter against its specific threshold values
+    - Identify parameters that are NEARING the threshold limits (within 0.3-0.5 units of min/max)
+    - Include specific threshold information in your analysis
+    - Reference the actual threshold ranges in your reasoning
 
     RESPONSE STYLE REQUIREMENTS:
     - START your overall insight with: "${greetingStyle.opening}"
     - Address the user by their nickname "${userNickname || 'fish farmer'}" when appropriate
     - Use expressive greetings based on the quality status (examples: ${greetingStyle.examples.join(", ")})
     - Make the tone conversational and emotive, not clinical
+    - SPECIFICALLY mention when parameters are approaching thresholds
 
     CRITICAL: Use extremely simple, everyday language that a fish farmer with no scientific training can understand.
     - Avoid technical terms like "alkalinity", "acidification", "reduce alkalinity", etc.
     - Use common farmer terms like "baking soda", "farm lime", "clean filters", "change some water", etc.
     - Make each recommendation a clear action that farmers can do TODAY.
     - Keep instructions very practical and easy to follow.
+    - When mentioning thresholds, say things like "close to the ideal range of 6.5-8.5 for pH"
 
     Examples of good conversational language:
-    ✅ GOOD: "Hey Alex, your pH seems a bit low - try adding some baking soda daily until it gets back to normal"
+    ✅ GOOD: "Hey Alex, your pH is getting close to the ideal range of 6.5-8.5 - try adding some baking soda daily until it gets back to normal"
     ✅ EXCELLENT: "Fantastic work, Maria! Your water quality is looking perfect - keep it up!"
-    ✅ CRITICAL: "Oh no, David! Your water is very cloudy - clean that filter right away!"
+    ✅ CRITICAL: "Oh no, David! Your water is very cloudy and way above the 50 unit turbidity limit - clean that filter right away!"
     ❌ BAD: "The analysis indicates suboptimal pH levels require immediate corrective measures"
 
     Please return a JSON object with the following structure:
     {
       "insights": {
-        "overallInsight": "Conversational paragraph about your pond water quality starting with appropriate greeting and addressing the user by name.",
+        "overallInsight": "Conversational paragraph about your pond water quality starting with appropriate greeting and addressing the user by name, mentioning specific thresholds when parameters are approaching limits.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai"
       },
@@ -319,7 +544,7 @@ const generateInsightFromAPI = async (sensorData) => {
             "Heavy rainfall washing in acids from soil"
           ],
           "recommendedActions": [
-            "Add a spoonful of baking soda or farm lime daily until pH rises",
+            "Add a spoonful of baking soda or farm lime daily until pH rises toward the ideal range of ${actualThresholds.pH.min}-${actualThresholds.pH.max}",
             "Remove uneaten fish food from the pond",
             "Do a 20% of the water change by removing old water and adding fresh water"
           ],
@@ -380,6 +605,9 @@ const generateInsightFromAPI = async (sensorData) => {
 
     try {
       const parsedResponse = JSON.parse(cleanedText);
+
+      // Record successful API request for rate limiting
+      recordRequest();
 
       // Ensure the response has the expected structure
       return {
@@ -520,7 +748,7 @@ const generateInsightCore = async (sensorData, componentId, dataHash) => {
     silentLog(`🔄 Fetching new insight for component ${componentId}`);
     updateComponentFetchTime(componentId);
 
-    const newInsight = await generateInsightFromAPI(sensorData);
+    const newInsight = await generateInsightFromAPI(sensorData, componentId);
 
     // Cache the new insight
     await cacheInsight(componentId, dataHash, newInsight);
@@ -541,15 +769,9 @@ const generateInsightCore = async (sensorData, componentId, dataHash) => {
       };
     }
 
-    // Generate fallback response
-    return {
-      insights: {
-        overallInsight: "Unable to generate insight at this time. Please try again later.",
-        timestamp: new Date().toISOString(),
-        source: "error"
-      },
-      suggestions: []
-    };
+    // Generate rich static fallback response for errors
+    silentLog(`🔄 Using rich static fallback for ${componentId} error`);
+    return await generateStaticFallbackResponse(sensorData, componentId);
   }
 };
 
@@ -557,6 +779,32 @@ const generateInsightCore = async (sensorData, componentId, dataHash) => {
  * Main function to generate insights with caching and fallback
  */
 export const generateInsight = async (sensorData, componentId = 'default') => {
+  // Emergency AI disable check - return static response if AI is completely disabled
+  if (aiCompletelyDisabled) {
+    silentLog("🚫 AI completely disabled due to quota exhaustion");
+    return {
+      insights: {
+        overallInsight: "AI insights are temporarily disabled. Please upgrade to a paid plan for full functionality. Using basic water quality recommendations.",
+        timestamp: new Date().toISOString(),
+        source: "ai-disabled"
+      },
+      suggestions: [
+        {
+          parameter: "pH",
+          influencingFactors: ["Water quality changes"],
+          recommendedActions: ["Monitor pH levels", "Consider water testing"],
+          status: "normal"
+        },
+        {
+          parameter: "temperature",
+          influencingFactors: ["Environmental conditions"],
+          recommendedActions: ["Monitor water temperature", "Provide shade if needed"],
+          status: "normal"
+        }
+      ]
+    };
+  }
+
   if (!sensorData) {
     return {
       insights: {
@@ -575,25 +823,47 @@ export const generateInsight = async (sensorData, componentId = 'default') => {
 };
 
 /**
- * Get insight status for a component
+ * Check if API request should be rate limited (prioritized)
+ * @param {string} componentId - The component requesting the API call
  */
-export const getInsightStatus = (componentId) => {
-  const lastFetch = componentCache.get(componentId);
-  if (!lastFetch) return 'never-fetched';
-  
+const shouldRateLimit = (componentId = 'default') => {
   const now = Date.now();
-  const timeSinceLastFetch = now - lastFetch;
-  
-  if (timeSinceLastFetch < FETCH_INTERVAL) {
-    const timeLeft = FETCH_INTERVAL - timeSinceLastFetch;
-    return {
-      status: 'cached',
-      timeLeft: Math.ceil(timeLeft / (60 * 1000)), // minutes
-      nextFetch: new Date(lastFetch + FETCH_INTERVAL).toLocaleString()
-    };
+
+  // Clean old timestamps outside the window
+  requestTimestamps = requestTimestamps.filter(
+    timestamp => now - timestamp < RATE_LIMIT_WINDOW
+  );
+
+  // Get component priority (lower number = higher priority)
+  const componentPriority = COMPONENT_PRIORITIES[componentId] || COMPONENT_PRIORITIES.default;
+  const isHighPriority = componentPriority <= 2; // Home and report components get priority
+
+  // Allow high-priority components even when near limit
+  const effectiveLimit = isHighPriority ? MAX_DAILY_REQUESTS : MAX_DAILY_REQUESTS - 2;
+
+  // Check if we're over the effective limit for this component's priority
+  if (requestTimestamps.length >= effectiveLimit) {
+    const timeUntilReset = RATE_LIMIT_WINDOW - (now - requestTimestamps[0]);
+    const hoursLeft = Math.ceil(timeUntilReset / (60 * 60 * 1000));
+    const minutesLeft = Math.ceil(timeUntilReset / (60 * 1000));
+
+    if (isHighPriority) {
+      silentLog(`🟡 Approaching daily limit (${requestTimestamps.length}/${MAX_DAILY_REQUESTS}). High-priority component ${componentId} allowed.`);
+      return false; // Allow high-priority components
+    } else {
+      silentLog(`🛑 Daily rate limit effective threshold reached (${requestTimestamps.length}/${effectiveLimit}) for ${componentId}. Next reset in ${hoursLeft} hours (${minutesLeft} minutes).`);
+      return true; // Block low-priority components when near limit
+    }
   }
-  
-  return 'ready-to-fetch';
+
+  return false;
+};
+
+/**
+ * Record a successful API request for rate limiting
+ */
+const recordRequest = () => {
+  requestTimestamps.push(Date.now());
 };
 
 /**
@@ -640,6 +910,98 @@ export const clearAllCachedInsights = async () => {
   } catch (error) {
     silentError('Error clearing cached insights:', error);
   }
+};
+
+/**
+ * Emergency functions for managing AI quota
+ */
+
+/**
+ * Disable AI completely (emergency mode)
+ */
+export const disableAI = () => {
+  aiCompletelyDisabled = true;
+  silentLog("🚫 AI completely disabled for quota conservation");
+};
+
+/**
+ * Re-enable AI after quota reset or billing upgrade
+ */
+export const enableAI = () => {
+  aiCompletelyDisabled = false;
+  silentLog("✅ AI re-enabled");
+};
+
+/**
+ * Check if AI is currently disabled
+ */
+export const isAIDisabled = () => {
+  return aiCompletelyDisabled;
+};
+
+/**
+ * Get insight status for a component (used by InsightsContext)
+ * @param {string} componentId - The component ID
+ */
+export const getInsightStatus = (componentId = 'default') => {
+  // Return status based on current state
+  if (aiCompletelyDisabled) {
+    return 'ai-disabled';
+  }
+
+  if (isQuotaExceeded) {
+    return 'quota-limited';
+  }
+
+  if (shouldRateLimit(componentId)) {
+    return 'rate-limited';
+  }
+
+  return 'available';
+};
+
+/**
+ * Get current rate limiting status
+ */
+export const getRateLimitStatus = () => {
+  const now = Date.now();
+
+  // Clean timestamps first
+  requestTimestamps = requestTimestamps.filter(
+    timestamp => now - timestamp < RATE_LIMIT_WINDOW
+  );
+
+  const timeUntilReset = requestTimestamps.length >= MAX_DAILY_REQUESTS
+    ? RATE_LIMIT_WINDOW - (now - requestTimestamps[0])
+    : 0;
+
+  return {
+    currentRequests: requestTimestamps.length,
+    maxRequests: MAX_DAILY_REQUESTS,
+    remaining: Math.max(0, MAX_DAILY_REQUESTS - requestTimestamps.length),
+    hoursUntilReset: Math.ceil(timeUntilReset / (60 * 60 * 1000)),
+    minutesUntilReset: Math.ceil(timeUntilReset / (60 * 1000)),
+    aiDisabled: aiCompletelyDisabled,
+    quotaExceeded: isQuotaExceeded,
+    rateLimited: shouldRateLimit()
+  };
+};
+
+/**
+ * Reset daily request counters (for testing/debugging)
+ */
+export const resetDailyLimits = () => {
+  if (!__DEV__) {
+    silentError("Reset function only available in development mode");
+    return false;
+  }
+
+  requestTimestamps = [];
+  isQuotaExceeded = false;
+  quotaResetTime = null;
+  aiCompletelyDisabled = false;
+  silentLog("🔄 Daily limits reset (dev mode only)");
+  return true;
 };
 
 silentLog("Enhanced Gemini API initialized with 15-minute intervals and caching");
