@@ -2,7 +2,7 @@
   "expo": {
     "name": "PureFlow",
     "slug": "pureflow-mobile",
-    "version": "4.1.2",
+    "version": "4.4.3",
     "owner": "xy_pher",
     "orientation": "portrait",
     "icon": "./assets/logo/pureflow-logo-apk-08.png",
@@ -61,7 +61,12 @@
           "android": {
             "compileSdkVersion": 33,
             "targetSdkVersion": 33,
-            "buildToolsVersion": "33.0.0"
+            "buildToolsVersion": "33.0.0",
+            "config": {
+              "buildConfig": {
+                "GEMINI_API_KEY": "AIzaSyDW7O87l3lN8jnn6hGgW0wTwrJQH-XRiE4"
+              }
+            }
           },
           "ios": {
             "useFrameworks": "static",
@@ -74,9 +79,9 @@
       "typedRoutes": true
     },
     "extra": {
-      "GEMINI_API_KEY": "AIzaSyA1J4Ue-GM0pJT2rcILsJD52tTyuRbmuO0",
+      "GEMINI_API_KEY": "AIzaSyDW7O87l3lN8jnn6hGgW0wTwrJQH-XRiE4",
       "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
-      "GEMINI_MODEL": "gemini-2.0-flash",
+      "GEMINI_MODEL": "gemini-2.5-flash-lite",
       "firebase": {
         "apiKey": "AIzaSyBCcrWxgO0wRa0-QL0DTLdExN01tbQrzhY",
         "authDomain": "pureflow-system.firebaseapp.com",
@@ -89,7 +94,10 @@
       "router": {},
       "eas": {
         "projectId": "d24fac03-1b41-4b93-ab04-8593c0f6095d"
-      }
+      },
+      "fcm": {
+          "serverUrl": "https://pureflow-d40vydpuj-xyphers-projects-a3902ca1.vercel.app/api"
+        }
     }
   }
 }
