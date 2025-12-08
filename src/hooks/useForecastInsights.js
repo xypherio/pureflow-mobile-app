@@ -1,21 +1,21 @@
 import { useEffect, useState, useCallback } from "react";
 import { debounce } from "lodash";
 
-export const useForecastInsights = (forecastPredicted, dataSource) => {
+export const useForecastInsights = (forecastPredicted, trends, dataSource) => {
   const [geminiResponse, setGeminiResponse] = useState(null);
   const [isGeminiLoading, setIsGeminiLoading] = useState(false);
 
   // Generate insights function
   const generateInsights = useCallback(async () => {
-    if (!forecastPredicted) {
+    if (!forecastPredicted || !trends) {
       setGeminiResponse(null);
       return;
     }
 
     setIsGeminiLoading(true);
     try {
-      const { generateInsight } = await import("@services/ai/geminiAPI");
-      const insight = await generateInsight(forecastPredicted, "forecast-overall-insight");
+      const { generateForecastInsight } = await import("@services/ai/geminiAPI");
+      const insight = await generateForecastInsight(forecastPredicted, trends);
       setGeminiResponse(insight);
     } catch (error) {
       console.error("❌ Error generating forecast insights:", error);
@@ -23,7 +23,7 @@ export const useForecastInsights = (forecastPredicted, dataSource) => {
     } finally {
       setIsGeminiLoading(false);
     }
-  }, [forecastPredicted]);
+  }, [forecastPredicted, trends]);
 
   // Debounced version for forecast data changes (10-minute debounce)
   const debouncedGenerateInsights = useCallback(
@@ -34,12 +34,12 @@ export const useForecastInsights = (forecastPredicted, dataSource) => {
   );
 
   useEffect(() => {
-    if (forecastPredicted) {
+    if (forecastPredicted && trends) {
       debouncedGenerateInsights();
     } else {
       setGeminiResponse(null);
     }
-  }, [forecastPredicted, debouncedGenerateInsights]);
+  }, [forecastPredicted, trends, debouncedGenerateInsights]);
 
   // Firebase sync is now handled in useForecastService to avoid duplicates
 

@@ -1,23 +1,22 @@
-import React, { useCallback, useState, useEffect } from "react";
-import { Alert, StyleSheet } from "react-native";
 import * as FileSystem from 'expo-file-system';
+import React, { useCallback, useState } from "react";
+import { Alert, StyleSheet } from "react-native";
 
 // Contexts
 import { useWeather } from "@contexts/WeatherContext";
 
 // Components
 import ExportToggleButton from "@components/forms/ExportToggleButton";
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import SettingsModal from "@components/modals/SettingsModal";
+import { ReportSkeleton } from "@components/ui/LoadingSkeletons";
 import PureFlowLogo from "@components/ui/UiHeader";
 import SegmentedFilter from "@navigation/SegmentedFilters";
 import GlobalWrapper from "@ui/GlobalWrapper";
-import { ReportSkeleton } from "@components/ui/LoadingSkeletons";
-import SettingsModal from "@components/modals/SettingsModal";
-import IssueReportingModal from "@components/modals/IssueReportingModal";
-import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 
 // Report Components
 import ReportContent from "@components/sections/ReportContent";
-import ReportErrorState from "@components/sections/ReportErrorState";
 
 // Hooks
 import { useReportData } from "@hooks/useReportData";

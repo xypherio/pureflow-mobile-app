@@ -4,7 +4,8 @@ import { Bell, FileText, Flame, Home } from "lucide-react-native";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const TAB_ICON_SIZE = 22;
+const TAB_ICON_SIZE_INACTIVE = 22;
+const TAB_ICON_SIZE_ACTIVE = 27;
 
 const TabsLayout = () => {
   const insets = useSafeAreaInsets();
@@ -25,20 +26,21 @@ const TabsLayout = () => {
     tabBarPressOpacity: 1,
     tabBarStyle: [styles.tabBar, { marginBottom: 10 + insets.bottom }],
     tabBarLabelStyle: styles.tabBarLabel,
-    tabBarActiveTintColor: "#2569d0",
+    tabBarActiveTintColor: "#2d7fe3",
     tabBarInactiveTintColor: colors.textMuted,
   };
 
-  const getTabBarIcon = (route, color) => {
+  const getTabBarIcon = (route, color, focused) => {
+    const iconSize = focused ? TAB_ICON_SIZE_ACTIVE : TAB_ICON_SIZE_INACTIVE;
     switch (route.name) {
       case "index":
-        return <Home size={TAB_ICON_SIZE} color={color} />;
+        return <Home size={iconSize} color={color} />;
       case "forecast":
-        return <Flame size={TAB_ICON_SIZE} color={color} />;
+        return <Flame size={iconSize} color={color} />;
       case "report":
-        return <FileText size={TAB_ICON_SIZE} color={color} />;
+        return <FileText size={iconSize} color={color} />;
       case "notifications":
-        return <Bell size={TAB_ICON_SIZE} color={color} />;
+        return <Bell size={iconSize} color={color} />;
       default:
         return <View />;
     }
@@ -48,7 +50,7 @@ const TabsLayout = () => {
     <Tabs
       screenOptions={({ route }) => ({
         ...screenOptions,
-        tabBarIcon: ({ color }) => getTabBarIcon(route, color),
+        tabBarIcon: ({ color, focused }) => getTabBarIcon(route, color, focused),
       })}
     >
       <Tabs.Screen 

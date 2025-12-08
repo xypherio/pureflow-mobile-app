@@ -286,9 +286,56 @@ export default function InsightsCard({
   };
 
   const renderRecommendations = () => {
-    const allRecommendations = recommendations && recommendations.length > 0
-      ? recommendations
-      : insight?.suggestions?.flatMap(s => s.recommendedActions || []).slice(0, 5) || [];
+    // Ultra-defensive recommendation processing to prevent React object rendering errors
+    const getSafeRecommendations = () => {
+      try {
+        // First priority: static recommendations prop
+        if (recommendations && Array.isArray(recommendations)) {
+          return recommendations
+            .flatMap(rec => {
+              // Handle case where rec might be an object with recommendedActions
+              if (rec && typeof rec === 'object' && rec.recommendedActions) {
+                return Array.isArray(rec.recommendedActions) ? rec.recommendedActions : [];
+              }
+              // Handle case where rec might be a string
+              return typeof rec === 'string' ? [rec] : [];
+            })
+            .filter(rec => typeof rec === 'string')
+            .slice(0, 8);
+        }
+
+        // Second priority: extract from AI insight suggestions
+        if (insight?.suggestions && Array.isArray(insight.suggestions)) {
+          return insight.suggestions
+            .flatMap(suggestion => {
+              if (!suggestion || typeof suggestion !== 'object') return [];
+              const actions = suggestion.recommendedActions;
+              // Ensure actions is an array and filter to strings only
+              return Array.isArray(actions) ? actions.filter(action => typeof action === 'string') : [];
+            })
+            .slice(0, 8);
+        }
+
+        // Third priority: look for influencing factors as fallback
+        if (insight?.suggestions && Array.isArray(insight.suggestions)) {
+          return insight.suggestions
+            .flatMap(suggestion => {
+              if (!suggestion || typeof suggestion !== 'object') return [];
+              const factors = suggestion.influencingFactors;
+              // Use factors as secondary recommendations
+              return Array.isArray(factors) ? factors.filter(factor => typeof factor === 'string') : [];
+            })
+            .slice(0, 5);
+        }
+
+        return [];
+      } catch (error) {
+        console.error('Error processing recommendations:', error);
+        return [];
+      }
+    };
+
+    const allRecommendations = getSafeRecommendations();
 
     if (!allRecommendations || allRecommendations.length === 0) return null;
 
@@ -300,11 +347,21 @@ export default function InsightsCard({
           <Text style={[styles.recommendationsTitle, { color: config.iconColor }]}>
             💡 Recommendations:
           </Text>
-          {allRecommendations.map((rec, index) => (
-            <Text key={index} style={[styles.recommendationItem, { accessibilityLabel: `Recommendation: ${rec}` }]}>
-              • {rec}
-            </Text>
-          ))}
+          {allRecommendations.map((rec, index) => {
+            // Final safety check: ensure rec is a string before rendering
+            const safeText = typeof rec === 'string' ? rec.trim() : 'Invalid recommendation data';
+
+            return (
+              <Text
+                key={`rec-${index}`}
+                style={[styles.recommendationItem, {
+                  accessibilityLabel: `Recommendation ${index + 1}: ${safeText}`
+                }]}
+              >
+                • {safeText}
+              </Text>
+            );
+          })}
         </View>
       </View>
     );

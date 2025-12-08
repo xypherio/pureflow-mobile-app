@@ -1,14 +1,14 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 
 // Components
-import PureFlowLogo from "@components/ui/UiHeader";
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import SettingsModal from "@components/modals/SettingsModal";
 import NotificationsEmptyState from "@components/sections/NotificationsEmptyState";
 import NotificationsErrorState from "@components/sections/NotificationsErrorState";
 import NotificationsList from "@components/sections/NotificationsList";
 import NotificationsLoadingState from "@components/sections/NotificationsLoadingState";
-import SettingsModal from "@components/modals/SettingsModal";
-import IssueReportingModal from "@components/modals/IssueReportingModal";
-import FeatureRatingModal from "@components/modals/FeatureRatingModal";
+import PureFlowLogo from "@components/ui/UiHeader";
 
 // Hooks
 import { useNotificationsData } from "@hooks/useNotificationsData";

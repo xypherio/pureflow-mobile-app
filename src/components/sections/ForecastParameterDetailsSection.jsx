@@ -33,8 +33,27 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
   const theme = getParameterTheme(selectedParam);
 
   const getFactorsData = () => {
-    const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
-    return suggestion?.influencingFactors || [
+    try {
+      const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
+      const factors = suggestion?.influencingFactors;
+
+      // Ensure factors is always an array of strings
+      if (Array.isArray(factors)) {
+        return factors;
+      } else if (typeof factors === 'string') {
+        // Handle case where it's a single string instead of array
+        return [factors];
+      } else if (factors && typeof factors === 'object') {
+        // Handle case where factors might be an object
+        console.warn('Influencing factors returned as object instead of array:', factors);
+        return ["Forecast factors are being analyzed"];
+      }
+    } catch (error) {
+      console.error('Error getting influencing factors:', error);
+    }
+
+    // Default fallback
+    return [
       "Rainfall intensity affecting water dilution",
       "Temperature fluctuations impacting solubility",
       "Low sunlight reducing photosynthesis"
@@ -42,8 +61,27 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
   };
 
   const getActionsData = () => {
-    const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
-    return suggestion?.recommendedActions || [
+    try {
+      const suggestion = geminiResponse?.suggestions?.find(s => s.parameter.toLowerCase() === selectedParam.toLowerCase());
+      const actions = suggestion?.recommendedActions;
+
+      // Ensure actions is always an array of strings
+      if (Array.isArray(actions)) {
+        return actions;
+      } else if (typeof actions === 'string') {
+        // Handle case where it's a single string instead of array
+        return [actions];
+      } else if (actions && typeof actions === 'object') {
+        // Handle case where actions might be an object
+        console.warn('Recommended actions returned as object instead of array:', actions);
+        return ["Precautionary action is being prepared"];
+      }
+    } catch (error) {
+      console.error('Error getting recommended actions:', error);
+    }
+
+    // Default fallback
+    return [
       "Adjust feeding schedules based on water conditions",
       "Increase aeration to maintain oxygen levels",
       "Regularly check ammonia and nitrite levels"
@@ -74,11 +112,15 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
               <Text style={[styles.recommendationsTitle, { color: theme.color }]}>
                 🌧️ Influencing Factors:
               </Text>
-              {getFactorsData().map((factor, index) => (
+              {(getFactorsData()).map ? getFactorsData().map((factor, index) => (
                 <Text key={index} style={styles.recommendationItem}>
-                  • {factor}
+                  • {typeof factor === 'string' ? factor : 'Loading forecast factor...'}
                 </Text>
-              ))}
+              )) : (
+                <Text style={styles.recommendationItem}>
+                  • Error loading forecast factors
+                </Text>
+              )}
             </View>
           </View>
 
@@ -88,11 +130,15 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
               <Text style={[styles.recommendationsTitle, { color: theme.color }]}>
                 💡 Recommended Actions:
               </Text>
-              {getActionsData().map((action, index) => (
+              {(getActionsData()).map ? getActionsData().map((action, index) => (
                 <Text key={index} style={styles.recommendationItem}>
-                  • {action}
+                  • {typeof action === 'string' ? action : 'Loading recommended action...'}
                 </Text>
-              ))}
+              )) : (
+                <Text style={styles.recommendationItem}>
+                  • Error loading recommended actions
+                </Text>
+              )}
             </View>
           </View>
 

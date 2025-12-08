@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 
 // UI Components
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import SettingsModal from "@components/modals/SettingsModal";
 import GlobalWrapper from "@ui/GlobalWrapper";
 import PureFlowLogo from "@ui/UiHeader";
 import WeatherBanner from "@ui/WeatherBanner";
-import SettingsModal from "@components/modals/SettingsModal";
-import IssueReportingModal from "@components/modals/IssueReportingModal";
-import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 
 // Custom Hooks
 import useForecastInsights from "@hooks/useForecastInsights";
@@ -56,6 +56,7 @@ export default function ForecastScreen() {
   // Forecast insights and AI logic
   const { geminiResponse, isGeminiLoading } = useForecastInsights(
     forecastPredicted,
+    trends,
     dataSource
   );
 
@@ -69,12 +70,12 @@ export default function ForecastScreen() {
     init();
   }, []);
 
-  // Set up automated prediction refresh (every 4 hours)
+  // Set up automated prediction refresh (every 2 hours)
   useEffect(() => {
     const cleanup = ForecastService.setupAutomatedRefresh(() => {
       const cb = predictionCallbackRef.current;
       if (cb) cb();
-    }, 4);
+    }, 2);
     return cleanup;
   }, []); // empty deps for interval setup
 
