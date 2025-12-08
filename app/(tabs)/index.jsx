@@ -4,6 +4,7 @@ import { useNotifications } from "@hooks/useNotifications";
 import { useNotificationSetup } from "@hooks/useNotificationSetup";
 import { useWaterQualityNotifications } from "@hooks/useWaterQualityNotifications";
 import { useWeather } from "@contexts/WeatherContext";
+import useHomeInsights from "@hooks/useHomeInsights";
 import React, { Suspense, useCallback, useMemo, useState } from "react";
 
 import SystemStatusSection from "@components/sections/SystemStatusSection";
@@ -25,37 +26,28 @@ import { ScrollView } from "react-native";
 
 // Lazy-loaded heavy components for better performance
 const LazyInsightsSection = React.lazy(() =>
-  import("@components/sections/InsightsSection").then(module => ({
-    default: module.default
+  import("@components/sections/InsightsSection").then((module) => ({
+    default: module.default,
   }))
 );
 
 const LazyDashboardSection = React.lazy(() =>
-  import("@components/sections/DashboardSection").then(module => ({
-    default: module.default
+  import("@components/sections/DashboardSection").then((module) => ({
+    default: module.default,
   }))
 );
 
 export default function HomeScreen() {
   // Data and loading states
-  const {
-    alerts,
-    sensorData,
-    loading,
-    refreshData,
-    lastUpdate,
-    realtimeData,
-  } = useData();
+  const { alerts, activeAlerts, sensorData, loading, refreshData, lastUpdate, realtimeData } =
+    useData();
 
   // Device status computed from realtime data (already memoized in hook)
   const { isDatmActive, isSolarPowered } = useDeviceStatus(realtimeData);
 
   // Notifications setup
-  const {
-    isInitialized,
-    unreadCount,
-    addNotificationListener,
-  } = useNotifications();
+  const { isInitialized, unreadCount, addNotificationListener } =
+    useNotifications();
 
   useWaterQualityNotifications();
   useNotificationSetup(isInitialized, addNotificationListener);
@@ -63,16 +55,14 @@ export default function HomeScreen() {
   // Get weather context for weather-related functionality
   const { refetchWeather } = useWeather();
 
-
+  // Home insights generation with error handling
+  const { homeInsight, isHomeLoading } = useHomeInsights(realtimeData);
 
   // Memoized weather info computation for performance
-  const weatherInfo = useMemo(() =>
-    getWeatherInfo(realtimeData?.isRaining || 0),
+  const weatherInfo = useMemo(
+    () => getWeatherInfo(realtimeData?.isRaining || 0),
     [realtimeData?.isRaining]
   );
-
-  // Note: Using simple lazy loading instead of viewport-based loading
-  // for better React Native compatibility
 
   // Modal states
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
@@ -103,12 +93,11 @@ export default function HomeScreen() {
     setIsIssueReportingVisible(false);
   }, []);
 
-  // Memoized refresh handler to prevent recreation and useInsertionEffect warnings
   const handleRefresh = useCallback(async () => {
     try {
       await refreshData();
     } catch (error) {
-      console.error('Error during refresh:', error);
+      console.error("Error during refresh:", error);
     }
   }, [refreshData]);
 
@@ -169,7 +158,7 @@ export default function HomeScreen() {
           <ErrorBoundary fallbackMessage="Dashboard data temporarily unavailable">
             <Suspense fallback={<DashboardSkeleton />}>
               <LazyDashboardSection
-                alerts={alerts}
+                activeAlerts={activeAlerts}
                 realtimeData={realtimeData}
                 sensorData={sensorData}
               />
@@ -183,13 +172,12 @@ export default function HomeScreen() {
                 loading={loading}
                 realtimeData={realtimeData}
                 lastUpdate={lastUpdate}
+                homeInsight={homeInsight}
+                isHomeLoading={isHomeLoading}
               />
             </Suspense>
           </ErrorBoundary>
         </ScrollView>
-
-        {/* Notification Test Panel - only visible in development
-        <NotificationTestPanel /> */}
       </GlobalWrapper>
     </>
   );

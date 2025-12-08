@@ -70,12 +70,12 @@ export default function ForecastScreen() {
     init();
   }, []);
 
-  // Set up automated prediction refresh (every 2 hours)
+  // Set up automated prediction refresh (every 5 minutes)
   useEffect(() => {
     const cleanup = ForecastService.setupAutomatedRefresh(() => {
       const cb = predictionCallbackRef.current;
       if (cb) cb();
-    }, 2);
+    }, 5);
     return cleanup;
   }, []); // empty deps for interval setup
 
@@ -154,13 +154,7 @@ export default function ForecastScreen() {
           selectedParam={selectedParam}
           setSelectedParam={setSelectedParam}
           geminiResponse={geminiResponse}
-        />
-
-        <ForecastInsights
-          isGeminiLoading={isGeminiLoading}
-          geminiResponse={geminiResponse}
-          forecastDataAvailable={forecastDataAvailable}
-          forecastPredicted={forecastPredicted}
+          trends={trends}
         />
       </GlobalWrapper>
     </>

@@ -1,4 +1,5 @@
 import { PARAMETER_CONFIG } from "@constants/report";
+import { getWaterQualityThresholdsFromSettings } from "@constants/thresholds";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import ParameterCard from "@dataDisplay/ParameterCard";
 import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
@@ -7,6 +8,161 @@ import { AlertCircle, AlertTriangle, History } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { globalStyles } from "../../styles/globalStyles";
+
+// Report fallback functions
+const generateReportInsightFallback = (reportData) => {
+  if (!reportData || !reportData.parameters) {
+    return {
+      overallInsight: "Report data is being analyzed for water quality insights.",
+      source: 'report-fallback'
+    };
+  }
+
+  const parameters = Object.entries(reportData.parameters || {});
+  const wqi = reportData.wqi?.overall || 0;
+  const wqiRating = reportData.wqi?.rating?.level || 'unknown';
+  const overallStatus = reportData.overallStatus || 'normal';
+
+  // Count parameter statuses
+  const statusCounts = { normal: 0, warning: 0, critical: 0 };
+  const parameterStatuses = [];
+
+  parameters.forEach(([key, data]) => {
+    const status = data.status || 'normal';
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+    if (status !== 'normal') {
+      parameterStatuses.push({ param: key, status, value: data.average });
+    }
+  });
+
+  // Generate insight based on WQI and parameter health (farmer-friendly language)
+  let insight = '';
+
+  if (wqiRating === 'excellent' && statusCounts.critical === 0 && statusCounts.warning === 0) {
+    insight = `Excellent water quality with WQI score of ${wqi}. All parameters are within optimal ranges, showing healthy conditions for your fish.`;
+  } else if (wqiRating === 'good' && statusCounts.critical === 0) {
+    insight = `Good water quality with WQI score of ${wqi}. Some parameters are approaching limits but remain within acceptable ranges for fish health.`;
+  } else if (wqiRating === 'fair' || statusCounts.warning > 0) {
+    insight = `Fair water quality with WQI score of ${wqi}. ${statusCounts.warning} parameters need watching. Keep maintaining good conditions.`;
+  } else if (wqiRating === 'poor' || statusCounts.critical > 0) {
+    insight = `Poor water quality with WQI score of ${wqi}. ${statusCounts.critical} parameters need immediate action to keep fish healthy.`;
+  } else {
+    insight = `Water quality status: ${wqiRating} with WQI score of ${wqi}. Watch all parameters closely to keep fish in good conditions.`;
+  }
+
+  return {
+    overallInsight: insight,
+    source: 'report-fallback',
+    wqi: wqi,
+    wqiRating: wqiRating,
+    parameterSummary: statusCounts
+  };
+};
+
+const generateParameterInsightFallback = (parameterName, parameterStatus, averageValue) => {
+  const paramKey = parameterName.toLowerCase();
+
+  // Status messages for different parameter types and levels (farmer-friendly, no jargon)
+  const statusMessages = {
+    ph: {
+      critical: {
+        low: `pH critically low at ${averageValue?.toFixed(1)}. Add baking soda immediately to raise it.`,
+        high: `pH critically high at ${averageValue?.toFixed(1)}. Add vinegar or acid to lower it right away.`
+      },
+      warning: {
+        low: `pH getting low at ${averageValue?.toFixed(1)}. Add baking soda if it keeps dropping.`,
+        high: `pH getting high at ${averageValue?.toFixed(1)}. Add vinegar if it keeps rising.`
+      },
+      normal: `pH level good at ${averageValue?.toFixed(1)}. Conditions are right for healthy fish.`
+    },
+    temperature: {
+      critical: {
+        low: `Water temperature very low at ${averageValue?.toFixed(1)}°C. Heat water or give fish more protection immediately.`,
+        high: `Water temperature very high at ${averageValue?.toFixed(1)}°C. Cool water down right away or add shade.`
+      },
+      warning: {
+        low: `Water temperature low at ${averageValue?.toFixed(1)}°C. Keep an eye on it and protect fish if needed.`,
+        high: `Water temperature high at ${averageValue?.toFixed(1)}°C. Watch closely and add shade if needed.`
+      },
+      normal: `Water temperature good at ${averageValue?.toFixed(1)}°C. Perfect for fish health and activity.`
+    },
+    salinity: {
+      critical: {
+        low: `Salt level very low at ${averageValue?.toFixed(1)}. Add salt immediately.`,
+        high: `Salt level very high at ${averageValue?.toFixed(1)}. Change some water to reduce salt right away.`
+      },
+      warning: {
+        low: `Salt level getting low at ${averageValue?.toFixed(1)}. Add salt gradually if needed.`,
+        high: `Salt level getting high at ${averageValue?.toFixed(1)}. Change some water if it keeps rising.`
+      },
+      normal: `Salt level balanced at ${averageValue?.toFixed(1)}. Good for fish body water balance.`
+    },
+    turbidity: {
+      critical: {
+        low: `Water too clear at ${averageValue?.toFixed(1)} - could grow too much algae. Add some natural balance.`,
+        high: `Water too cloudy at ${averageValue?.toFixed(1)}. Change water or clean filters immediately.`
+      },
+      warning: {
+        low: `Water very clear at ${averageValue?.toFixed(1)}. Watch for possible algae growth.`,
+        high: `Water getting cloudy at ${averageValue?.toFixed(1)}. Clean filters soon and feed less if needed.`
+      },
+      normal: `Water clarity good at ${averageValue?.toFixed(1)}. Clear enough for healthy fish and plants.`
+    }
+  };
+
+  // Find which parameter config matches
+  let matchedMessages = null;
+  Object.keys(statusMessages).forEach(key => {
+    if (parameterName.toLowerCase().includes(key) || key.includes(parameterName.toLowerCase()) ||
+        key === parameterName.toLowerCase()) {
+      matchedMessages = statusMessages[key];
+    }
+  });
+
+  if (!matchedMessages) {
+    // Generic fallback
+    return `${parameterName} at ${parameterStatus} level with average value of ${averageValue?.toFixed(1) || 'N/A'}. Monitor closely for optimal conditions.`;
+  }
+
+  // Return status-specific message
+  if (parameterStatus === 'normal') {
+    return matchedMessages.normal;
+  }
+
+  // For warning/critical, determine if high or low based on parameter-specific logic
+  let isLow = false;
+
+  // Parameter-specific logic to determine high vs low
+  switch (paramKey) {
+    case 'ph':
+      // pH normal range around 7, lower values are more acidic
+      isLow = averageValue < 7;
+      break;
+    case 'temperature':
+      // Temperature normal range around 26-30°C for aquaculture
+      isLow = averageValue < 28;
+      break;
+    case 'salinity':
+      // Salinity normal range for freshwater: 0-5, saltwater: 15-35
+      isLow = (paramKey === 'temperature-salinity' || paramKey === 'salinity') ? averageValue < 20 : averageValue < 3;
+      break;
+    case 'turbidity':
+      // Turbidity lower than 25 NTU might be too clear, higher is cloudy
+      isLow = averageValue < 25;
+      break;
+    default:
+      isLow = true; // Default assumption
+      break;
+  }
+
+  if (parameterStatus === 'warning') {
+    return matchedMessages.warning[isLow ? 'low' : 'high'];
+  } else if (parameterStatus === 'critical') {
+    return matchedMessages.critical[isLow ? 'low' : 'high'];
+  }
+
+  return `${parameterName} status: ${parameterStatus}. Average value: ${averageValue?.toFixed(1) || 'N/A'}`;
+};
 
 const ReportContent = ({
   reportData,
@@ -171,28 +327,28 @@ const ReportContent = ({
                   sensorData={reportData}
                 />
               ) : (
-                // Only show error message if we're not actively switching filters
+                // Generate fallback insights based on WQI and parameter statuses
                 !isSwitchingFilter && (
-                  <View style={styles.insightsErrorContainer}>
-                    <View style={styles.insightsErrorHeader}>
-                      <View style={[styles.insightsErrorIcon, { backgroundColor: '#FFFBEB' }]}>
-                        <AlertCircle size={28} color="#D97706" />
-                      </View>
-                      <View style={styles.insightsErrorHeaderText}>
-                        <Text style={styles.insightsErrorTitle}>AI Insights Unavailable</Text>
-                        <Text style={styles.insightsErrorSubtitle}>Unable to generate recommendations</Text>
-                      </View>
-                    </View>
-
-                    <View style={[styles.insightsErrorBanner, { backgroundColor: '#FFFBEB' }]}>
-                      <Text style={[styles.insightsErrorStatus, { color: '#D97706' }]}>
-                        Service Unavailable
-                      </Text>
-                      <Text style={styles.insightsErrorDescription}>
-                        Unable to generate AI recommendations at this time. Please try again later.
-                      </Text>
-                    </View>
-                  </View>
+                  (() => {
+                    const fallbackInsight = generateReportInsightFallback(reportData);
+                    return (
+                      <InsightsCard
+                        type="info"
+                        title="Overall Water Quality Insight"
+                        description={fallbackInsight.overallInsight}
+                        recommendations={
+                          processedParameters
+                            .filter(p => p.status !== 'normal')
+                            .slice(0, 3)
+                            .map(p => `${p.parameter} needs attention - ${p.status} status`)
+                        }
+                        timestamp={reportData.generatedAt}
+                        componentId="report-fallback-insight"
+                        autoRefresh={false}
+                        sensorData={reportData}
+                      />
+                    );
+                  })()
                 )
               )}
             </View>

@@ -26,11 +26,28 @@ const InsightsSection = ({ loading, realtimeData, lastUpdate, homeInsight, isHom
   }
 
   if (homeInsight) {
+    // Extract recommendations from the insight suggestions
+    const extractRecommendationsFromInsight = (insight) => {
+      if (!insight?.suggestions || !Array.isArray(insight.suggestions)) return null;
+
+      return insight.suggestions
+        .flatMap(suggestion => {
+          if (!suggestion || typeof suggestion !== 'object') return [];
+          // Use recommendedActions, parameter, status for better display
+          return suggestion.recommendedActions || [];
+        })
+        .filter(action => typeof action === 'string')
+        .map(action => action.replace(/\*\*([^*]+)\*\*/g, '$1').trim())
+        .filter(action => action.length > 0)
+        .slice(0, 5);
+    };
+
     return (
       <InsightsCard
         type="info"
         title="Water Quality Insights"
-        description={homeInsight?.insights?.overallInsight || ""}
+        description={homeInsight?.insights?.overallInsight || "Analyzing water quality data..."}
+        recommendations={extractRecommendationsFromInsight(homeInsight)}
         sensorData={realtimeData}
         timestamp={homeInsight?.insights?.timestamp || lastUpdate}
         componentId="home-insights"

@@ -7,7 +7,10 @@ export const useForecastInsights = (forecastPredicted, trends, dataSource) => {
 
   // Generate insights function
   const generateInsights = useCallback(async () => {
-    if (!forecastPredicted || !trends) {
+    if (!forecastPredicted ||
+        !trends ||
+        typeof forecastPredicted !== 'object' ||
+        typeof trends !== 'object') {
       setGeminiResponse(null);
       return;
     }
@@ -15,8 +18,23 @@ export const useForecastInsights = (forecastPredicted, trends, dataSource) => {
     setIsGeminiLoading(true);
     try {
       const { generateForecastInsight } = await import("@services/ai/geminiAPI");
+
+      // Validate the imported function exists
+      if (typeof generateForecastInsight !== 'function') {
+        throw new Error('generateForecastInsight function not found in geminiAPI');
+      }
+
       const insight = await generateForecastInsight(forecastPredicted, trends);
-      setGeminiResponse(insight);
+
+      // Validate response structure
+      if (!insight ||
+          typeof insight !== 'object' ||
+          !insight.insights ||
+          typeof insight.insights.overallInsight !== 'string') {
+        setGeminiResponse(null);
+      } else {
+        setGeminiResponse(insight);
+      }
     } catch (error) {
       console.error("❌ Error generating forecast insights:", error);
       setGeminiResponse(null);

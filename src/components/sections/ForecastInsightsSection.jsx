@@ -15,6 +15,11 @@ const generateStaticForecastInsight = (forecastDataAvailable, forecastPredicted)
   let overallInsight;
   let suggestions = [];
 
+  // Validate forecastPredicted structure
+  const isValidForecastData = forecastPredicted &&
+    typeof forecastPredicted === 'object' &&
+    !Array.isArray(forecastPredicted);
+
   if (!forecastDataAvailable) {
     // No forecast data available
     overallInsight = "Forecast predictions will be available once your sensors collect more historical data. For now, focus on maintaining stable water conditions with regular monitoring.";
@@ -27,7 +32,7 @@ const generateStaticForecastInsight = (forecastDataAvailable, forecastPredicted)
         status: "normal"
       }
     ];
-  } else if (forecastPredicted && Object.keys(forecastPredicted).length > 0) {
+  } else if (isValidForecastData && Object.keys(forecastPredicted).length > 0) {
     // Forecast data is available but might be basic
     const paramCount = Object.keys(forecastPredicted).length;
     const hasMultipleParams = paramCount >= 3;
@@ -48,7 +53,7 @@ const generateStaticForecastInsight = (forecastDataAvailable, forecastPredicted)
     ];
 
     // Add parameter-specific suggestions if available
-    if (forecastPredicted.temperature) {
+    if (isValidForecastData && typeof forecastPredicted.temperature === 'number') {
       suggestions.push({
         parameter: "temperature",
         influencingFactors: ["Weather conditions", "Water depth"],
@@ -57,7 +62,7 @@ const generateStaticForecastInsight = (forecastDataAvailable, forecastPredicted)
       });
     }
 
-    if (forecastPredicted.pH) {
+    if (isValidForecastData && typeof forecastPredicted.pH === 'number') {
       suggestions.push({
         parameter: "pH",
         influencingFactors: ["Water movement", "Fish activity"],
@@ -101,13 +106,18 @@ const ForecastInsights = ({
   }
 
   // AI response available - show AI-powered insights
-  if (geminiResponse && geminiResponse.insights) {
+  if (geminiResponse &&
+      typeof geminiResponse === 'object' &&
+      geminiResponse.insights &&
+      typeof geminiResponse.insights === 'object' &&
+      geminiResponse.insights.overallInsight &&
+      typeof geminiResponse.insights.overallInsight === 'string') {
     return (
       <InsightsCard
         type="info"
         title="Overall Forecast Insight"
-        description={geminiResponse?.insights?.overallInsight || ""}
-        timestamp={geminiResponse?.insights?.timestamp}
+        description={geminiResponse.insights.overallInsight}
+        timestamp={geminiResponse.insights.timestamp || new Date().toISOString()}
         componentId="forecast-overall-insight"
         autoRefresh={true}
         sensorData={forecastPredicted}

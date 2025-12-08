@@ -218,20 +218,80 @@ export const useReportData = (activeFilter) => {
     return result;
   }, [reportData]);
 
-  // Find insight for parameter from geminiResponse
+  // Find insight for parameter from geminiResponse with fallback
   const getParameterInsight = useCallback((parameterName) => {
-    if (!geminiResponse?.suggestions) return null;
+    // First try AI insights
+    if (geminiResponse?.suggestions) {
+      const suggestion = geminiResponse.suggestions.find(s => {
+        const suggestionParam = s.parameter?.toLowerCase()?.replace(/\s+/g, '') || '';
+        const currentParam = parameterName?.toLowerCase()?.replace(/\s+/g, '') || '';
+        return suggestionParam === currentParam ||
+               suggestionParam.includes(currentParam) ||
+               currentParam.includes(suggestionParam);
+      });
 
-    const suggestion = geminiResponse.suggestions.find(s => {
-      const suggestionParam = s.parameter?.toLowerCase()?.replace(/\s+/g, '') || '';
-      const currentParam = parameterName?.toLowerCase()?.replace(/\s+/g, '') || '';
-      return suggestionParam === currentParam ||
-             suggestionParam.includes(currentParam) ||
-             currentParam.includes(suggestionParam);
+      if (suggestion?.recommendation) {
+        return suggestion.recommendation;
+      }
+    }
+
+    // Fallback to parameter-specific insights based on status
+    if (processedParameters) {
+      const param = processedParameters.find(p =>
+        p.parameter?.toLowerCase()?.includes(parameterName?.toLowerCase()) ||
+        parameterName?.toLowerCase()?.includes(p.parameter?.toLowerCase())
+      );
+
+      if (param) {
+        // Generate status-based fallback message
+        const status = param.status || 'normal';
+        const avgValue = param.averageValue;
+
+        return generateParameterStatusInsight(param.parameter, status, avgValue);
+      }
+    }
+
+    return null;
+  }, [geminiResponse, processedParameters]);
+
+  // Helper function to generate parameter-specific fallback insights
+  const generateParameterStatusInsight = useCallback((parameterName, status, averageValue) => {
+    const paramKey = parameterName?.toLowerCase() || '';
+
+    // Status-specific messages for each parameter type
+    const statusInsights = {
+      ph: {
+        critical: `pH critically out of range at ${averageValue?.toFixed(1) || 'unknown'}. Requires immediate attention to prevent stress to aquatic life.`,
+        warning: `pH approaching boundary at ${averageValue?.toFixed(1) || 'unknown'}. Monitor closely to maintain optimal water chemistry.`,
+        normal: `pH level stable at ${averageValue?.toFixed(1) || 'unknown'}. Good for maintaining proper ecosystem balance.`
+      },
+      temperature: {
+        critical: `Temperature critically out of range at ${averageValue?.toFixed(1) || 'unknown'}°C. Immediate action needed to adjust water temperature.`,
+        warning: `Temperature approaching limits at ${averageValue?.toFixed(1) || 'unknown'}°C. Monitor and adjust to prevent stress to fish.`,
+        normal: `Water temperature stable at ${averageValue?.toFixed(1) || 'unknown'}°C. Optimal for fish metabolism and growth.`
+      },
+      salinity: {
+        critical: `Salinity critically out of balance at ${averageValue?.toFixed(1) || 'unknown'}. Immediate adjustment required for proper osmotic regulation.`,
+        warning: `Salinity approaching limits at ${averageValue?.toFixed(1) || 'unknown'}. Watch for fluctuations to maintain aquatic health.`,
+        normal: `Salinity level balanced at ${averageValue?.toFixed(1) || 'unknown'}. Good osmotic environment for aquatic species.`
+      },
+      turbidity: {
+        critical: `Water clarity critically poor at ${averageValue?.toFixed(1) || 'unknown'} NTU. Immediate filtration action needed.`,
+        warning: `Water getting cloudy at ${averageValue?.toFixed(1) || 'unknown'} NTU. Monitor filtration system performance.`,
+        normal: `Water clarity good at ${averageValue?.toFixed(1) || 'unknown'} NTU. Optimal visibility for fish feeding and behavior.`
+      }
+    };
+
+    // Find matching parameter
+    let matchedInsight = null;
+    Object.keys(statusInsights).forEach(key => {
+      if (paramKey.includes(key) || key.includes(paramKey)) {
+        matchedInsight = statusInsights[key][status] || statusInsights[key].normal;
+      }
     });
 
-    return suggestion?.recommendation || null;
-  }, [geminiResponse]);
+    return matchedInsight || `${parameterName} at ${status} level. Average value: ${averageValue?.toFixed(1) || 'unknown'}.`;
+  }, []);
 
   const onRefresh = useCallback(() => {
     refreshData();

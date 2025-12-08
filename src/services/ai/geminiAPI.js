@@ -12,7 +12,7 @@ import { getWaterQualityThresholdsFromSettings, getWaterQualityThresholds } from
  */
 const generateForecastParameterSuggestions = (forecastData, trends, componentId = 'default') => {
   const suggestions = [];
-  const parameters = ['pH', 'temperature', 'salinity', 'turbidity'];
+  const parameters = ['pH', 'Temperature', 'Salinity', 'Turbidity'];
 
   // Process each parameter
   parameters.forEach(param => {
@@ -66,7 +66,7 @@ const generateForecastParameterSuggestions = (forecastData, trends, componentId 
           }
           break;
 
-        case 'temperature':
+        case 'Temperature':
           if (trend === 'rising') {
             paramSuggestions.influencingFactors = [
               "Increasing daytime temperatures",
@@ -103,7 +103,7 @@ const generateForecastParameterSuggestions = (forecastData, trends, componentId 
           }
           break;
 
-        case 'salinity':
+        case 'Salinity':
           if (trend === 'rising') {
             paramSuggestions.influencingFactors = [
               "Evaporation concentrating salt levels",
@@ -140,7 +140,7 @@ const generateForecastParameterSuggestions = (forecastData, trends, componentId 
           }
           break;
 
-        case 'turbidity':
+        case 'Turbidity':
           if (trend === 'rising') {
             paramSuggestions.influencingFactors = [
               "Fish activity disturbing sediment",
@@ -263,7 +263,22 @@ const getParameterQualityAssessment = async (data, isReport = false) => {
   const approaching = [];
 
   params.forEach(param => {
-    const value = isReport ? data.parameters?.[param]?.average : data[param];
+    let value = null;
+
+    if (isReport) {
+      // Report mode: access data.parameters[param].average
+      value = data.parameters?.[param]?.average;
+    } else {
+      // Real-time mode: could be either full sensor data (data[param]) or individual parameter data (data.parameter, data.value)
+      if (data.parameter && data.value && data.parameter.toLowerCase() === param.toLowerCase()) {
+        // Individual parameter data structure from ParameterCard
+        value = data.value;
+      } else {
+        // Full sensor data structure
+        value = data[param];
+      }
+    }
+
     if (value != null && !isNaN(value)) {
       const threshold = thresholds[param];
       if (threshold) {
@@ -287,6 +302,220 @@ const getParameterQualityAssessment = async (data, isReport = false) => {
 };
 
 /**
+ * Generate parameter-specific fallback insights for individual parameter cards
+ * @param {string} parameterName - The name of the parameter (e.g., 'Turbidity')
+ * @param {Object} sensorData - Parameter sensor data from ParameterCard
+ */
+const generateParameterFallbackInsight = async (parameterName, sensorData) => {
+  const paramKey = parameterName.toLowerCase();
+  const status = sensorData.status || 'normal';
+
+  // Helper function to safely format sensor data value
+  const formatValue = (value) => {
+    if (value === undefined || value === null || value === 'N/A') return 'current value';
+
+    // If it's already a string (like from averageValue.toFixed(2)), try to parse it
+    if (typeof value === 'string') {
+      const num = parseFloat(value);
+      if (!isNaN(num)) {
+        return num.toFixed(1);
+      }
+      return 'current value';
+    }
+
+    // If it's a number, format it
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value.toFixed(1);
+    }
+
+    return 'current value';
+  };
+
+  const formattedValue = formatValue(sensorData.value);
+
+  // Get parameter-specific alert-centered insights based on status
+  const getParameterInsight = (param, status, formattedValue) => {
+    // Critical alerts - immediate action needed
+    if (status === 'critical') {
+      switch(param) {
+        case 'ph':
+          return {
+            insight: `CRITICAL: pH is dangerously out of range at ${formattedValue}. Fish health is severely compromised with decreased oxygen carrying capacity and increased disease risk.`,
+            suggestions: [
+              "IMMEDIATELY add baking soda or buffer solution in 1 tsp increments and test every 30 minutes",
+              "Stop all feeding and minimize fish stress while correcting pH",
+              "Consider a 50% water change with properly buffered replacement water",
+              "Monitor oxygen levels closely as low pH reduces oxygen availability"
+            ]
+          };
+        case 'temperature':
+          return {
+            insight: `CRITICAL: Water temperature at ${formattedValue}°C is life-threatening for fish. This extreme temperature can cause stress, weakened immunity, and potential mortality.`,
+            suggestions: [
+              "IMMEDIATELY adjust aeration and provide emergency shade or heating as needed",
+              "Gradually change temperature by no more than 2°C per hour if using heaters/chillers",
+              "Stop feeding and minimize fish activity during temperature stabilization",
+              "Test temperature every 30 minutes until it reaches safe ranges (26-30°C)"
+            ]
+          };
+        case 'salinity':
+          return {
+            insight: `CRITICAL: Salinity level at ${formattedValue} ppt is causing severe osmotic stress to fish. Rapid salinity changes can damage gills and cause mortality.`,
+            suggestions: [
+              "IMMEDIATELY begin gradual salinity adjustment at 1 ppt per hour maximum",
+              "Use proper salt mix designed for fish ponds when increasing salinity",
+              "Stop feeding during salinity correction to reduce metabolic stress",
+              "Monitor fish behavior closely - lethargy indicates correction pace is too fast"
+            ]
+          };
+        case 'turbidity':
+          return {
+            insight: `CRITICAL: Turbidity at ${formattedValue} NTU indicates severe water cloudiness. Fish visibility is extremely compromised with potential gill damage from particulates.`,
+            suggestions: [
+              "IMMEDIATELY stop all feeding and reduce fish activity that stirs up sediment",
+              "Clean filters thoroughly and add extra filtration capacity if available",
+              "Add natural settling agents like alum (consult local extension service)",
+              "Cover pond surface partially to reduce wind-driven turbulence"
+            ]
+          };
+        default:
+          return {
+            insight: `CRITICAL: ${parameterName} at ${formattedValue} ${sensorData.unit || ''} is in dangerous territory. Immediate corrective action is essential to prevent fish health deterioration.`,
+            suggestions: [
+              "Take immediate steps to bring parameter back within safe operating ranges",
+              "Stop feeding and minimize stress on fish during correction",
+              "Monitor parameter closely - test every hour if possible",
+              "Contact local aquaculture specialist for emergency guidance"
+            ]
+          };
+      }
+    }
+
+    // Warning alerts - monitoring needed
+    if (status === 'warning') {
+      switch(param) {
+        case 'ph':
+          return {
+            insight: `WARNING: pH at ${formattedValue} indicates approaching unsafe levels. While not immediately critical, continued trends could stress fish health and predispose them to disease.`,
+            suggestions: [
+              "Monitor pH levels twice daily and track trends over the next 48 hours",
+              "Prepare baking soda or buffering agents for quick pH adjustment if needed",
+              "Check and clean filters regularly as they can influence pH stability",
+              "Consider adding buffer chemicals during water changes to maintain stability"
+            ]
+          };
+        case 'temperature':
+          return {
+            insight: `WARNING: Temperature at ${formattedValue}°C is outside optimal ranges but not life-threatening. This can cause chronic stress and reduced growth rates over time.`,
+            suggestions: [
+              "Monitor temperature hourly during heat/cold events and daily otherwise",
+              "Adjust shade coverage or consider pond location changes for better temperature control",
+              "Test temperature morning and evening to understand daily fluctuations",
+              "Consider supplementary aeration during warmer periods to maintain oxygen levels"
+            ]
+          };
+        case 'salinity':
+          return {
+            insight: `WARNING: Salinity at ${formattedValue} ppt is trending away from optimal. Gradual changes can cause chronic stress even when not immediately life-threatening.`,
+            suggestions: [
+              "Monitor salinity levels twice daily and record measurements",
+              "Make salinity adjustments slowly over several days (no more than 1 ppt per day)",
+              "Check evaporation rates and rainfall patterns that influence salinity",
+              "Use consistent salt feeding practices and record quantities added"
+            ]
+          };
+        case 'turbidity':
+          return {
+            insight: `WARNING: Turbidity at ${formattedValue} NTU shows increasing cloudiness. While not critical yet, elevated levels affect fish feeding behavior and growth.`,
+            suggestions: [
+              "Increase filter cleaning frequency and monitor filter performance",
+              "Reduce feeding amounts temporarily to decrease waste input",
+              "Check for pond bottom sediment disturbance from fish activity",
+              "Consider adding beneficial bacteria products to improve natural filtration"
+            ]
+          };
+        default:
+          return {
+            insight: `WARNING: ${parameterName} at ${formattedValue} ${sensorData.unit || ''} is approaching problem levels. Close monitoring is needed to prevent deterioration.`,
+            suggestions: [
+              "Double monitoring frequency and track parameter trends carefully",
+              "Prepare corrective supplies and have them ready for quick action",
+              "Review maintenance practices that might be affecting this parameter",
+              "Contact aquaculture extension services for specific recommendations"
+            ]
+          };
+      }
+    }
+
+    // Normal status - maintenance and optimization
+    switch(param) {
+      case 'ph':
+        return {
+          insight: `GOOD: pH at ${formattedValue} is within acceptable ranges. This stable pH level supports healthy fish immune systems and efficient oxygen utilization.`,
+          suggestions: [
+            "Continue regular pH testing 2-3 times per week as part of routine monitoring",
+            "Maintain consistent buffering practices during water changes",
+            "Monitor for gradual trends that might indicate system imbalances",
+            "Document pH stability as part of overall pond health records"
+          ]
+        };
+      case 'temperature':
+        return {
+          insight: `GOOD: Water temperature at ${formattedValue}°C is in the optimal range for fish health and growth. This supports efficient metabolism and immune function.`,
+          suggestions: [
+            "Continue daily temperature monitoring in morning and afternoon",
+            "Maintain current shade and aeration systems in good working order",
+            "Track seasonal temperature patterns to anticipate needed adjustments",
+            "Consider supplemental heating/cooling only if environmental conditions become extreme"
+          ]
+        };
+      case 'salinity':
+        return {
+          insight: `GOOD: Salinity at ${formattedValue} ppt is appropriate for the fish species. This level supports proper osmotic balance and disease resistance.`,
+          suggestions: [
+            "Continue regular salinity testing and consistent salt feeding practices",
+            "Monitor weather patterns that might affect evaporation/dilution rates",
+            "Record salinity measurements to track patterns and system consistency",
+            "Adjust salt quantities based on rainfall events as needed"
+          ]
+        };
+      case 'turbidity':
+        return {
+          insight: `GOOD: Turbidity at ${formattedValue} NTU indicates clear water conditions. Fish have good visibility and there are minimal particulates affecting gill health.`,
+          suggestions: [
+            "Maintain current filter cleaning schedule and good filtration practices",
+            "Continue appropriate feeding levels without overfeeding",
+            "Monitor for any changes in weather or pond conditions that could increase turbidity",
+            "Keep pond bottom management practices consistent (no excessive cleaning that stirs sediment)"
+          ]
+        };
+      default:
+        return {
+          insight: `GOOD: ${parameterName} at ${formattedValue} ${sensorData.unit || ''} is within acceptable operating parameters. Current levels support healthy fish conditions.`,
+          suggestions: [
+            "Maintain regular monitoring schedule for this parameter",
+            "Document current values as part of baseline pond health records",
+            "Continue standard maintenance procedures that support parameter stability",
+            "Be alert for gradual trends that might require preventive adjustments"
+          ]
+        };
+    }
+  };
+
+  const insightData = getParameterInsight(paramKey, status, formattedValue);
+
+  return {
+    overallInsight: insightData.insight,
+    suggestions: insightData.suggestions.map(suggestion => ({
+      parameter: parameterName,
+      influencingFactors: [`${parameterName} water quality parameter`],
+      recommendedActions: [suggestion],
+      status: status
+    }))
+  };
+};
+
+/**
  * Generate intelligent static fallback responses when AI is unavailable
  * Provides meaningful, personalized insights based on sensor data analysis
  */
@@ -306,25 +535,115 @@ const generateStaticFallbackResponse = async (sensorData, componentId = 'default
   }
 
   const user = userNickname ? userNickname : "my friend";
-
   const isReport = componentId === "report-overall-insight";
-  const { issues, warnings } = await getParameterQualityAssessment(sensorData, isReport);
+  const isParameterInsight = componentId.endsWith('-insight') && !isReport;
 
-  // Generate personalized response based on assessment
+  // Handle parameter-specific insights (like "turbidity-insight")
+  if (isParameterInsight) {
+    const paramName = componentId.replace('-insight', '').toLowerCase();
+    const displayName = paramName.charAt(0).toUpperCase() + paramName.slice(1);
+
+    // Generate parameter-specific fallback insight
+    const parameterFallback = await generateParameterFallbackInsight(displayName, sensorData);
+
+    return {
+      insights: {
+        overallInsight: parameterFallback.overallInsight || `${displayName} appears to be stable at current levels. Continue regular monitoring.`,
+        timestamp: new Date().toISOString(),
+        source: "parameter-fallback"
+      },
+      suggestions: parameterFallback.suggestions || []
+    };
+  }
+
+  // Prioritize alert levels and weather consideration for fallback responses
+  const getAlertLevelBasedAssessment = () => {
+    const criticalParams = [];
+    const warningParams = [];
+    const normalParams = [];
+
+    // Check alert levels for each parameter (prioritize these)
+    const params = ['pH', 'temperature', 'salinity', 'turbidity'];
+    params.forEach(param => {
+      const alertLevel = sensorData[`${param}AlertLevel`] || 'normal';
+      if (alertLevel === 'critical') criticalParams.push(param);
+      else if (alertLevel === 'warning') warningParams.push(param);
+      else normalParams.push(param);
+    });
+
+    return { criticalParams, warningParams, normalParams };
+  };
+
+  const { criticalParams, warningParams, normalParams } = getAlertLevelBasedAssessment();
+  const isRaining = sensorData.isRaining && sensorData.isRaining > 0;
+  const rainMessage = isRaining ? "with recent rain, be extra careful with" : "";
+
+  // Generate personalized response based on alert level assessment
   let overallInsight;
   let suggestions = [];
 
   if (isReport) {
     // Report-specific fallback response
-    const wqiScore = sensorData.wqi?.value || 0;
+    const wqiScore = sensorData.wqi?.overall || 0;
     const overallStatus = sensorData.overallStatus || 'unknown';
 
-    if (wqiScore <= 30) {
+    if (wqiScore >= 90) {
       overallInsight = `Great job maintaining your pond, ${user}! Your WQI score of ${wqiScore} shows excellent water quality overall. All parameter averages stayed within healthy ranges, indicating consistent pond management.`;
-    } else if (wqiScore <= 60) {
-      overallInsight = `Good work overall, ${user}. Your WQI score of ${wqiScore} shows acceptable water quality, though there may be some areas to watch closely over the coming weeks.`;
+    } else if (wqiScore >= 70) {
+      overallInsight = `Good work overall, ${user}. Your WQI score of ${wqiScore} shows good water quality, though there may be some areas to watch closely over the coming weeks.`;
+    } else if (wqiScore >= 50) {
+      overallInsight = `Hey ${user}, your WQI score of ${wqiScore} indicates fair (acceptable) water quality. While not concerning, monitor your parameters to ensure they don't decline further.`;
+    } else if (wqiScore >= 25) {
+      overallInsight = `Your WQI score of ${wqiScore} indicates poor water quality concerns that need attention, ${user}. To improve water quality and raise your WQI score, focus on the parameter averages that are contributing most to this score.`;
     } else {
-      overallInsight = `Your WQI score of ${wqiScore} indicates water quality concerns that need attention, ${user}. Focus on the parameter averages that are contributing most to this score.`;
+      overallInsight = `Oh no, ${user}! Your WQI score of ${wqiScore} indicates very poor water quality with serious concerns. Immediate action is required to address these water quality issues and improve your WQI score.`;
+    }
+
+    // Add WQI improvement suggestions for poor scores
+    if (wqiScore >= 25 && wqiScore < 50) {
+      // Poor water quality - focus on solutions to improve WQI
+      suggestions.unshift({
+        parameter: "WQI Improvement",
+        influencingFactors: [
+          "Poor overall water quality requiring comprehensive improvement",
+          "Multiple parameters contributing to low WQI score",
+          "Need systematic approach to water quality management"
+        ],
+        recommendedActions: [
+          "Perform a 30% water change to reduce overall pollution levels and improve all parameters",
+          "Clean or replace filters to improve water clarity and reduce turbidity",
+          "Test and adjust pH to optimal range (6.5-8.5) using baking soda for low pH or buffers for high pH",
+          "Monitor and adjust feeding practices to reduce waste buildup affecting water quality",
+          "Ensure proper aeration to maintain oxygen levels and prevent anaerobic conditions",
+          "Check and clean pond bottom to remove accumulated debris and organic matter",
+          "Establish regular water testing schedule - test pH, ammonia, nitrite daily for 2 weeks",
+          "Consider beneficial bacteria supplements to help break down organic waste",
+          "Monitor temperature daily and provide shade or heating as needed for optimal range (26-30°C)"
+        ],
+        status: "critical"
+      });
+    } else if (wqiScore < 25) {
+      // Very poor water quality - urgent solutions needed
+      suggestions.unshift({
+        parameter: "Urgent WQI Recovery",
+        influencingFactors: [
+          "Severely degraded water quality requiring immediate emergency measures",
+          "Multiple critical parameters endangering fish health",
+          "Risk of fish mortality if not addressed immediately"
+        ],
+        recommendedActions: [
+          "URGENT: Perform emergency 50% water change immediately to save fish lives",
+          "Stop all feeding until water quality improves to prevent additional pollution",
+          "Provide extra aeration with air stones or emergency aerators immediately",
+          "Add emergency water conditioners or treatments if available",
+          "Isolate healthy fish if possible while treating water problems",
+          "Clean/replace all filters and test water chemistry every 4-6 hours",
+          "Contact aquaculture specialists or local extension service for emergency assistance",
+          "Monitor fish behavior closely - lethargy indicates critical water quality",
+          "Prepare to harvest fish early if severe problems persist beyond 24 hours"
+        ],
+        status: "critical"
+      });
     }
 
     // Add parameter-specific insights based on averages
@@ -343,79 +662,151 @@ const generateStaticFallbackResponse = async (sensorData, componentId = 'default
       });
     }
   } else {
-    // Regular real-time insights fallback
-    if (issues.length === 0) {
-      // Excellent water quality
-      overallInsight = `Excellent news, ${user}! Your pond water quality looks perfect. All parameters are within ideal ranges - keep up the great work managing your fish farm!`;
-
-      suggestions = [
-        {
-          parameter: "pH",
-          influencingFactors: ["Balanced fish food", "Proper pond maintenance"],
-          recommendedActions: ["Maintain current feeding schedule", "Test water weekly to confirm stability"],
-          status: "normal"
-        },
-        {
-          parameter: "temperature",
-          influencingFactors: ["Good weather patterns", "Adequate shade"],
-          recommendedActions: ["Continue providing shade during hot days", "Monitor for sudden weather changes"],
-          status: "normal"
-        }
-      ];
-    } else if (issues.length >= 2) {
-      // Critical situations
-      overallInsight = `Oh no, ${user}! There are several water quality concerns that need immediate attention. Your fish might be stressed - please address these issues right away to prevent health problems.`;
-
-      if (issues.some(issue => issue.includes('ph'))) {
-        suggestions.push({
-          parameter: "pH",
-          influencingFactors: ["Fish waste buildup", "Old water needing change"],
-          recommendedActions: ["Add baking soda (1 tsp per 10 gallons) daily until pH rises", "Do a 20% water change tomorrow", "Reduce fish food by half for 3 days"],
-          status: "critical"
-        });
-      }
-      if (issues.some(issue => issue.includes('temperature'))) {
-        suggestions.push({
-          parameter: "temperature",
-          influencingFactors: ["Too much sun exposure", "Hot weather"],
-          recommendedActions: ["Install shade cloth over pond immediately", "Add pond depth with new water if possible", "Provide extra aeration today"],
-          status: "critical"
-        });
-      }
-      if (issues.some(issue => issue.includes('turbidity'))) {
-        suggestions.push({
-          parameter: "turbidity",
-          influencingFactors: ["Bottom mud disturbance", "Too many fish", "Dirty filter"],
-          recommendedActions: ["Clean filter thoroughly right now", "Reduce feeding by half for 2 days", "Add a settling pond section if possible"],
-          status: "critical"
-        });
-      }
+    // Regular real-time insights fallback based on alert levels
+    if (criticalParams.length >= 2) {
+      // Multiple critical issues
+      overallInsight = `Oh no, ${user}! There are several critical water quality concerns that need immediate attention. Your fish health is at serious risk - please address these issues right away${isRaining ? ', especially with recent rain' : ''}.`;
+    } else if (criticalParams.length === 1) {
+      // Single critical issue
+      overallInsight = `Oh no, ${user}! Your ${criticalParams[0]} needs immediate attention as it's in critical condition. ${isRaining ? `With recent rain, this becomes even more urgent.` : 'Please address this right away to protect your fish.'}`;
+    } else if (warningParams.length > 0) {
+      // Warning issues
+      overallInsight = `Hey ${user}, your water quality needs attention. ${warningParams.length === 1 ? `Your ${warningParams[0]} requires close monitoring` : `Several parameters need watching closely`} ${isRaining ? 'especially with recent rain' : ''}.`;
     } else {
-      // Warning situations
-      overallInsight = `Hey ${user}, your water quality needs some attention but it's not critical yet. Addressing these concerns promptly will keep your fish healthy and happy.`;
+      // All normal
+      overallInsight = `Excellent news, ${user}! Your pond water quality looks perfect${isRaining ? ', even with recent rain' : ''}. All parameters are within good ranges - keep up the great work managing your fish farm!`;
+    }
 
-      if (issues.some(issue => issue.includes('ph'))) {
+    // Generate suggestions based on alert levels
+    const allParamsToAddress = [...criticalParams, ...warningParams];
+
+    if (allParamsToAddress.includes('pH')) {
+      const isCritical = criticalParams.includes('pH');
+      suggestions.push({
+        parameter: "pH",
+        influencingFactors: [
+          "Fish waste making water more acidic",
+          "Too much fish food leftover",
+          ...(isRaining ? ["Heavy rainfall washing in acids from soil"] : [])
+        ],
+        recommendedActions: isCritical ? [
+          "Add baking soda (1 tsp per 10 gallons) daily until pH rises",
+          "Do a 20% water change tomorrow",
+          "Reduce fish food by half for 3 days"
+        ] : [
+          "Add baking soda (½ tsp per 10 gallons) daily for 3 days",
+          "Test pH every other day to check progress",
+          ...(isRaining ? ["Monitor pH more frequently after rain"] : [])
+        ],
+        status: isCritical ? "critical" : "warning"
+      });
+    }
+
+    if (allParamsToAddress.includes('temperature')) {
+      const isCritical = criticalParams.includes('temperature');
+      suggestions.push({
+        parameter: "temperature",
+        influencingFactors: [
+          "Hot sun during afternoon",
+          "Using shallow water in pond",
+          "No shade over the pond",
+          ...(isRaining ? ["Cooler water from recent rain"] : [])
+        ],
+        recommendedActions: isCritical ? [
+          "Install shade cloth over pond immediately",
+          "Add pond depth with new water if possible",
+          "Provide extra aeration today"
+        ] : [
+          "Add more shade cloth to pond",
+          "Check water depth - aim for 3-4 feet",
+          "Monitor temperature twice daily",
+          ...(isRaining ? ["Be prepared for temperature fluctuations after rain"] : [])
+        ],
+        status: isCritical ? "critical" : "warning"
+      });
+    }
+
+    if (allParamsToAddress.includes('salinity')) {
+      const isCritical = criticalParams.includes('salinity');
+      suggestions.push({
+        parameter: "salinity",
+        influencingFactors: [
+          "Using too much salt for fish health",
+          "Not adding salt regularly",
+          ...(isRaining ? ["Heavy rain diluting the salt level"] : [])
+        ],
+        recommendedActions: isCritical ? [
+          "Reduce salt feeding by half for a few days",
+          "Add 2 tablespoons of salt per 10 gallons daily",
+          "Gradually add salt back over 3-4 days"
+        ] : isRaining ? [
+          "Add 2 tablespoons salt per 10 gallons of pond water",
+          "Mix thoroughly and test in 24 hours",
+          "Add salt gradually over several days"
+        ] : [
+          "Maintain regular salt feeding schedule",
+          "Test salinity levels regularly",
+          "Add salt incrementally if needed"
+        ],
+        status: isCritical ? "critical" : "warning"
+      });
+    }
+
+    if (allParamsToAddress.includes('turbidity')) {
+      const isCritical = criticalParams.includes('turbidity');
+      suggestions.push({
+        parameter: "turbidity",
+        influencingFactors: [
+          "Fish stirring up bottom mud",
+          "Too many fish in small pond",
+          "Filter not clean or not strong enough",
+          ...(isRaining ? ["Recent rain increasing water cloudiness"] : [])
+        ],
+        recommendedActions: isCritical ? [
+          "Clean filter thoroughly right now",
+          "Reduce feeding by half for 2 days",
+          "Add a settling pond section if possible"
+        ] : [
+          "Don't overfeed fish to reduce their activity",
+          "Clean filter daily and make sure water flows through well",
+          ...(isRaining ? ["Clean filters more frequently after rain", "Monitor for increased sediment"] : [])
+        ],
+        status: isCritical ? "critical" : "warning"
+      });
+    }
+
+    // Add maintenance for normal parameters or if no issues
+    if (suggestions.length < 2) {
+      if (!suggestions.some(s => s.parameter === 'pH')) {
         suggestions.push({
           parameter: "pH",
-          influencingFactors: ["Gradual acid buildup"],
-          recommendedActions: ["Add baking soda (½ tsp per 10 gallons) daily for 3 days", "Test pH every other day to check progress"],
-          status: "warning"
+          influencingFactors: [
+            "Balanced fish food",
+            "Proper pond maintenance",
+            ...(isRaining ? ["pH stability during rain events"] : [])
+          ],
+          recommendedActions: [
+            "Maintain current feeding schedule",
+            "Test water weekly to confirm stability",
+            ...(isRaining ? ["Monitor pH for 2-3 days after rain"] : [])
+          ],
+          status: "normal"
         });
       }
-      if (issues.some(issue => issue.includes('temperature'))) {
+
+      if (!suggestions.some(s => s.parameter === 'maintenance') && suggestions.length === 1) {
         suggestions.push({
-          parameter: "temperature",
-          influencingFactors: ["Summer heat approaching"],
-          recommendedActions: ["Add more shade cloth to pond", "Check water depth - aim for 3-4 feet", "Monitor temperature twice daily"],
-          status: "warning"
-        });
-      }
-      if (issues.some(issue => issue.includes('salinity'))) {
-        suggestions.push({
-          parameter: "salinity",
-          influencingFactors: ["Recent rainfall", "Salt not mixed evenly"],
-          recommendedActions: ["Add 2 tablespoons salt per 10 gallons of pond water", "Mix thoroughly and test in 24 hours", "Add salt gradually over several days"],
-          status: "warning"
+          parameter: "maintenance",
+          influencingFactors: [
+            "Regular pond care",
+            ...(isRaining ? ["Routine maintenance during rain events"] : [])
+          ],
+          recommendedActions: [
+            "Clean filters weekly",
+            "Test all water parameters every 3 days",
+            "Feed fish according to stocking density"
+          ],
+          status: "normal"
         });
       }
     }
@@ -756,7 +1147,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
     let prompt;
     if (isReport) {
       // Analyze current water quality status for reports (same as real-time insights)
-      const { issues: reportIssues, warnings: reportWarnings } = await getParameterQualityAssessment(sensorData, true); // true for report mode
+      const { issues: reportIssues, warnings: reportWarnings } = await getParameterQualityAssessment(sensorData, isReport); // Pass correct report flag
 
       // Determine overall water quality status for current period
       let currentReportStatus = 'normal';
@@ -774,7 +1165,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
 
       REPORT ANALYSIS CONTEXT:
       - This is a WATER QUALITY REPORT showing averaged data over a time period
-      - WQI (Water Quality Index): ${sensorData.wqi?.value} (status: ${sensorData.wqi?.status})
+      - WQI (Water Quality Index): ${sensorData.wqi?.overall} (status: ${sensorData.wqi?.status})
       - WQI Range: Lower scores (0-30) are excellent, higher scores (70-100+) indicate problems
       - Parameter averages are calculated across the entire reporting period
       - Overall status: ${sensorData.overallStatus}
@@ -791,6 +1182,9 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
       - Current quality status determines tone: ${currentReportStatus}
 
       ANALYSIS REQUIREMENTS:
+      - Explain why each parameter is in its current alert level (normal/warning/critical)
+      - Analyze parameter alert levels using causes: critical from extreme readings, warning from approaching threshold, normal within safe range
+      - Explain trends using percentage changes: why parameters are rising/falling/stable and what causes these patterns
       - Check current water quality status FIRST (critical/warning/normal) and base insight tone on this
       - Explain what the WQI score means in practical terms for fish farmers
       - Analyze how parameter averages contribute to overall water quality
@@ -798,20 +1192,31 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
       - Identify which parameters most impact the WQI score AND current issues
       - Address both historical trends (report period) AND current status priorities
 
+      ALERT LEVEL EXPLANATIONS - WHY PARAMETERS ARE IN EACH STATUS:
+      - CRITICAL alerts: Extreme values that immediately endanger fish health (too high/low for survival)
+      - WARNING alerts: Values approaching dangerous levels that need monitoring
+      - NORMAL alerts: Values within safe ranges that support healthy fish conditions
+      - Include specific causes for each alert level based on parameter type and current conditions
+
+      TREND EXPLANATIONS - WHY PERCENTAGE CHANGES OCCUR:
+      - Use exact percentage changes from parameter trends (rising/falling/stable)
+      - Explain what factors cause each trend direction and magnitude
+      - Connect percentage changes to farming practices and environmental conditions
+
       RESPONSE STYLE REQUIREMENTS:
       - START your overall insight with: "${reportGreetingStyle.opening}"
       - Address the user by their nickname "${userNickname || 'fish farmer'}" when appropriate
       - Base conversational tone on CURRENT WATER QUALITY STATUS: ${currentReportStatus}
       - Focus on OVERALL TRENDS while addressing current status priorities
       - Use simple farmer language - avoid technical terms
-      - Explain WQI impact: "Your WQI of ${sensorData.wqi?.value} indicates [good/poor] water quality"
+      - Explain WQI impact: "Your WQI of ${sensorData.wqi?.overall} indicates [good/poor] water quality"
       - For current issues: ${reportIssues.length > 0 ? 'URGENT - address ' + reportIssues.map(i => i.split(' ')[0]).join(' and ') + ' immediately' : 'Monitor ongoing trends'}
       - For approaching thresholds: ${reportWarnings.length > 0 ? 'Watch ' + reportWarnings.map(w => w.split(' ')[0]).join(' and ') + ' closely' : ''}
 
-      EXAMPLES OF GOOD REPORT INSIGHTS:
-      ✅ EXCELLENT: "Excellent news, John! Your WQI of 25 shows great water quality with steady parameters throughout. Everything looks perfect - keep up the great work!"
-      ✅ WARNING: "Hey Maria, while your WQI of 45 is acceptable, your current pH is approaching the low threshold. Check pH daily and be ready to add baking soda regularly."
-      ✅ CRITICAL: "Oh no, David! Your WQI of 85 shows serious issues, and your current turbidity levels are way too high. Clean those filters today and reduce fish feeding immediately."
+      EXAMPLES OF GOOD REPORT INSIGHTS WITH ALERT & TREND EXPLANATIONS:
+      ✅ CRITICAL: "Oh no, David! Your WQI of 85 shows serious problems with turbidity at critical levels because cloudy water harms gills. Turbidity fell 15.2% likely from recent heavy rain settling particles, but values are still dangerous for fish health."
+      ✅ WARNING: "Hey Maria, your salinity is approaching warning levels at 2.3 ppt because it's trending up 8.7% from evaporation concentrating salts. Watch closely as rising salinity can stress fish before it becomes critical."
+      ✅ NORMAL: "Excellent news, John! Your pH is normal because it stayed stable within safe ranges, only varying 2.1% which indicates good buffer capacity. This balanced pH supports healthy fish metabolism throughout the period."
 
       Please return a JSON object with this structure:
       {
@@ -837,11 +1242,18 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
       }
       `;
     } else {
-      // Original prompt for real-time insights
+      // Original prompt for real-time insights with alert level priority and weather consideration
       prompt = `
       Based on the following pond/tank water quality sensor data, provide analysis and simple recommendations for FISH FARMERS.
       The data is: ${JSON.stringify(sensorData)}
       Water quality thresholds for ${fishpondType} ponds: ${JSON.stringify(actualThresholds)}
+
+      PRIORITY ANALYSIS REQUIREMENTS:
+      - PRIORITIZE EACH PARAMETER'S ALERT LEVEL FIRST (pHAlertLevel, temperatureAlertLevel, salinityAlertLevel, turbidityAlertLevel)
+      - Alert levels indicate current status: 'critical' = immediate action needed, 'warning' = monitor closely, 'normal' = good condition
+      - Weather condition (isRaining): if raining (value > 0), adjust recommendations for rainfall effects on water quality
+      - Focus urgent recommendations on parameters with 'critical' alert levels, then 'warning' levels
+      - Weather-aware adjustments: rain affects pH (lowers it), turbidity (increases), salinity (dilutes), temperature (cools water)
 
       USER PERSONALIZATION:
       - User's nickname: ${userNickname || 'not set'}
@@ -851,24 +1263,24 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
       - Actual thresholds: ${JSON.stringify(actualThresholds)}
 
       ANALYSIS REQUIREMENTS:
-      - Carefully analyze each parameter against its specific threshold values
-      - Identify parameters that are NEARING the threshold limits (within 0.3-0.5 units of min/max)
-      - Include specific threshold information in your analysis
-      - Reference the actual threshold ranges in your reasoning
+      - Start with parameters that have 'critical' or 'warning' alert levels
+      - Consider weather impact on each parameter's current alert level
+      - Explain how rain affects each parameter if isRaining > 0
+      - Provide weather-appropriate action adjustments
 
       RESPONSE STYLE REQUIREMENTS:
       - START your overall insight with: "${greetingStyle.opening}"
       - Address the user by their nickname "${userNickname || 'fish farmer'}" when appropriate
       - Use expressive greetings based on the quality status (examples: ${greetingStyle.examples.join(", ")})
       - Make the tone conversational and emotive, not clinical
-      - SPECIFICALLY mention when parameters are approaching thresholds
+      - PRIORITIZE critical issues first, then warnings, then provide maintenance advice for normal parameters
 
-      CRITICAL: Use extremely simple, everyday language that a fish farmer with no scientific training can understand.
-      - Avoid technical terms like "alkalinity", "acidification", "reduce alkalinity", etc.
-      - Use common farmer terms like "baking soda", "farm lime", "clean filters", "change some water", etc.
-      - Make each recommendation a clear action that farmers can do TODAY.
-      - Keep instructions very practical and easy to follow.
-      - When mentioning thresholds, say things like "close to the ideal range of 6.5-8.5 for pH"
+      LANGUAGE REQUIREMENTS:
+      - Use extremely simple, everyday language that a fish farmer with no scientific training can understand
+      - Avoid technical jargon - use terms like "baking soda", "clean filters", "change some water", "add salt", etc.
+      - Make each recommendation a clear, actionable step that farmers can do TODAY
+      - When mentioning alert levels, explain what they mean: "your pH needs immediate attention" (critical) or "watch your pH closely" (warning)
+      - If raining, mention: "with recent rain, be extra careful with..." followed by parameter-specific advice
 
       Examples of good conversational language:
       ✅ GOOD: "Hey Alex, your pH is getting close to the ideal range of 6.5-8.5 - try adding some baking soda daily until it gets back to normal"
@@ -896,7 +1308,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
               "Remove uneaten fish food from the pond",
               "Do a 20% of the water change by removing old water and adding fresh water"
             ],
-            "status": "normal|warning|critical"
+            "status": "${sensorData.pHAlertLevel || 'normal'}"
           },
           {
             "parameter": "temperature",
@@ -910,7 +1322,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
               "Add more water depth to pond",
               "Move pond location away from direct hot sun"
             ],
-            "status": "normal|warning|critical"
+            "status": "${sensorData.temperatureAlertLevel || 'normal'}"
           },
           {
             "parameter": "salinity",
@@ -924,7 +1336,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
               "Add 2 tablespoons of salt per 10 gallons of water daily",
               "Gradually add salt back over 3-4 days after rain"
             ],
-            "status": "normal|warning|critical"
+            "status": "${sensorData.salinityAlertLevel || 'normal'}"
           },
           {
             "parameter": "turbidity",
@@ -938,7 +1350,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
               "Clean filter daily and make sure water flows through well",
               "Add a settling pond or reduce fish number"
             ],
-            "status": "normal|warning|critical"
+            "status": "${sensorData.turbidityAlertLevel || 'normal'}"
           }
         ]
       }
@@ -946,7 +1358,7 @@ const generateInsightFromAPI = async (sensorData, componentId) => {
     }
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response = result.response;
     const text = response.text();
 
     // Clean the response to ensure it's valid JSON
@@ -1132,89 +1544,8 @@ export const generateInsight = async (sensorData, componentId = 'default') => {
   if (aiCompletelyDisabled) {
     silentLog("🚫 AI completely disabled due to quota exhaustion");
 
-    // Try to provide water quality-aware response if data is available
-    if (sensorData) {
-      try {
-        const isReport = componentId === "report-overall-insight";
-        const { issues, warnings } = await getParameterQualityAssessment(sensorData, isReport);
-
-        let statusMessage = "AI insights are temporarily disabled due to high usage. Here are basic water quality recommendations.";
-        let suggestions = [];
-
-        if (componentId === "report-overall-insight") {
-          // Report-specific AI-disabled response
-          const wqi = sensorData.wqi?.value || 0;
-          statusMessage = `AI insights are temporarily disabled. Your recent WQI score of ${wqi} indicates ${wqi <= 30 ? 'excellent' : wqi <= 60 ? 'good' : 'needs attention'} water quality.`;
-        } else {
-          // Regular insights with parameter awareness
-          if (issues.length > 0) {
-            statusMessage = "AI insights are disabled, but some parameters need attention. Basic recommendations below.";
-          } else if (warnings.length > 0) {
-            statusMessage = "AI insights unavailable, but parameters are approaching limits. Monitor closely.";
-          }
-        }
-
-        // Generate parameter-specific suggestions based on quality assessment
-        if (issues.length > 0 || warnings.length > 0) {
-          const paramsToAddress = [...issues, ...warnings];
-          paramsToAddress.slice(0, 2).forEach(issue => {
-            const param = issue.split(' ')[0]; // Extract parameter name
-            suggestions.push({
-              parameter: param,
-              influencingFactors: [`${param} quality monitoring`],
-              recommendedActions: [`Monitor ${param} levels regularly`, `Address any significant changes`],
-              status: issues.some(i => i.includes(param)) ? "critical" : "warning"
-            });
-          });
-        }
-
-        // Add maintenance suggestions if we don't have specific issues
-        if (suggestions.length === 0) {
-          suggestions = [
-            {
-              parameter: "maintenance",
-              influencingFactors: ["Regular monitoring"],
-              recommendedActions: ["Monitor water parameters regularly", "Note any significant changes"],
-              status: "normal"
-            }
-          ];
-        }
-
-        return {
-          insights: {
-            overallInsight: statusMessage,
-            timestamp: new Date().toISOString(),
-            source: "ai-disabled"
-          },
-          suggestions
-        };
-      } catch (error) {
-        silentError("Error generating AI-disabled insights:", error);
-      }
-    }
-
-    // Fallback generic response
-    return {
-      insights: {
-        overallInsight: "AI insights are temporarily disabled. Please upgrade to a paid plan for full functionality. Using basic water quality recommendations.",
-        timestamp: new Date().toISOString(),
-        source: "ai-disabled"
-      },
-      suggestions: [
-        {
-          parameter: "pH",
-          influencingFactors: ["Water quality changes"],
-          recommendedActions: ["Monitor pH levels", "Consider water testing"],
-          status: "normal"
-        },
-        {
-          parameter: "temperature",
-          influencingFactors: ["Environmental conditions"],
-          recommendedActions: ["Monitor water temperature", "Provide shade if needed"],
-          status: "normal"
-        }
-      ]
-    };
+    // Use same alert level logic as static fallback
+    return await generateStaticFallbackResponse(sensorData, componentId);
   }
 
   if (!sensorData) {
@@ -1422,28 +1753,39 @@ export const resetDailyLimits = () => {
  * @param {Object} trends - Trend data for each parameter (rising/falling/stable)
  */
 export const generateForecastInsight = async (forecastData, trends) => {
-  if (!forecastData) {
-    return {
-      insights: {
-        overallInsight: "No forecast data available for analysis.",
-        timestamp: new Date().toISOString(),
-        source: "error"
-      },
-      suggestions: []
-    };
-  }
-
-  const componentId = "forecast-overall-insight";
-
-  // Emergency AI disable check
-  if (aiCompletelyDisabled) {
-    silentLog("🚫 AI completely disabled - using forecast static fallback");
-    return generateForecastStaticFallback(forecastData, trends);
-  }
-
   try {
-    // Check for cached insights first
-    const dataForHash = { ...forecastData, trends };
+    // Validate input parameters
+    if (!forecastData || typeof forecastData !== 'object') {
+      return {
+        insights: {
+          overallInsight: "No forecast data available for analysis.",
+          timestamp: new Date().toISOString(),
+          source: "error"
+        },
+        suggestions: []
+      };
+    }
+
+    // Validate trends parameter
+    const validTrends = trends && typeof trends === 'object' ? trends : {};
+
+    const componentId = "forecast-overall-insight";
+
+// TEMPORARY: Clear rate limit counters to unblock forecast insights during development
+// This allows forecast AI to work without affecting other insights
+if (__DEV__) {
+  console.log("🔄 Clearing rate limit counters to enable forecast insights");
+  requestTimestamps = []; // Clear the request tracking
+}
+
+    // Emergency AI disable check
+    if (aiCompletelyDisabled) {
+      silentLog("🚫 AI completely disabled - using forecast static fallback");
+      return generateForecastStaticFallback(forecastData, validTrends);
+    }
+
+    // Safely create data hash without spreading undefined trends
+    const dataForHash = { ...forecastData, ...validTrends };
     const dataHash = createDataHash(dataForHash, componentId);
     const cachedInsight = await getCachedInsight(componentId, dataHash);
 
@@ -1453,7 +1795,7 @@ export const generateForecastInsight = async (forecastData, trends) => {
     }
 
     // Generate new forecast insights
-    const forecastSuggestions = generateForecastParameterSuggestions(forecastData, trends, componentId);
+    const forecastSuggestions = generateForecastParameterSuggestions(forecastData, validTrends, componentId);
 
     // Create AI prompt for forecast insights
     const prompt = `
@@ -1462,31 +1804,38 @@ export const generateForecastInsight = async (forecastData, trends) => {
     FORECAST DATA: ${JSON.stringify(forecastData)}
     TREND ANALYSIS: ${JSON.stringify(trends)}
 
+    CRITICAL TREND FOCUS REQUIREMENTS:
+    - For EACH PARAMETER, focus ONLY on its specific current trend (rising/falling/stable)
+    - If pH is rising, ONLY explain what causes pH increases and actions to prevent pH problems
+    - If temperature is falling, ONLY explain what causes temperature decreases and actions to prevent cold stress
+    - If any parameter is stable, ONLY explain what maintains stability and actions to keep it balanced
+    - DO NOT mix trends - each parameter insight must be trend-specific
+
     FORECAST ANALYSIS REQUIREMENTS:
-    - Analyze what each trend (rising/falling/stable) means for fish pond management
-    - Provide actionable preparation strategies for the predicted parameter changes
-    - Explain the potential impact of these trends on fish health and pond maintenance
-    - Suggest preventive measures before water quality reaches critical levels
+    - Explain the specific factors that are driving each parameter's current trend
+    - Describe the immediate consequences if the trend continues unchecked
+    - Provide targeted actions to either encourage (if stable/wanted) or counteract (if rising/falling unwanted) the trend
+    - Suggest preventive measures appropriate for each parameter's specific trend
 
     RESPONSE STYLE REQUIREMENTS:
     - Focus on PREVENTIVE FORECASTING rather than current status
     - Use simple farmer language that fish farmers understand
-    - Explain what each trend indicates about future pond conditions
-    - Provide practical preparation steps for the predicted changes
+    - For each parameter, explain: "WHAT FACTORS cause this [rising/falling/stable] trend, WHAT PROBLEMS it creates, WHAT ACTIONS to take"
+    - Provide practical preparation steps specific to each trend scenario
 
-    EXAMPLES OF GOOD FORECAST INSIGHTS:
-    ✅ "Your pH is forecasted to rise - fresh water additions could cause sudden increases. Check pH daily and be ready with baking soda if it starts climbing too much."
-    ✅ "Temperature is predicted to fall - colder weather approaches. Monitor fish for signs of slowing metabolism and consider a backup heater preparation."
-    ✅ "Stormy weather may increase turbidity - be prepared with extra filtration capacity. Clean filtersAhead of heavy rains to prevent water clarity issues."
+    EXAMPLES OF TREND-FOCUSED FORECAST INSIGHTS:
+    ✅ pH RISING: "Your pH is going up because fresh water additions raise it and plants use up sour gas. If it keeps rising, fish get stressed and can't breathe right. Check pH daily and have baking soda ready if it gets too high..."
+    ✅ TEMPERATURE FALLING: "Water temperature is dropping from cooling nights and no sun. If it keeps getting colder, fish metabolism slows and they eat less. Watch fish movement and prepare heaters if needed..."
+    ✅ TURBIDITY STABLE: "Mud levels staying steady - fish activity and filter work balanced. Keep feeding amounts the same and clean filter regularly to maintain this balance..."
 
-    The parameter suggestions are already generated and provided below. Use these specific suggestions as context and expand into an overall predictive insight.
+    The parameter suggestions are already generated and provided below. Use these specific suggestions as context and expand into an overall predictive insight, but ENSURE each parameter response focuses ONLY on its specific trend.
 
     GENERATED SUGGESTIONS: ${JSON.stringify(forecastSuggestions)}
 
     Please return a JSON object with this structure (expand the overallInsight to be predictive and actionable):
     {
       "insights": {
-        "overallInsight": "Conversational analysis of forecasted water quality trends, explaining what the predictions mean for proactive pond management and fish health preparation.",
+        "overallInsight": "Conversational analysis of forecasted water quality trends, explaining what the predictions mean for proactive pond management and fish health preparation. For each parameter, focus on what causes its current specific trend and appropriate actions.",
         "timestamp": "${new Date().toISOString()}",
         "source": "gemini-ai-forecast"
       },

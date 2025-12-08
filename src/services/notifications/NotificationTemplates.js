@@ -1,10 +1,9 @@
 class NotificationTemplates {
   static waterQualityAlert(parameter, value, status) {
     const severity = status === 'critical' ? 'Critical' : 'Warning';
-    const emoji = status === 'critical' ? '🚨' : '⚠️';
 
     return {
-      title: `${emoji} Water Quality Alert`,
+      title: `${severity} Water Quality Alert`,
       body: `${severity}: ${parameter} level is ${value}. Tap to view details and monitor water quality.`,
       data: {
         type: 'water_quality_alert',
@@ -24,7 +23,7 @@ class NotificationTemplates {
 
   static deviceOffline(deviceName, lastSeen) {
     return {
-      title: '📡 Device Offline',
+      title: 'Device Offline',
       body: `${deviceName} went offline. Last seen: ${lastSeen}`,
       data: {
         type: 'device_offline',
@@ -41,7 +40,7 @@ class NotificationTemplates {
 
   static deviceOnline(deviceName) {
     return {
-      title: '✅ Device Online',
+      title: 'Device Online',
       body: `${deviceName} is back online`,
       data: {
         type: 'device_online',
@@ -56,7 +55,7 @@ class NotificationTemplates {
 
   static lowBattery(deviceName, batteryLevel) {
     return {
-      title: '🔋 Low Battery Warning',
+      title: 'Low Battery Warning',
       body: `${deviceName} battery is low (${batteryLevel}%)`,
       data: {
         type: 'low_battery',
@@ -98,7 +97,7 @@ class NotificationTemplates {
     }
 
     return {
-      title: '🔧 Maintenance Reminder',
+      title: 'Maintenance Reminder',
       body: `${task} is due on ${dueDateStr}`,
       data: {
         type: 'maintenance_reminder',
@@ -114,7 +113,7 @@ class NotificationTemplates {
 
   static dataSyncComplete(recordCount) {
     return {
-      title: '☁️ Data Sync Complete',
+      title: 'Data Sync Complete',
       body: `Successfully synced ${recordCount} records`,
       data: {
         type: 'data_sync_complete',
@@ -129,7 +128,7 @@ class NotificationTemplates {
 
   static dataSyncFailed(error) {
     return {
-      title: '❌ Data Sync Failed',
+      title: 'Data Sync Failed',
       body: `Sync failed: ${error}`,
       data: {
         type: 'data_sync_failed',
@@ -144,16 +143,8 @@ class NotificationTemplates {
   }
 
   static systemStatus(status, message) {
-    const statusEmojis = {
-      healthy: '✅',
-      warning: '⚠️',
-      error: '❌',
-      maintenance: '🔧',
-      system_alert: '🚨'
-    };
-
     return {
-      title: `${statusEmojis[status] || '📊'} System Status`,
+      title: `System Status`,
       body: message,
       data: {
         type: 'system_status',
@@ -169,7 +160,7 @@ class NotificationTemplates {
 
   static forecastAlert(parameter, prediction, timeframe) {
     return {
-      title: '🔮 Forecast Alert',
+      title: 'Forecast Alert',
       body: `${parameter} predicted to breach limits in ${timeframe}`,
       data: {
         type: 'forecast_alert',
@@ -185,16 +176,8 @@ class NotificationTemplates {
   }
 
   static qualityReport(wqi, rating) {
-    const ratingEmojis = {
-      excellent: '🌟',
-      good: '✅',
-      fair: '⚠️',
-      poor: '❌',
-      veryPoor: '🚨'
-    };
-
     return {
-      title: `${ratingEmojis[rating] || '📊'} Water Quality Report`,
+      title: `Water Quality Report`,
       body: `Current WQI: ${wqi} (${rating.charAt(0).toUpperCase() + rating.slice(1)})`,
       data: {
         type: 'quality_report',
@@ -210,7 +193,7 @@ class NotificationTemplates {
 
   static forecastReminder() {
     return {
-      title: '🌅 Water Parameter Forecast Ready',
+      title: 'Water Parameter Forecast Ready',
       body: 'Tomorrow\'s water parameter forecast is ready for viewing. Check your PureFlow app to stay ahead of water quality trends.',
       data: {
         type: 'forecast_reminder',
@@ -225,7 +208,7 @@ class NotificationTemplates {
 
   static reportReminder() {
     return {
-      title: '📊 Daily Report Available',
+      title: 'Daily Report Available',
       body: 'Your daily water quality report is ready. Tap to view today\'s comprehensive analysis.',
       data: {
         type: 'report_reminder',
@@ -240,10 +223,9 @@ class NotificationTemplates {
 
   static borderlineAlert(parameter, value, threshold, direction) {
     const status = direction === 'high' ? 'approaching maximum' : 'approaching minimum';
-    const emoji = direction === 'high' ? '📈' : '📉';
 
     return {
-      title: `${emoji} Parameter Warning`,
+      title: `Parameter Warning`,
       body: `${parameter} (${value}) is ${status} threshold (${threshold}). Consider taking preventive action.`,
       data: {
         type: 'borderline_alert',
@@ -265,7 +247,7 @@ class NotificationTemplates {
     const attempts = attemptCount > 0 ? ` (${attemptCount} failed attempts)` : '';
 
     return {
-      title: '⚠️ Device Connection Unstable',
+      title: 'Device Connection Unstable',
       body: `${deviceName} connection is unstable${attempts}. Please check for potential problems.`,
       data: {
         type: 'connection_unstable',
@@ -281,7 +263,7 @@ class NotificationTemplates {
 
   static deviceUnstable(deviceName = 'DATM') {
     return {
-      title: '🚨 DATM Unstable',
+      title: 'DATM Unstable',
       body: `${deviceName} is unstable. Multiple fetch attempts failed. Check for potential problems.`,
       data: {
         type: 'device_unstable',
@@ -299,7 +281,7 @@ class NotificationTemplates {
     const params = parameters.join(', ');
 
     return {
-      title: '🚨 Harmful Water Parameters Detected',
+      title: 'Harmful Water Parameters Detected',
       body: `${params}${count} are in harmful state. Tap to open PureFlow and take action.`,
       data: {
         type: 'harmful_state_alert',
@@ -316,18 +298,23 @@ class NotificationTemplates {
   }
 
   static weatherAlert(rainStatus, weatherMessage) {
-    const statusEmojis = {
-      'No Rain': '☀️',
-      'Raining': '🌧️',
-      'Heavy Rain': '⛈️'
-    };
+    // Determine severity based on rain intensity for Firebase alert level
+    let status = 'info'; // Default to info level
+    if (rainStatus === 'Heavy Rain') {
+      status = 'critical';
+    } else if (rainStatus === 'Raining') {
+      status = 'warning';
+    } else if (rainStatus === 'Light Rain') {
+      status = 'info'; // Explicitly set light rain to info alert level
+    }
 
     return {
-      title: `${statusEmojis[rainStatus] || '💧'} Weather Alert`,
+      title: `Weather Alert`,
       body: weatherMessage,
       data: {
         type: 'weather_alert',
         rainStatus,
+        status, // Add severity status for Firebase alert level
         timestamp: new Date().toISOString(),
         category: 'weather',
         deepLink: 'pureflow://forecast'
@@ -341,7 +328,7 @@ class NotificationTemplates {
 
   static monitoringReminder(hoursInterval = 4) {
     return {
-      title: '🌊 Time to Monitor Water Parameters',
+      title: 'Time to Monitor Water Parameters',
       body: `It's been a while! Open PureFlow to check your water quality parameters and ensure everything is running smoothly.`,
       data: {
         type: 'monitoring_reminder',
@@ -357,7 +344,7 @@ class NotificationTemplates {
 
   static calibrationNeeded(parameter, lastCalibrated) {
     return {
-      title: '🔧 Calibration Required',
+      title: 'Calibration Required',
       body: `${parameter} sensor was last calibrated ${lastCalibrated}. Maintenance recommended.`,
       data: {
         type: 'calibration_reminder',
@@ -373,7 +360,7 @@ class NotificationTemplates {
 
   static monthlyMaintenanceReminder() {
     return {
-      title: '🔧 Monthly Maintenance Check',
+      title: 'Monthly Maintenance Check',
       body: 'Time for your monthly maintenance checkup. Review equipment status and perform routine maintenance tasks.',
       data: {
         type: 'monthly_maintenance_reminder',
@@ -388,7 +375,7 @@ class NotificationTemplates {
 
   static monthlyCalibrationReminder() {
     return {
-      title: '🔬 Monthly Sensor Calibration',
+      title: 'Monthly Sensor Calibration',
       body: 'Monthly sensor calibration is due. Ensure accurate readings by calibrating all water quality sensors.',
       data: {
         type: 'monthly_calibration_reminder',

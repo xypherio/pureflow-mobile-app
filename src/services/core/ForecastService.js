@@ -256,11 +256,11 @@ class ForecastService {
   /**
    * Sets up automated prediction refresh interval
    * @param {Function} predictionCallback - Callback function to execute predictions
-   * @param {number} intervalHours - Hours between predictions (default: 12)
+   * @param {number} intervalMinutes - Minutes between predictions (default: 720 - 12 hours)
    * @returns {Function} Cleanup function to clear the interval
    */
-  setupAutomatedRefresh(predictionCallback, intervalHours = 12) {
-    const intervalMs = intervalHours * 60 * 60 * 1000;
+  setupAutomatedRefresh(predictionCallback, intervalMinutes = 720) {
+    const intervalMs = intervalMinutes * 60 * 1000;
 
     const predictionInterval = setInterval(async () => {
       console.log("🔄 Automated prediction refresh triggered");

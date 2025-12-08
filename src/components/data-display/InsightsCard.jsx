@@ -114,10 +114,8 @@ const useScreenSize = () => {
  * Custom hook for insight-related state and logic
  */
 const useInsightState = (componentId, sensorData, autoRefresh) => {
-  // Use insight manager for AI-generated insights when sensorData is available
-  const insightData = sensorData
-    ? useInsightManager(componentId, sensorData, { autoRefresh })
-    : {};
+  // Always call useInsightManager - it handles empty sensorData internally
+  const insightData = useInsightManager(componentId, sensorData, { autoRefresh });
 
   const { insight, loading: insightLoading, error: insightError } = insightData;
 
@@ -152,26 +150,32 @@ const useDisplayConfig = (type, hasStaticContent, hasAIInsight, insightLoading, 
 /**
  * Custom hook for status information
  */
-const useStatusInfo = (insightError, insightLoading, hasAIInsight, hasStaticContent) => {
-  const getStatusColor = () => {
-    if (insightError) return '#DC2626'; // Red for error
-    if (insightLoading) return '#F59E0B'; // Yellow for loading
-    return '#10B981'; // Green for success
-  };
+  const useStatusInfo = (insightError, insightLoading, hasAIInsight, hasStaticContent, insight) => {
+    const getStatusColor = () => {
+      if (insightLoading) return '#F59E0B'; // Yellow for loading
+      if (hasAIInsight) return '#10B981'; // Green for AI
+      if (hasStaticContent) return '#10B981'; // Green for fallback content
+      if (insightError) return '#F59E0B'; // Yellow for error (when no content available)
+      return '#6B7280'; // Gray for waiting
+    };
 
-  const getStatusText = () => {
-    if (insightError) return 'AI Error';
-    if (insightLoading) return 'Generating...';
-    if (hasAIInsight) return 'AI Generated';
-    if (hasStaticContent) return 'Content Available';
-    return 'Waiting for Data';
-  };
+    const getStatusText = () => {
+      if (insightLoading) return 'Generating...';
+      if (hasAIInsight) return 'AI Generated';
+      if (hasStaticContent) {
+        const source = insight?.insights?.source;
+        if (source === 'alert-level-fallback') return 'Alert Analysis'; // New intelligent fallback
+        return 'Content Available'; // Traditional fallback
+      }
+      if (insightError) return 'Alert Analysis'; // Show alert analysis instead of error
+      return 'Waiting for Data';
+    };
 
-  return {
-    statusColor: getStatusColor(),
-    statusText: getStatusText()
+    return {
+      statusColor: getStatusColor(),
+      statusText: getStatusText()
+    };
   };
-};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -220,7 +224,8 @@ export default function InsightsCard({
     insightError,
     insightLoading,
     hasAIInsight,
-    hasStaticContent
+    hasStaticContent,
+    insight
   );
 
   // Timestamp logic
@@ -411,20 +416,6 @@ export default function InsightsCard({
 
         {/* Main content container */}
         <View style={styles.contentContainer}>
-          {/* Icon */}
-          <View style={[styles.iconContainer, {
-            backgroundColor: displayConfig.bgColor,
-            shadowColor: displayConfig.iconColor,
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 6,
-          }]}>
-            <displayConfig.icon
-              size={isEmpty ? 20 : 24}
-              color={displayConfig.iconColor}
-            />
-          </View>
 
           {/* Content */}
           <View style={{ flex: 1 }}>

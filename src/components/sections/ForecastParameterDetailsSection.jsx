@@ -5,7 +5,181 @@ import { StyleSheet, Text, View } from "react-native";
 // Utils
 import { getParameterTheme } from "@utils/forecastUtils";
 
-const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) => {
+// Helper function to generate trend-aware fallbacks
+const getTrendAwareFallbacks = (selectedParam, trend) => {
+  const normalizedParam = selectedParam.toLowerCase();
+  const normalizedTrend = trend?.toLowerCase() || 'stable';
+
+  const fallbacks = {
+    ph: {
+      rising: {
+        factors: [
+          "Baking soda/lime in feed making water less acid",
+          "Fresh water from hose or well is less sour",
+          "Plants in pond using up sour gas from their breathing"
+        ],
+        actions: [
+          "Keep checking pH - it might get too high and bother fish",
+          "Have baking soda ready if fish start floating funny",
+          "Shade pond more if plants are bubbling too much"
+        ]
+      },
+      falling: {
+        factors: [
+          "Baking soda in feed getting less - fish food changed?",
+          "Heavy rain bringing sour water from nearby ground",
+          "Fish waste piling up making water acidic"
+        ],
+        actions: [
+          "Add little baking soda if pH keeps dropping slow",
+          "Check new fish food - might need more baking soda in it",
+          "Watch if ammonia or nitrite is also going up"
+        ]
+      },
+      stable: {
+        factors: [
+          "Same baking soda amount in feed every day",
+          "Plants in pond eating sour gas normally",
+          "Fish waste breaking down same as always"
+        ],
+        actions: [
+          "Test pH twice a week like usual",
+          "Use same baking soda amount you're comfortable with",
+          "Change same water amount each week"
+        ]
+      }
+    },
+    temperature: {
+      rising: {
+        factors: [
+          "Days getting hotter and warmer winds blowing",
+          "Shallow pond water heating up fast in sun",
+          "Hot sun all afternoon making water warm sitting still"
+        ],
+        actions: [
+          "Put up shade cloth or tarp if no shade trees",
+          "Make pond deeper if possible for cooler water",
+          "Check temperature during hottest part of day"
+        ]
+      },
+      falling: {
+        factors: [
+          "Evenings getting cooler and cold weather coming",
+          "Cloudy days blocking sun from warming water",
+          "Deep pond bottom getting exposed to cooler air"
+        ],
+        actions: [
+          "Cover pond at night if it gets very cold",
+          "Watch fish for slow movement signs from cold",
+          "Feed less when water is cold - fish eat slower"
+        ]
+      },
+      stable: {
+        factors: [
+          "Weather staying same hot/cold every day",
+          "Shade working good and pond in good spot",
+          "Water moving around keeping heat even"
+        ],
+        actions: [
+          "Keep shade up and check temperature daily",
+          "Move water around pond to keep heat even",
+          "Plan feeding when water is normally warmest"
+        ]
+      }
+    },
+    salinity: {
+      rising: {
+        factors: [
+          "Sun making water dry up and salt getting stronger",
+          "Putting more salt in feed for fish health",
+          "Less fresh water going in pond"
+        ],
+        actions: [
+          "Check salt level before adding more to feed",
+          "Add fresh water if salt gets too strong",
+          "Watch if fish are swimming funny from too much salt"
+        ]
+      },
+      falling: {
+        factors: [
+          "Heavy rain washing salt out right away",
+          "Adding lots fresh water all at once",
+          "Less salt in feed mix than usual"
+        ],
+        actions: [
+          "Add salt slow over a few days, don't put in all at once",
+          "Test salt after rain and add what was washed out",
+          "Watch fish for signs they're adjusting to less salt"
+        ]
+      },
+      stable: {
+        factors: [
+          "About same water drying up and fresh water added",
+          "Same salt amount in feed every day",
+          "Weather staying dry or rainy same as last weeks"
+        ],
+        actions: [
+          "Test salt regular and add same amount",
+          "Add fresh water when it's usually dry time",
+          "Change salt amount if fish getting bigger or smaller"
+        ]
+      }
+    },
+    turbidity: {
+      rising: {
+        factors: [
+          "Fish more active and stirring up bottom mud",
+          "Too much feed making more mess floating around",
+          "New fresh water bringing clear water that stirs up mud"
+        ],
+        actions: [
+          "Feed less for few days to let mud settle",
+          "Add more filter or another small settling pond",
+          "Check how muddy water is every day"
+        ]
+      },
+      falling: {
+        factors: [
+          "Heavy rain washing away floating dirt",
+          "Fish less active letting mud settle naturally",
+          "Filter working better catching dirt particles"
+        ],
+        actions: [
+          "Use cleaner water time to clean pond bottom",
+          "Clean filter regular to keep it working",
+          "Watch for over-clean water making fish see too far"
+        ]
+      },
+      stable: {
+        factors: [
+          "Same number fish making same mess amount",
+          "Feeding same amount every day",
+          "Filter balancing dirt coming in with catching it"
+        ],
+        actions: [
+          "Clean filter on regular schedule",
+          "Feed same amounts you're comfortable with",
+          "Scoop bottom mud regular before it piles too high"
+        ]
+      }
+    }
+  };
+
+  return fallbacks[normalizedParam]?.[normalizedTrend] || {
+    factors: [
+      "Parameter stability factors being analyzed",
+      "Environmental conditions under monitoring",
+      "System equilibrium patterns observed"
+    ],
+    actions: [
+      "Continue regular parameter monitoring and testing",
+      "Maintain consistent system management practices",
+      "Adjust interventions based on parameter trend observations"
+    ]
+  };
+};
+
+const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse, trends }) => {
   if (!selectedParam) {
     return (
       <View style={styles.sectionContainer}>
@@ -52,12 +226,10 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
       console.error('Error getting influencing factors:', error);
     }
 
-    // Default fallback
-    return [
-      "Rainfall intensity affecting water dilution",
-      "Temperature fluctuations impacting solubility",
-      "Low sunlight reducing photosynthesis"
-    ];
+    // Trend-aware parameter-specific fallback
+    const trend = trends?.[selectedParam] || 'stable';
+    const fallback = getTrendAwareFallbacks(selectedParam, trend);
+    return fallback.factors;
   };
 
   const getActionsData = () => {
@@ -80,12 +252,10 @@ const ParameterDetails = ({ selectedParam, setSelectedParam, geminiResponse }) =
       console.error('Error getting recommended actions:', error);
     }
 
-    // Default fallback
-    return [
-      "Adjust feeding schedules based on water conditions",
-      "Increase aeration to maintain oxygen levels",
-      "Regularly check ammonia and nitrite levels"
-    ];
+    // Trend-aware parameter-specific fallback
+    const trend = trends?.[selectedParam] || 'stable';
+    const fallback = getTrendAwareFallbacks(selectedParam, trend);
+    return fallback.actions;
   };
 
   return (
@@ -263,6 +433,8 @@ const styles = StyleSheet.create({
 
   // Recommendations styles
   recommendationsCard: {
+    width: 320,
+    alignSelf: 'center',
     marginTop: 16,
     marginBottom: 8,
     paddingVertical: 14,
