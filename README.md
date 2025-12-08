@@ -10,18 +10,12 @@
 - [Usage](#usage)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
-- [Recent Updates](#recent-updates)
 - [Technical Implementation](#technical-implementation)
-- [Performance Features](#performance-features)
-- [Error Handling](#error-handling)
 - [AI Integration](#ai-integration)
-- [Development](#development)
 
 ## Project Overview
 
-PureFlow Mobile is an advanced Expo-based mobile application designed for comprehensive water quality monitoring and management. It addresses the critical need for accessible and actionable water quality data, empowering fishpond owners to maintain optimal water conditions. By providing real-time data visualization, intelligent alerts, predictive forecasting, and AI-powered insights, PureFlow Mobile helps prevent water-related issues and promotes a healthier environment.
-
-Built with modern React Native and Expo technologies, PureFlow Mobile delivers a production-ready solution with enterprise-level error handling, performance optimization, and user experience design.
+PureFlow Mobile is an Expo-based mobile application designed for comprehensive water quality monitoring. It addresses the critical need for accessible and actionable water quality data, empowering fishpond owners to maintain optimal water conditions. By providing real-time data visualization, intelligent alerts, predictive forecasting, and AI-powered insights, PureFlow Mobile helps prevent water-related issues and promotes a healthier environment.
 
 ## Features
 
@@ -29,7 +23,7 @@ Built with modern React Native and Expo technologies, PureFlow Mobile delivers a
 -   **Real-time Data Monitoring:** Visualize essential water quality parameters (pH, Temperature, Salinity, Turbidity) through intuitive real-time data cards with live updates
 -   **Water Quality Forecasting:** ML-powered predictions for future water quality parameters with trend analysis and breach detection
 -   **Interactive Charts & Reports:** Generate detailed reports and explore historical water quality data with interactive line charts and comprehensive analytics
--   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events with native push notifications
+-   **Smart Notifications & Alerts:** Receive timely and customizable alerts based on predefined thresholds and critical water quality events with local notifications
 -   **Data Export & Sharing:** Easily export comprehensive reports as PDFs and CSVs, share critical water quality information with stakeholders
 
 ### Environmental Monitoring
@@ -50,7 +44,7 @@ Built with modern React Native and Expo technologies, PureFlow Mobile delivers a
 -   **Performance Optimized:** Advanced data processing, caching, and memory management for optimal app performance
 
 ### Data Management
--   **Firebase Integration:** Seamlessly integrates with Firebase for robust cloud-based data storage (Firestore) and efficient push notifications (FCM)
+-   **Firebase Integration:** Seamlessly integrates with Firebase for robust cloud-based data storage (Firestore)
 -   **Real-time Synchronization:** Advanced real-time data fetching with intelligent retry logic and fallback mechanisms
 -   **Data Validation:** Comprehensive data validation and sanitization throughout the application stack
 
@@ -59,7 +53,7 @@ Built with modern React Native and Expo technologies, PureFlow Mobile delivers a
 To utilize the full functionality of the PureFlow Mobile App, the following components are necessary:
 
 -   **DATM Module:** A separate, deployable hardware module/device responsible for data acquisition using various sensors. This module is integrated with Firebase to securely transmit collected water quality data to a Firebase Collection.
--   **Firebase Project:** Active Firebase project with Firestore and FCM enabled
+-   **Firebase Project:** Active Firebase project with Firestore enabled for data storage
 -   **Google Gemini API Key:** Valid API key for AI-powered insights and forecasting
 -   **Custom AI Model:** Custom AI model for AI-powered insights and forecasting
 
@@ -84,7 +78,7 @@ To get the PureFlow Mobile App up and running on your local development environm
 
 3.  **Set up Firebase:**
 
-    PureFlow Mobile relies on Firebase for data storage and notifications.
+    PureFlow Mobile relies on Firebase for data storage.
 
     -   **Create a Firebase Project:** Navigate to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
     -   **Configure for Android/iOS:** Within your Firebase project, add Android and/or iOS apps. Follow the on-screen instructions to register your apps.
@@ -130,7 +124,7 @@ Once the application is installed and configured, you can run it in development 
 -   **Home Tab:** Real-time water quality monitoring with live data cards and status indicators
 -   **Forecast Tab:** ML-powered water quality predictions with trend analysis and AI insights
 -   **Reports Tab:** Comprehensive reporting with historical data analysis and AI insights
--   **Notifications Tab:** Alert management and notification history with native push notifications
+-   **Notifications Tab:** Alert management and notification history with local notifications
 -   **Settings:** Configuration options and system preferences
 
 ## Architecture
@@ -156,7 +150,7 @@ PureFlow Mobile is built on a robust and scalable architecture, leveraging Expo 
 
 -   **Frontend:** React Native + Expo (Cross-platform mobile/web)
 -   **Styling:** CSS
--   **Backend:** Firebase (Firestore + FCM)
+-   **Backend:** Firebase (Firestore)
 -   **AI Integration:** Google Gemini AI
 -   **Charts:** react-native-chart-kit + Victory Native
 -   **Navigation:** React Navigation v6
@@ -169,18 +163,43 @@ The project follows a modular architecture promoting maintainability and scalabi
 
 ```
 .
-├── app/                      # Main application with file-based routing
+├── app/                      # Main application with file-based routing (Expo)
 │   ├── (tabs)/              # Tab navigation screens
+│   │   ├── _layout.jsx      # Tab layout configuration
+│   │   ├── forecast.jsx     # Forecast tab
+│   │   ├── index.jsx        # Home/Dashboard tab
+│   │   ├── notifications.jsx # Notifications tab
+│   │   └── report.jsx       # Reports tab
 │   ├── _layout.jsx          # Root layout configuration
 │   └── _splash.jsx          # Custom splash screen
 ├── src/                     # Core source code
+│   ├── AppInitializer.js    # Application initialization
+│   ├── PdfGenerator.js      # PDF report generation
 │   ├── components/          # Reusable UI components
 │   │   ├── data-display/    # Data visualization components
+│   │   │   ├── AlertCardItem.jsx
+│   │   │   ├── AlertsCard.jsx
+│   │   │   ├── ForecastCard.jsx
+│   │   │   ├── GaugeCard.jsx
+│   │   │   ├── InsightsCard.jsx
+│   │   │   ├── LinechartCard.jsx
+│   │   │   ├── ParameterCard.jsx
+│   │   │   ├── ParameterGridCard.jsx
+│   │   │   ├── RealtimeDataCards.jsx
+│   │   │   ├── ReportsChart.jsx
+│   │   │   └── WaterQualitySummaryCard.jsx
 │   │   ├── forms/           # Form components
+│   │   ├── modals/          # Modal components
 │   │   ├── navigation/      # Navigation components
+│   │   ├── sections/        # Section components
 │   │   └── ui/              # Base UI components
 │   ├── constants/           # Application constants
+│   │   ├── alertMessages/   # Alert message templates
 │   │   ├── colors.js        # Color palette
+│   │   ├── notifications.js # Notification settings
+│   │   ├── processing.js    # Data processing constants
+│   │   ├── report.js        # Report constants
+│   │   ├── services.js      # Service constants
 │   │   └── thresholds.js    # Water quality thresholds
 │   ├── contexts/            # React Context implementations
 │   │   ├── DataContext.js   # Main data management
@@ -189,115 +208,48 @@ The project follows a modular architecture promoting maintainability and scalabi
 │   │   ├── OptimizedDataContext.js # Optimized data management
 │   │   ├── SuggestionContext.js # AI suggestions management
 │   │   └── WeatherContext.js # Environmental weather data
-│   ├── hooks/               # Custom React hooks
-│   │   ├── useChartData.js  # Data fetching logic
-│   │   ├── useForecastService.js # Forecast data management
-│   │   ├── useNotifications.js # Notification handling
-│   │   └── useOptimizedChartData.js # Optimized chart data processing
+│   ├── hooks/               # Custom React hooks (20+ hooks)
+│   │   └── [Multiple]       # Alert processing, chart data, notifications, etc.
 │   ├── services/            # Business logic and API services
 │   │   ├── ai/              # AI integration services
-│   │   ├── firebase/        # Firebase services
-│   │   ├── data/            # Data processing services
 │   │   ├── caching/         # Caching services
-│   │   ├── notifications/   # Notification management services
+│   │   ├── core/            # Core business logic services
+│   │   ├── data/            # Data processing services
+│   │   ├── facades/         # Service facades
+│   │   ├── firebase/        # Firebase services
+│   │   ├── insights/        # AI insights services
+│   │   ├── notifications/   # Notification services
 │   │   ├── processing/      # Data processing services
-│   │   └── core/            # Core business logic services
-│   └── utils/               # Utility functions
-│       ├── exportUtils.js   # Data export utilities
-│       ├── reportUtils.js   # Report generation utilities
-│       ├── WaterQualityDataTransformer.js # ML data transformation
-│       └── chart-config.js  # Chart configuration utilities
+│   │   ├── fcmService.js    # FCM service (fallback)
+│   │   └── [Multiple... ]   # Weather, historical data, etc.
+│   ├── styles/              # Style definitions
+│   ├── utils/               # Utility functions (20+ utils)
+│   │   └── [Multiple...]    # Chart config, data utils, export, etc.
 ├── android/                 # Android platform files
-├── ios/                     # iOS platform files
-└── assets/                  # Static assets and resources
+│   ├── app/                 # Android app source
+│   └── gradle/              # Gradle build files
+├── ios/                     # iOS platform files (if applicable)
+├── assets/                  # Static assets and resources
+│   ├── images/              # Image assets
+│   ├── logo/                # Logo variants
+│   └── water-alert.mp3      # Notification sound
+├── fcm-server/              # Firebase Cloud Messaging serverless API
+│   ├── api/                 # Serverless functions
+│   ├── lib/                 # Server utilities
+│   ├── package.json         # Server dependencies
+│   └── README.md            # Server documentation
+├── pureflow-datm/           # IoT hardware code (Arduino)
+│   ├── datm/                # Main DATM module
+│   ├── datm-ext/           # Extended DATM module
+│   └── *.ino                # Arduino source files
+├── app.json                 # Expo configuration
+├── package.json             # Node.js dependencies
+├── eas.json                 # Expo Application Services config
+├── tsconfig.json           # TypeScript configuration
+├── jsconfig.json            # JavaScript configuration
+├── firebase_key.txt         # Firebase credentials (gitignored)
+└── [Config files...]       # Linting, git, etc.
 ```
-
-## Recent Updates
-
-### Version 2.2 - Environmental Monitoring & Enhanced UX
-
-#### 🌤️ **Environmental Monitoring System**
-- **Weather Integration:** Real-time weather tracking with OpenWeatherMap API integration
-- **Weather Context Management:** Centralized weather data management with WeatherContext for seamless state handling
-- **Weather Alerts & Notifications:** Intelligent weather-based alert system for rainfall impacts on water quality
-- **Weather Badges & Indicators:** Visual weather indicators in forecasts and summaries for better contextual awareness
-
-#### 🔔 **Enhanced Alert Management**
-- **Paginated Alert History:** Infinite scroll implementation for efficient alert loading and navigation
-- **Performance Optimizations:** Improved alert fetching logic with smart pagination and memory management
-- **Enhanced Notification Cooldowns:** Better control over alert frequency to prevent spam while maintaining important notifications
-
-#### 📊 **Advanced Reporting Features**
-- **Enhanced PDF Generation:** Complete overhaul of PDF export with detailed executive summaries
-- **WQI Integration:** Water Quality Index metrics and critical parameter analysis in reports
-- **Improved Export UX:** Better animations and styling for export toggle buttons and options
-
-#### 🤖 **AI Processing Optimizations**
-- **Extended Refresh Intervals:** Increased AI insights auto-refresh intervals to 15 minutes for better performance
-- **Smart Caching Enhancements:** Improved caching strategies for AI responses and data freshness
-- **Optimized API Processing:** Better quota management and error recovery for AI services
-
-#### 🎨 **UI/UX Improvements**
-- **Parameter Details Styling:** Enhanced styling with icons for factors and actions, improved visual distinction
-- **Gradient Color Updates:** Refined warning and critical color gradients for better alert visibility
-- **Component Consistency:** Standardized styles across parameter cards and data visualization components
-
-### Version 2.1 - Advanced Forecasting & ML Integration
-
-#### 🔮 **Water Quality Forecasting System**
-- **ML-Powered Predictions:** Advanced machine learning models for water quality parameter forecasting
-- **Data Transformation Engine:** New WaterQualityDataTransformer utility for ML model input preparation
-- **Lag Features & Rolling Statistics:** Historical data analysis with 6-period lag features and 24-hour rolling statistics
-- **Time-Based Features:** Hour, day-of-week, month, weekend/night indicators for enhanced prediction accuracy
-
-#### 📱 **Enhanced User Interface**
-- **Forecast Tab:** Dedicated forecasting screen with real-time predictions and trend analysis
-- **Animated UI Elements:** Enhanced AlertsCard with animated indicator dots for better user experience
-- **Improved PDF Generation:** Better layout and pagination handling for comprehensive reports
-- **Style Consistency:** Refactored component styles for improved visual consistency across the app
-
-#### 🔔 **Advanced Notification System**
-- **Expo Notifications Integration:** Native push notification support with expo-notifications
-- **Notification Processing Services:** Dedicated services for alert processing and notification management
-- **Enhanced Notification Handling:** Improved logging and error management for received notifications
-- **Scheduled Notifications:** Advanced notification scheduling and management system
-
-#### 🏗️ **Architecture Improvements**
-- **Optimized Data Management:** OptimizedDataProvider integration for better data flow management
-- **Service Refactoring:** Improved architecture and maintainability across all service layers
-- **Component Optimization:** Enhanced rendering performance for LinechartCard and RealtimeDataCards
-- **Data Validation:** Comprehensive validation and sanitization throughout the application stack
-
-#### 📄 **Enhanced Export Features**
-- **PDF Export Functionality:** Complete PDF generation and export capabilities
-- **Report Formatting:** Improved report layouts with better pagination and content organization
-- **Data Export Options:** Enhanced CSV and PDF export with comprehensive water quality data
-
-### Version 2.0 - Production-Ready Enhancements
-
-#### 🚀 **Performance Optimizations**
-- **Smart Caching System:** 5-minute TTL for Firebase data with intelligent cache invalidation
-- **Interval-Based AI Processing:** 10-minute intervals for AI requests to prevent quota exhaustion
-- **Optimized Data Fetching:** Advanced retry logic with exponential backoff
-- **Memory Management:** Automatic cleanup and resource optimization
-
-#### 🛡️ **Enhanced Error Handling**
-- **Silent Error Handling:** Production-ready error handling without console logs in UI
-- **User-Friendly Messages:** Technical errors converted to actionable user messages
-- **Comprehensive Fallbacks:** Multiple fallback mechanisms for all critical operations
-- **Development Logging:** Full debugging information available in development mode
-
-#### 🤖 **Advanced AI Integration**
-- **Intelligent Caching:** AI responses cached with 10-minute expiry
-- **Quota Management:** Smart quota tracking with fallback mechanisms
-- **Error Recovery:** Automatic fallback to cached responses when API unavailable
-- **Production Logging:** Silent operation in production with full logging in development
-
-#### 📊 **Data Processing Improvements**
-- **Real-time Validation:** Comprehensive data validation throughout the application
-- **Null-Safe Operations:** Safe property access with optional chaining
-- **Type Safety:** Enhanced type checking and data sanitization
-- **Performance Monitoring:** Built-in performance tracking and optimization
 
 ## Technical Implementation
 
@@ -309,7 +261,7 @@ The project follows a modular architecture promoting maintainability and scalabi
 3. DataContext → Components (UI rendering)
 4. User Actions → AI Processing (Gemini API)
 5. AI Results → InsightsContext (Caching & display)
-6. Alerts → Notification System (FCM integration)
+6. Alerts → Notification System (Local notifications)
 ```
 
 ### Key Technical Features
@@ -329,42 +281,8 @@ The project follows a modular architecture promoting maintainability and scalabi
 #### Alert Management System
 - **Real-time Processing:** Instant alert generation based on sensor data
 - **Deduplication:** Prevents duplicate alerts for same conditions
-- **Firebase Sync:** Automatic synchronization with Firebase backend
+- **Local Storage:** Automatic synchronization with local storage
 - **User Preferences:** Customizable alert thresholds and notification settings
-
-## Performance Features
-
-### Caching Strategy
-- **Multi-Level Caching:** Memory cache + AsyncStorage persistence
-- **Smart Expiry:** Component-specific cache expiry management
-- **Cache Invalidation:** Automatic cleanup of expired data
-- **Fallback Chain:** Cached → Fresh → Fallback data hierarchy
-
-### Memory Management
-- **Automatic Cleanup:** Interval-based memory cleanup
-- **Resource Optimization:** Efficient data structures and algorithms
-- **Background Processing:** Non-blocking data operations
-- **Memory Leak Prevention:** Proper component lifecycle management
-
-### Network Optimization
-- **Retry Logic:** Exponential backoff for failed requests
-- **Timeout Protection:** 30-second timeouts prevent hanging requests
-- **Connection Management:** Intelligent connection pooling
-- **Offline Support:** Graceful degradation when offline
-
-## Error Handling
-
-### Production-Ready Error Management
-- **Silent Operation:** No technical errors visible to end users
-- **User-Friendly Messages:** Clear, actionable error messages
-- **Error Categorization:** Different handling for network, API, and data errors
-- **Fallback Systems:** Multiple fallback mechanisms for all critical operations
-
-### Development Support
-- **Comprehensive Logging:** Full error logging in development mode
-- **Debug Information:** Detailed error context and stack traces
-- **Performance Monitoring:** Built-in performance tracking
-- **Error Boundaries:** React error boundaries for component-level error handling
 
 ## AI Integration
 
@@ -379,100 +297,3 @@ The project follows a modular architecture promoting maintainability and scalabi
 - **Intelligent Caching:** Reduces API calls while maintaining data freshness
 - **Error Recovery:** Automatic fallback when AI service unavailable
 - **Quota Management:** Built-in quota tracking and management
-
-## Development
-
-### Development Guidelines
-- **Code Organization:** Modular architecture with clear separation of concerns
-- **Error Handling:** Comprehensive error handling throughout the application
-- **Performance Optimization:** Built-in performance monitoring and optimization
-- **Testing:** Unit tests and integration tests recommended
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with proper error handling and documentation
-4. Test thoroughly in both development and production modes
-5. Submit a pull request with detailed description
-
-### Build & Deployment
-- **Android:** `expo run:android` or `npx expo start --dev-client`
-- **iOS:** `expo run:ios` or `npx expo start --dev-client`
-- **Web:** `npx expo start --web`
-- **Production Build:** `expo build:android` / `expo build:ios`
-
-## Android Production Release (APK for Internal Distribution)
-
-### Prerequisites
-1. Java Development Kit (JDK) 11 or higher
-2. Android SDK Tools
-3. Gradle (included with Android SDK)
-
-### Generating a Release Signing Key
-
-If you don't already have a signing key, generate one using:
-
-```powershell
-keytool -genkey -v -keystore C:\path\to\release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias pureflow-key
-```
-
-**Important:** 
-- Replace `C:\path\to\release-key.jks` with your desired keystore location
-- Store the keystore file securely and **DO NOT commit it to version control**
-- Remember the store password and key password
-
-### Setting Up Environment Variables
-
-Add the following to your `.env` file (already configured):
-
-```env
-RELEASE_STORE_FILE=C:\path\to\release-key.jks
-RELEASE_STORE_PASSWORD=your-store-password
-RELEASE_KEY_ALIAS=pureflow-key
-RELEASE_KEY_PASSWORD=your-key-password
-```
-
-### Building the Signed APK
-
-1. Navigate to the project root directory:
-```powershell
-cd c:\Projects\pureflow-mobile
-```
-
-2. Build the signed release APK:
-```powershell
-cd android ; .\gradlew.bat assembleRelease
-```
-
-3. The APK will be generated at:
-```
-android/app/build/outputs/apk/release/PureFlow-v3.0.0.apk
-```
-
-### Distributing the APK Internally
-
-Once you have the signed APK:
-- **Direct Sharing:** Share the APK file directly via email or cloud storage (Google Drive, OneDrive, etc.)
-- **Private Server:** Host the APK on a private server for download
-- **Mobile Device Management (MDM):** Use MDM solutions for enterprise distribution
-- **QR Code:** Generate a QR code linking to the APK for easy distribution
-
-### Verifying the Signed APK
-
-To verify the APK is properly signed:
-
-```powershell
-jarsigner -verify -verbose -certs android\app\build\outputs\apk\release\PureFlow-v3.0.0.apk
-```
-
-### Security Notes
-
-- **Never commit** your keystore file (`.jks`) to version control
-- The `.gitignore` file should exclude keystore files
-- Keep your keystore password secure
-- Backup your keystore file in a secure location
-- Use the same keystore for all future updates to maintain app continuity
-
----
-
-**PureFlow Mobile** - Advanced water quality monitoring with AI-powered insights and production-ready architecture.
