@@ -1,3 +1,4 @@
+/** ParameterGridCard - Compact grid layout of parameter cards showing status and values */
 import { globalStyles } from "@styles/globalStyles.js";
 import { Eye, Gauge, Thermometer, Waves } from "lucide-react-native";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";

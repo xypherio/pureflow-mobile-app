@@ -1,3 +1,4 @@
+/** AlertsFilter - Notification filter component with parameter selection (pH, temperature, etc.) and alert severity filtering (critical, warning, info) */
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 const parameterFilters = [

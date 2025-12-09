@@ -1,3 +1,4 @@
+/** SegmentedFilters - Reusable segmented control component with parameter-specific color theming and support for both text labels and icons */
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../../constants/colors";

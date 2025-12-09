@@ -1,3 +1,4 @@
+/** SettingsModal - Configuration modal for user preferences including nickname, water type, and weather location */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
 import {

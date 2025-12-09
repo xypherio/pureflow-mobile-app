@@ -1,3 +1,4 @@
+/** ExportToggleButton - Animated floating action button with collapsible export options for PDF and CSV */
 import { FileDown, FileJson, FileText } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
@@ -80,6 +81,7 @@ export default function ExportToggleButton({
     <View style={styles.container}>
       {isExpanded && (
         <>
+        {/* Buttons */}
           <Animated.View
             style={[
               styles.optionButtonWrapper,

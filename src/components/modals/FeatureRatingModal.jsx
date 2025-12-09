@@ -1,3 +1,4 @@
+/** FeatureRatingModal - Modal for collecting user ratings and feedback on individual app features with star ratings */
 import React, { useState } from 'react';
 import {
   Modal,

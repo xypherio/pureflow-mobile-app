@@ -1,3 +1,4 @@
+/** ForecastErrorMessagesSection - Displays forecast-related error messages and no-data states */
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 

@@ -1,3 +1,4 @@
+/** WaterQualitySummaryCard - Overall water quality summary with WQI score, quality level indicators, and parameter pills */
 import {
   AlertCircle,
   AlertTriangle,

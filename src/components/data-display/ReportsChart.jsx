@@ -1,3 +1,4 @@
+/** ReportsChart - Water quality reports with time range filtering (daily/weekly/monthly/annual) and chart interaction */
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../../constants/colors';

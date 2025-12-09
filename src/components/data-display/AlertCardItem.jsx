@@ -1,3 +1,4 @@
+/** AlertCardItem - Individual alert card component with status indicators, parameter icons, and expandable content */
 import {
   AlertCircle,
   CheckCircle2,
@@ -116,7 +117,7 @@ export default function AlertCardItem({ alert }) {
     if (isWeatherAlert) {
       return "#2563eb";
     }
-
+  // border left color
     switch (alert.type) {
       case "success":
         return "#22c55e";

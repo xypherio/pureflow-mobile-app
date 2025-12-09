@@ -1,3 +1,4 @@
+/** ForecastDataSourceIndicatorSection - Shows forecast data source indicators and information */
 import { getDataSourceInfo } from "@utils/forecastUtils";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";

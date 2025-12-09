@@ -11,15 +11,15 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function StatusCard({
-  isDatmActive: propIsDatmActive = true,
+  isDatmActive: propIsDatmActive = false,
   isRaining = 0,
   temperature = null,
   lastDataTimestamp
 }) {
-  const { realtimeData } = useData();
+  const { realtimeData, generateDataSignature } = useData();
   const [isDatmActive, setIsDatmActive] = useState(propIsDatmActive);
   const timeoutRef = useRef();
-  const lastProcessedRef = useRef(null);
+  const lastProcessedDataSignatureRef = useRef(null);
 
   // Check if we have valid water quality data (matching RealtimeDataCards logic)
   const hasData =
@@ -35,19 +35,36 @@ export default function StatusCard({
 
   // Monitor for new data triggers (aligning with RealtimeDataCards rendering)
   useEffect(() => {
-    if (realtimeData && hasData && realtimeData !== lastProcessedRef.current) {
-      // New data received that RealtimeDataCards would render - mark DATM as active
-      setIsDatmActive(true);
-      lastProcessedRef.current = realtimeData;
+    if (realtimeData && hasData && generateDataSignature) {
+      // Extract actual sensor data for signature generation
+      const actualSensorData = realtimeData.reading || realtimeData;
 
-      // Clear existing timeout and set new one
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      // Generate data signature to detect actual value changes
+      const currentDataSignature = generateDataSignature(actualSensorData);
+      const hasDataChanged = currentDataSignature !== lastProcessedDataSignatureRef.current;
+
+      if (hasDataChanged) {
+        console.log('🔄 DeviceStatusCard: Sensor data changed, marking DATM active', {
+          currentSignature: currentDataSignature,
+          lastSignature: lastProcessedDataSignatureRef.current
+        });
+
+        // New sensor data values received - mark DATM as active
+        setIsDatmActive(true);
+        lastProcessedDataSignatureRef.current = currentDataSignature;
+
+        // Clear existing timeout and set new one
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        // Set timeout to mark inactive after 3 minutes without new data that RealtimeDataCards renders
+        timeoutRef.current = setTimeout(() => {
+          console.log('⏰ DeviceStatusCard: Timeout reached, marking DATM inactive');
+          setIsDatmActive(false);
+        }, 180000); // 3 minutes
+      } else {
+        console.log('🔄 DeviceStatusCard: Sensor data unchanged, keeping existing timeout');
       }
-      // Set timeout to mark inactive after 3 minutes without new data that RealtimeDataCards renders
-      timeoutRef.current = setTimeout(() => {
-        setIsDatmActive(false);
-      }, 180000); // 3 minutes
     }
 
     // Cleanup on unmount
@@ -56,7 +73,7 @@ export default function StatusCard({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [realtimeData, hasData]);
+  }, [realtimeData, hasData, generateDataSignature]);
 
   const [countdown, setCountdown] = useState(30);
 

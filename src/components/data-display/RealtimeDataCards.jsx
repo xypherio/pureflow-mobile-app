@@ -1,3 +1,4 @@
+/** RealTimeDataCards (RealTimeData) - Real-time sensor data display with gradient backgrounds and notifications */
 import { useData } from "@contexts/DataContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
@@ -6,10 +7,14 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { getWaterQualityThresholdsFromSettings } from "../../constants/thresholds";
 import waterQualityNotificationService from "../../services/WaterQualityNotificationService";
 
-// Parameter configuration - Water quality parameters only
-// Device environment parameters (humidity, datmTemp) are shown in DeviceStatusCard
+// DeviceStatusCard
+
 const PARAMETER_CONFIGS = [
-  { key: "pH", label: "pH Level", unit: "PH", icon: Gauge, color: "#007bff" },
+  { key: "pH",
+    label: "pH Level",
+    unit: "PH",
+    icon: Gauge,
+    color: "#007bff" },
   {
     key: "temperature",
     label: "Temperature",
@@ -225,12 +230,12 @@ const ParameterCard = React.memo(({ param }) => {
   // Define gradient colors: white to main tint
   const getGradientColors = () => {
     if (isWarning) {
-      return ["#ffffff", "#fefac3"];
+      return ["#ffffff", "#fefac3"]; //yellow
     }
     if (isCritical) {
-      return ["#ffffff", "#fecdcf"];
+      return ["#ffffff", "#fecdcf"]; //red
     }
-    return ["#ffffff", "#cbffe3"];
+    return ["#ffffff", "#cbffe3"]; //green
   };
 
   const WrappedCard = ({ children }) => {

@@ -194,7 +194,9 @@ const ReportScreen = () => {
         onValueChange={setActiveFilter}
         style={styles.filter}
       />
+       
 
+      {/* // report content */}
       <GlobalWrapper>
         <ReportContent
           reportData={reportData}

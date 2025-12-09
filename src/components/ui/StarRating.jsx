@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { Star } from 'lucide-react-native';
+import { Star, Moon } from 'lucide-react-native';
 import { colors } from '../../constants/colors';
 
 const StarRating = ({ rating = 0, onRatingChange, size = 24, disabled = false }) => {

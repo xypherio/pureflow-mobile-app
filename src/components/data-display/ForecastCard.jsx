@@ -1,3 +1,4 @@
+/** ForecastCard - Individual forecast card displaying parameter trends with rising/falling arrows and breach indicators */
 import { globalStyles } from "@styles/globalStyles.js";
 import {
   ArrowDownRight,

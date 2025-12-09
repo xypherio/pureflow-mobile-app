@@ -1,3 +1,4 @@
+/** LinechartCard - Interactive line chart with parameter filtering, tooltips, and scrollable views for historical data */
 import { Activity } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
@@ -345,7 +346,11 @@ const LineChartCard = ({
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.chartWrapper}
+              style={{
+                position: "relative",
+                width: screenWidth - CHART_DIMENSIONS.containerWidth
+              }}
+              contentContainerStyle={{ alignItems: "center" }}
             >
               <TouchableOpacity
                 activeOpacity={1}
@@ -458,7 +463,7 @@ const LineChartCard = ({
                     },
                     // Subtle background grid lines
                     propsForBackgroundLines: {
-                      strokeWidth: 0.5,
+                      strokeWidth: 0.8,
                       stroke: '#e2e8f0',
                     },
                     // Only set global propsForDots when showing single parameter

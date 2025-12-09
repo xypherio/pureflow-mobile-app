@@ -1,4 +1,5 @@
 
+/** IssueReportingModal - Modal for submitting bug reports, feedback, or feature requests to the development team */
 import { Send, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {

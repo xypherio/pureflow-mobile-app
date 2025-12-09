@@ -1,3 +1,4 @@
+/** ReportLoadingState - Loading state during report generation with disabled filters and export options */
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import PureFlowLogo from "@components/ui/UiHeader";

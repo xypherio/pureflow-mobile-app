@@ -1,3 +1,4 @@
+/** ForecastInsightsSection - Forecast-specific AI insights with fallback static recommendations */
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 

@@ -1,3 +1,4 @@
+/** SystemStatusSection - System status information displaying DATM activity, power, and environment data */
 import StatusCard from "@ui/DeviceStatusCard";
 import React from "react";
 import { StyleSheet, View } from "react-native";

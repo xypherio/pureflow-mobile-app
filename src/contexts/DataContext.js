@@ -83,7 +83,7 @@ export function DataProvider({ children, initialData = null }) {
    * @param {Object} sensorData - Sensor data object
    * @returns {string} Data signature based on values only
    */
-  const generateDataSignature = useCallback((sensorData) => {
+  const generateDataSignature = React.useCallback((sensorData) => {
     if (!sensorData) return null;
 
     // Extract and normalize sensor values for signature (round to 2 decimal places to reduce false changes)
@@ -147,17 +147,17 @@ export function DataProvider({ children, initialData = null }) {
         }).length
       };
       setAlertStats(stats);
-      
+
     } catch (error) {
       console.error('❌ Error updating state with AlertManager:', error);
       // Fallback: just update sensor data without alerts
       setSensorData(newSensorData);
       setError('Failed to process alerts');
     }
-  }, []);
+  }, []); // Empty dependency array to prevent function recreation
 
   /**
-   * 
+   *
    * @param {boolean} [useCache=true] - When true, uses cached data when available
    * @returns {Promise<void>}
    */
@@ -170,7 +170,7 @@ export function DataProvider({ children, initialData = null }) {
 
     const refreshId = Date.now();
     isRefreshing.current = true;
-    
+
     try {
       console.log(`🔄 [${refreshId}] Starting optimized refresh (cache: ${useCache ? 'enabled' : 'disabled'})`);
 
@@ -183,8 +183,8 @@ export function DataProvider({ children, initialData = null }) {
           hoursBack: 24
         }),
         realtimeDataService.getMostRecentData({
-          useCache: true,      
-          cacheTtl: 30000    
+          useCache: true,
+          cacheTtl: 30000
         })
       ]);
 
@@ -247,11 +247,11 @@ export function DataProvider({ children, initialData = null }) {
             if (realtimeDataForAlerts.reading) {
               actualSensorData = realtimeDataForAlerts.reading;
             }
-            
+
             // Generate data signature to check for changes
             const currentDataSignature = generateDataSignature(actualSensorData);
             const hasDataChanged = currentDataSignature !== lastProcessedDataSignature.current;
-            
+
             console.log('🚨 Debug: Processing alerts for sensor data:', {
               realtimeDataForAlerts,
               actualSensorData,
@@ -268,14 +268,14 @@ export function DataProvider({ children, initialData = null }) {
                 timestamp: realtimeDataForAlerts.timestamp || realtimeDataForAlerts.reading?.timestamp
               } : null
             });
-            
+
             // Only process alerts if data has actually changed
             if (hasDataChanged) {
               const sensorDataForAlerts = [{
                 ...actualSensorData,
                 datetime: actualSensorData.timestamp || realtimeDataForAlerts.timestamp,
               }];
-              
+
               const alertResult = await serviceContainer.getAlertFacade().processSensorData(sensorDataForAlerts);
 
               // Update the last processed signature
@@ -511,7 +511,7 @@ export function DataProvider({ children, initialData = null }) {
       // Use preloaded data if available (from server-side rendering or cache)
       if (initialData) {
         console.log('🚀 Using preloaded initial data');
-        
+
         // Initialize AlertManager with preloaded alerts to prevent duplicate processing
         if (initialData.alerts?.length > 0) {
           console.log(`📦 Initializing AlertFacade with ${initialData.alerts.length} preloaded alerts`);
@@ -523,17 +523,17 @@ export function DataProvider({ children, initialData = null }) {
             hasLoggedDeduplicationWarning.current = true;
           }
 
-          // Mark this data as processed to avoid duplicate alerts
+          // Mark this data as processed to prevent duplicate alerts
           // Note: AlertFacade handles data signature tracking automatically
           console.log('✅ AlertFacade will handle data signature tracking automatically');
         }
-        
+
         // Update application state with preloaded data
         setSensorData(initialData.sensorData);
         setAlerts(initialData.alerts || []);
         setDailyReport(initialData.dailyReport || null);
         setLastUpdate(Date.now());
-        
+
         console.log('📊 Initial data set in context:', {
           sensorDataCount: initialData.sensorData?.length || 0,
           alertsCount: initialData.alerts?.length || 0,
@@ -543,7 +543,7 @@ export function DataProvider({ children, initialData = null }) {
           chartLabels: initialData.dailyReport?.chartData?.labels?.length || 0,
           chartDataPoints: initialData.dailyReport?.chartData?.datasets?.[0]?.data?.length || 0
         });
-        
+
         // Still fetch fresh real-time data even with preloaded data
         try {
           const freshRealtimeData = await realtimeDataService.getMostRecentData(false);
@@ -596,7 +596,7 @@ export function DataProvider({ children, initialData = null }) {
         } catch (error) {
           console.warn('Failed to fetch fresh real-time data:', error);
         }
-        
+
         setLoading(false);
       } else {
         // Perform initial unified refresh
@@ -764,14 +764,14 @@ export function DataProvider({ children, initialData = null }) {
   const refreshData = useCallback(async (force = false) => {
     const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between manual refreshes
     const now = Date.now();
-    
+
     // Rate limiting check
     if (!force && (now - lastRefreshTime.current) < MIN_REFRESH_INTERVAL) {
       const timeLeft = Math.ceil((MIN_REFRESH_INTERVAL - (now - lastRefreshTime.current)) / 1000);
       console.warn(`⏳ Please wait ${timeLeft}s before refreshing again`);
       return false;
     }
-    
+
     console.log('🔄 Manual refresh triggered');
     try {
       await performUnifiedRefresh(false); // Force fresh data on manual refresh
@@ -783,7 +783,7 @@ export function DataProvider({ children, initialData = null }) {
   }, [performUnifiedRefresh]);
 
   // Alert display helper functions
-  
+
   /**
    * Gets a limited set of critical alerts for the homepage
    * Only returns alerts when real-time data is available and valid
@@ -965,6 +965,9 @@ export function DataProvider({ children, initialData = null }) {
     // Performance monitoring
     getPerformanceMetrics, // Get performance metrics for optimization tracking
 
+    // Data utilities
+    generateDataSignature, // Function to generate data signature for change detection
+
     // Testing and debugging
     testAlertProcessing, // Test function for alert processing and storage
 
@@ -975,7 +978,7 @@ export function DataProvider({ children, initialData = null }) {
     alerts, activeAlerts, sensorData, dailyReport, realtimeData, loading,
     error, lastUpdate, refreshData, alertStats,
     getHomepageAlerts, getNotificationAlerts, getAlertStatistics,
-    getPerformanceMetrics, testAlertProcessing
+    getPerformanceMetrics, generateDataSignature, testAlertProcessing
   ]);
 
   return (

@@ -1,3 +1,4 @@
+/** GaugeCard (WaterQualityGauge) - Circular gauge displaying overall water quality score with parameter progress bars */
 import { globalStyles } from "@styles/globalStyles.js";
 import { Droplet, Gauge, Thermometer, Waves } from "lucide-react-native";
 import React from "react";

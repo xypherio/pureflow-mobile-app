@@ -1,3 +1,4 @@
+/** ReportActionCard - Reusable card component for various report actions like download, share, export, and print */
 import { Download, FileText, Printer, Share } from 'lucide-react-native';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
@@ -77,4 +78,4 @@ export default function ReportActionCard({ action, onPress, disabled = false }) 
       </View>
     </TouchableOpacity>
   );
-} 
+}

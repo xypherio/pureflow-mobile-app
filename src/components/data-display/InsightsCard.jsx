@@ -1,11 +1,9 @@
-// Core imports
+/* InsightsCard - AI-generated insights display with expandable recommendations, status indicators, and real-time data processing */
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
 
-// Third-party imports
 import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react-native';
 
-// Local imports
 import { useInsightManager } from '@hooks/useInsightManager';
 
 // ============================================================================

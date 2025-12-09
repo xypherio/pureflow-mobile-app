@@ -1,3 +1,4 @@
+/** ForecastParameterDetailsSection - Detailed parameter forecast analysis with influencing factors and recommended actions */
 import { Pointer } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";

@@ -1,3 +1,4 @@
+/** NotificationsErrorState - Error state display for notification loading failures with retry options */
 import PureFlowLogo from "@components/ui/UiHeader";
 import NotificationFilter from "@navigation/AlertsFilter";
 import GlobalWrapper from "@ui/GlobalWrapper";

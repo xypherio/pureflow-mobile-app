@@ -1,3 +1,4 @@
+/** ForecastParametersSection - Scrollable list of forecast parameter cards showing predicted values and trends */
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 

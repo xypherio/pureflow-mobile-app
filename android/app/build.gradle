@@ -93,7 +93,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 4
-        versionName "4.4.5"
+        versionName "4.4.10"
         buildConfigField "String", "GEMINI_API_KEY", "\"${findProperty('GEMINI_API_KEY') ?: ''}\""
     }
 

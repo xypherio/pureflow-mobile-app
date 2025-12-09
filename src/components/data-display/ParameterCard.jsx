@@ -1,3 +1,4 @@
+/** ParameterCard - Expandable parameter card with bar chart, AI insights, and detailed metrics display */
 /**
  * @param {Object} props
  * @param {string} props.parameter - Parameter name (e.g., 'pH', 'temperature')

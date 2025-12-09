@@ -1,50 +1,62 @@
 import { PARAMETER_CONFIG } from "@constants/report";
-import { getWaterQualityThresholdsFromSettings } from "@constants/thresholds";
 import InsightsCard from "@dataDisplay/InsightsCard";
 import ParameterCard from "@dataDisplay/ParameterCard";
 import WaterQualitySummaryCard from "@dataDisplay/WaterQualitySummaryCard";
 import { useRouter } from "expo-router";
-import { AlertCircle, AlertTriangle, History } from "lucide-react-native";
+import { AlertTriangle, History } from "lucide-react-native";
 import React from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { globalStyles } from "../../styles/globalStyles";
 
 // Report fallback functions
 const generateReportInsightFallback = (reportData) => {
   if (!reportData || !reportData.parameters) {
     return {
-      overallInsight: "Report data is being analyzed for water quality insights.",
-      source: 'report-fallback'
+      overallInsight:
+        "Report data is being analyzed for water quality insights.",
+      source: "report-fallback",
     };
   }
 
   const parameters = Object.entries(reportData.parameters || {});
   const wqi = reportData.wqi?.overall || 0;
-  const wqiRating = reportData.wqi?.rating?.level || 'unknown';
-  const overallStatus = reportData.overallStatus || 'normal';
+  const wqiRating = reportData.wqi?.rating?.level || "unknown";
+  const overallStatus = reportData.overallStatus || "normal";
 
   // Count parameter statuses
   const statusCounts = { normal: 0, warning: 0, critical: 0 };
   const parameterStatuses = [];
 
   parameters.forEach(([key, data]) => {
-    const status = data.status || 'normal';
+    const status = data.status || "normal";
     statusCounts[status] = (statusCounts[status] || 0) + 1;
-    if (status !== 'normal') {
+    if (status !== "normal") {
       parameterStatuses.push({ param: key, status, value: data.average });
     }
   });
 
   // Generate insight based on WQI and parameter health (farmer-friendly language)
-  let insight = '';
+  let insight = "";
 
-  if (wqiRating === 'excellent' && statusCounts.critical === 0 && statusCounts.warning === 0) {
+  if (
+    wqiRating === "excellent" &&
+    statusCounts.critical === 0 &&
+    statusCounts.warning === 0
+  ) {
     insight = `Excellent water quality with WQI score of ${wqi}. All parameters are within optimal ranges, showing healthy conditions for your fish.`;
-  } else if (wqiRating === 'good' && statusCounts.critical === 0) {
+  } else if (wqiRating === "good" && statusCounts.critical === 0) {
     insight = `Good water quality with WQI score of ${wqi}. Some parameters are approaching limits but remain within acceptable ranges for fish health.`;
-  } else if (wqiRating === 'fair' || statusCounts.warning > 0) {
+  } else if (wqiRating === "fair" || statusCounts.warning > 0) {
     insight = `Fair water quality with WQI score of ${wqi}. ${statusCounts.warning} parameters need watching. Keep maintaining good conditions.`;
-  } else if (wqiRating === 'poor' || statusCounts.critical > 0) {
+  } else if (wqiRating === "poor" || statusCounts.critical > 0) {
     insight = `Poor water quality with WQI score of ${wqi}. ${statusCounts.critical} parameters need immediate action to keep fish healthy.`;
   } else {
     insight = `Water quality status: ${wqiRating} with WQI score of ${wqi}. Watch all parameters closely to keep fish in good conditions.`;
@@ -52,14 +64,18 @@ const generateReportInsightFallback = (reportData) => {
 
   return {
     overallInsight: insight,
-    source: 'report-fallback',
+    source: "report-fallback",
     wqi: wqi,
     wqiRating: wqiRating,
-    parameterSummary: statusCounts
+    parameterSummary: statusCounts,
   };
 };
 
-const generateParameterInsightFallback = (parameterName, parameterStatus, averageValue) => {
+const generateParameterInsightFallback = (
+  parameterName,
+  parameterStatus,
+  averageValue
+) => {
   const paramKey = parameterName.toLowerCase();
 
   // Status messages for different parameter types and levels (farmer-friendly, no jargon)
@@ -67,65 +83,68 @@ const generateParameterInsightFallback = (parameterName, parameterStatus, averag
     ph: {
       critical: {
         low: `pH critically low at ${averageValue?.toFixed(1)}. Add baking soda immediately to raise it.`,
-        high: `pH critically high at ${averageValue?.toFixed(1)}. Add vinegar or acid to lower it right away.`
+        high: `pH critically high at ${averageValue?.toFixed(1)}. Add vinegar or acid to lower it right away.`,
       },
       warning: {
         low: `pH getting low at ${averageValue?.toFixed(1)}. Add baking soda if it keeps dropping.`,
-        high: `pH getting high at ${averageValue?.toFixed(1)}. Add vinegar if it keeps rising.`
+        high: `pH getting high at ${averageValue?.toFixed(1)}. Add vinegar if it keeps rising.`,
       },
-      normal: `pH level good at ${averageValue?.toFixed(1)}. Conditions are right for healthy fish.`
+      normal: `pH level good at ${averageValue?.toFixed(1)}. Conditions are right for healthy fish.`,
     },
     temperature: {
       critical: {
         low: `Water temperature very low at ${averageValue?.toFixed(1)}°C. Heat water or give fish more protection immediately.`,
-        high: `Water temperature very high at ${averageValue?.toFixed(1)}°C. Cool water down right away or add shade.`
+        high: `Water temperature very high at ${averageValue?.toFixed(1)}°C. Cool water down right away or add shade.`,
       },
       warning: {
         low: `Water temperature low at ${averageValue?.toFixed(1)}°C. Keep an eye on it and protect fish if needed.`,
-        high: `Water temperature high at ${averageValue?.toFixed(1)}°C. Watch closely and add shade if needed.`
+        high: `Water temperature high at ${averageValue?.toFixed(1)}°C. Watch closely and add shade if needed.`,
       },
-      normal: `Water temperature good at ${averageValue?.toFixed(1)}°C. Perfect for fish health and activity.`
+      normal: `Water temperature good at ${averageValue?.toFixed(1)}°C. Perfect for fish health and activity.`,
     },
     salinity: {
       critical: {
         low: `Salt level very low at ${averageValue?.toFixed(1)}. Add salt immediately.`,
-        high: `Salt level very high at ${averageValue?.toFixed(1)}. Change some water to reduce salt right away.`
+        high: `Salt level very high at ${averageValue?.toFixed(1)}. Change some water to reduce salt right away.`,
       },
       warning: {
         low: `Salt level getting low at ${averageValue?.toFixed(1)}. Add salt gradually if needed.`,
-        high: `Salt level getting high at ${averageValue?.toFixed(1)}. Change some water if it keeps rising.`
+        high: `Salt level getting high at ${averageValue?.toFixed(1)}. Change some water if it keeps rising.`,
       },
-      normal: `Salt level balanced at ${averageValue?.toFixed(1)}. Good for fish body water balance.`
+      normal: `Salt level balanced at ${averageValue?.toFixed(1)}. Good for fish body water balance.`,
     },
     turbidity: {
       critical: {
         low: `Water too clear at ${averageValue?.toFixed(1)} - could grow too much algae. Add some natural balance.`,
-        high: `Water too cloudy at ${averageValue?.toFixed(1)}. Change water or clean filters immediately.`
+        high: `Water too cloudy at ${averageValue?.toFixed(1)}. Change water or clean filters immediately.`,
       },
       warning: {
         low: `Water very clear at ${averageValue?.toFixed(1)}. Watch for possible algae growth.`,
-        high: `Water getting cloudy at ${averageValue?.toFixed(1)}. Clean filters soon and feed less if needed.`
+        high: `Water getting cloudy at ${averageValue?.toFixed(1)}. Clean filters soon and feed less if needed.`,
       },
-      normal: `Water clarity good at ${averageValue?.toFixed(1)}. Clear enough for healthy fish and plants.`
-    }
+      normal: `Water clarity good at ${averageValue?.toFixed(1)}. Clear enough for healthy fish and plants.`,
+    },
   };
 
   // Find which parameter config matches
   let matchedMessages = null;
-  Object.keys(statusMessages).forEach(key => {
-    if (parameterName.toLowerCase().includes(key) || key.includes(parameterName.toLowerCase()) ||
-        key === parameterName.toLowerCase()) {
+  Object.keys(statusMessages).forEach((key) => {
+    if (
+      parameterName.toLowerCase().includes(key) ||
+      key.includes(parameterName.toLowerCase()) ||
+      key === parameterName.toLowerCase()
+    ) {
       matchedMessages = statusMessages[key];
     }
   });
 
   if (!matchedMessages) {
     // Generic fallback
-    return `${parameterName} at ${parameterStatus} level with average value of ${averageValue?.toFixed(1) || 'N/A'}. Monitor closely for optimal conditions.`;
+    return `${parameterName} at ${parameterStatus} level with average value of ${averageValue?.toFixed(1) || "N/A"}. Monitor closely for optimal conditions.`;
   }
 
   // Return status-specific message
-  if (parameterStatus === 'normal') {
+  if (parameterStatus === "normal") {
     return matchedMessages.normal;
   }
 
@@ -134,19 +153,22 @@ const generateParameterInsightFallback = (parameterName, parameterStatus, averag
 
   // Parameter-specific logic to determine high vs low
   switch (paramKey) {
-    case 'ph':
+    case "ph":
       // pH normal range around 7, lower values are more acidic
       isLow = averageValue < 7;
       break;
-    case 'temperature':
+    case "temperature":
       // Temperature normal range around 26-30°C for aquaculture
       isLow = averageValue < 28;
       break;
-    case 'salinity':
+    case "salinity":
       // Salinity normal range for freshwater: 0-5, saltwater: 15-35
-      isLow = (paramKey === 'temperature-salinity' || paramKey === 'salinity') ? averageValue < 20 : averageValue < 3;
+      isLow =
+        paramKey === "temperature-salinity" || paramKey === "salinity"
+          ? averageValue < 20
+          : averageValue < 3;
       break;
-    case 'turbidity':
+    case "turbidity":
       // Turbidity lower than 25 NTU might be too clear, higher is cloudy
       isLow = averageValue < 25;
       break;
@@ -155,13 +177,13 @@ const generateParameterInsightFallback = (parameterName, parameterStatus, averag
       break;
   }
 
-  if (parameterStatus === 'warning') {
-    return matchedMessages.warning[isLow ? 'low' : 'high'];
-  } else if (parameterStatus === 'critical') {
-    return matchedMessages.critical[isLow ? 'low' : 'high'];
+  if (parameterStatus === "warning") {
+    return matchedMessages.warning[isLow ? "low" : "high"];
+  } else if (parameterStatus === "critical") {
+    return matchedMessages.critical[isLow ? "low" : "high"];
   }
 
-  return `${parameterName} status: ${parameterStatus}. Average value: ${averageValue?.toFixed(1) || 'N/A'}`;
+  return `${parameterName} status: ${parameterStatus}. Average value: ${averageValue?.toFixed(1) || "N/A"}`;
 };
 
 const ReportContent = ({
@@ -173,32 +195,46 @@ const ReportContent = ({
   loading,
   onRefresh,
   getParameterInsight,
-  activeFilter = "daily"
+  activeFilter = "daily",
 }) => {
   const router = useRouter();
 
-  console.log('📊 [ReportContent] Rendering with data:', {
+  console.log("📊 [ReportContent] Rendering with data:", {
     activeFilter,
     isLoading: loading,
     reportDataKeys: Object.keys(reportData || {}),
     reportDataLength: Object.keys(reportData || {}).length,
     processedParametersLength: processedParameters?.length || 0,
-    processedParametersSample: processedParameters?.[0] ? {
-      parameter: processedParameters[0].parameter,
-      averageValue: processedParameters[0].averageValue,
-      hasChartData: processedParameters[0]?.chartData?.datasets?.[0]?.data?.length > 0
-    } : null,
-    reportHasParameters: !!(reportData?.parameters && Object.keys(reportData.parameters).length > 0),
-    isSwitchingFilter
+    processedParametersSample: processedParameters?.[0]
+      ? {
+          parameter: processedParameters[0].parameter,
+          averageValue: processedParameters[0].averageValue,
+          hasChartData:
+            processedParameters[0]?.chartData?.datasets?.[0]?.data?.length > 0,
+        }
+      : null,
+    reportHasParameters: !!(
+      reportData?.parameters && Object.keys(reportData.parameters).length > 0
+    ),
+    isSwitchingFilter,
   });
 
   const navigateToDashboard = () => {
     router.push("/");
   };
 
-  const EmptyState = ({ icon, title, description, buttonText, onPress, style, iconSize = 48, iconColor = "#3b82f6" }) => (
+  const EmptyState = ({
+    icon,
+    title,
+    description,
+    buttonText,
+    onPress,
+    style,
+    iconSize = 48,
+    iconColor = "#3b82f6",
+  }) => (
     <View style={[styles.emptyStateContainer, style]}>
-      <View style={[styles.emptyStateIcon, { backgroundColor: '#dbeafe' }]}>
+      <View style={[styles.emptyStateIcon, { backgroundColor: "#dbeafe" }]}>
         <AlertTriangle size={iconSize} color={iconColor} />
       </View>
       <Text style={styles.emptyStateTitle}>{title}</Text>
@@ -234,6 +270,7 @@ const ReportContent = ({
         />
       ) : (
         <>
+          {/* Water Quality Summary */}
           <View style={styles.summaryContainer}>
             <Text style={styles.sectionLabel}>Water Quality Summary</Text>
             <WaterQualitySummaryCard
@@ -262,6 +299,7 @@ const ReportContent = ({
             />
           </View>
 
+          {/* Key Parameters Report */}
           <View style={styles.parametersContainer}>
             <Text style={styles.sectionLabel}>Key Parameters Report</Text>
             {processedParameters && processedParameters.length > 0 ? (
@@ -283,65 +321,88 @@ const ReportContent = ({
             ) : (
               <View style={styles.noParametersCard}>
                 <View style={styles.noParametersHeader}>
-                  <View style={[styles.noParametersIcon, { backgroundColor: '#dbeafe' }]}>
+                  <View
+                    style={[
+                      styles.noParametersIcon,
+                      { backgroundColor: "#dbeafe" },
+                    ]}
+                  >
                     <History size={28} color="#3b82f6" />
                   </View>
                   <View style={styles.noParametersHeaderText}>
-                    <Text style={styles.noParametersTitle}>Parameters Unavailable</Text>
-                    <Text style={styles.noParametersSubtitle}>Waiting for sensor data to generate parameter report</Text>
+                    <Text style={styles.noParametersTitle}>
+                      Parameters Unavailable
+                    </Text>
+                    <Text style={styles.noParametersSubtitle}>
+                      Waiting for sensor data to generate parameter report
+                    </Text>
                   </View>
                 </View>
 
-                <View style={[styles.noParametersBanner, { backgroundColor: '#dbeafe' }]}>
-                  <Text style={[styles.noParametersStatus, { color: '#3b82f6' }]}>
+                <View
+                  style={[
+                    styles.noParametersBanner,
+                    { backgroundColor: "#dbeafe" },
+                  ]}
+                >
+                  <Text
+                    style={[styles.noParametersStatus, { color: "#3b82f6" }]}
+                  >
                     Data Collection Pending
                   </Text>
                   <Text style={styles.noParametersDescription}>
-                    Sensors are collecting initial data. Parameters will appear soon.
+                    Sensors are collecting initial data. Parameters will appear
+                    soon.
                   </Text>
                 </View>
               </View>
             )}
           </View>
 
-          {reportData && Object.keys(reportData.parameters || {}).length > 0 && processedParameters && processedParameters.length > 0 && (
-            <View style={styles.insightsContainer}>
-              {isGeminiLoading ? (
-                <ActivityIndicator
-                  style={styles.insightsLoading}
-                  color="#3b82f6"
-                />
-              ) : geminiResponse ? (
-                <InsightsCard
-                  type="info"
-                  title="Overall Water Quality Insight"
-                  description={
-                    geminiResponse?.insights?.overallInsight || ""
-                  }
-                  recommendations={
-                    (geminiResponse?.suggestions?.flatMap(s => s.recommendedActions) || []).slice(0, 5)
-                  }
-                  timestamp={reportData.generatedAt}
-                  componentId="report-overall-insight"
-                  autoRefresh={false}
-                  sensorData={reportData}
-                />
-              ) : (
-                // Generate fallback insights based on WQI and parameter statuses
-                !isSwitchingFilter && (
+          {/* Gemini Insights */}
+          {reportData &&
+            Object.keys(reportData.parameters || {}).length > 0 &&
+            processedParameters &&
+            processedParameters.length > 0 && (
+              <View style={styles.insightsContainer}>
+                {isGeminiLoading ? (
+                  <ActivityIndicator
+                    style={styles.insightsLoading}
+                    color="#3b82f6"
+                  />
+                ) : geminiResponse ? (
+                  <InsightsCard
+                    type="info"
+                    title="Overall Water Quality Insight"
+                    description={geminiResponse?.insights?.overallInsight || ""}
+                    recommendations={(
+                      geminiResponse?.suggestions?.flatMap(
+                        (s) => s.recommendedActions
+                      ) || []
+                    ).slice(0, 5)}
+                    timestamp={reportData.generatedAt}
+                    componentId="report-overall-insight"
+                    autoRefresh={false}
+                    sensorData={reportData}
+                  />
+                ) : (
+                  // Generate fallback insights based on WQI and parameter statuses
+                  !isSwitchingFilter &&
                   (() => {
-                    const fallbackInsight = generateReportInsightFallback(reportData);
+                    const fallbackInsight =
+                      generateReportInsightFallback(reportData);
                     return (
                       <InsightsCard
                         type="info"
                         title="Overall Water Quality Insight"
                         description={fallbackInsight.overallInsight}
-                        recommendations={
-                          processedParameters
-                            .filter(p => p.status !== 'normal')
-                            .slice(0, 3)
-                            .map(p => `${p.parameter} needs attention - ${p.status} status`)
-                        }
+                        recommendations={processedParameters
+                          .filter((p) => p.status !== "normal")
+                          .slice(0, 3)
+                          .map(
+                            (p) =>
+                              `${p.parameter} needs attention - ${p.status} status`
+                          )}
                         timestamp={reportData.generatedAt}
                         componentId="report-fallback-insight"
                         autoRefresh={false}
@@ -349,10 +410,9 @@ const ReportContent = ({
                       />
                     );
                   })()
-                )
-              )}
-            </View>
-          )}
+                )}
+              </View>
+            )}
         </>
       )}
     </ScrollView>
@@ -482,42 +542,42 @@ const styles = StyleSheet.create({
   },
   emptyStateContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   emptyStateIcon: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   emptyStateTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#1F2937",
+    textAlign: "center",
     marginBottom: 8,
   },
   emptyStateDescription: {
     fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
     marginBottom: 24,
     lineHeight: 24,
   },
   emptyStateButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: "#3b82f6",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   emptyStateButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

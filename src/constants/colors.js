@@ -10,7 +10,7 @@ export const colors = {
   //Parameter Colors
   phColor: '#007bff',
   tempColor: '#e83e8c',
-  turbidityColor: '#28a745',
+  turbidityColor: '#28a75',
   salinityColor: '#8b5cf6',
   
   // Secondary colors

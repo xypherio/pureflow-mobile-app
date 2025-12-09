@@ -1,3 +1,4 @@
+/** InsightsSection - Main insights section displaying AI-generated water quality analysis and recommendations */
 import InsightsCard from "@dataDisplay/InsightsCard";
 import { InsightsSkeleton } from "@ui/LoadingSkeletons";
 import React from "react";

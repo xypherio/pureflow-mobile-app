@@ -1,3 +1,4 @@
+/** AlertsCard - Rotating carousel component that displays alerts from processors or realtime data */
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { useAlertProcessor } from "../../hooks/useAlertProcessor";

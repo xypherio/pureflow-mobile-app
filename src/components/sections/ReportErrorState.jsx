@@ -1,3 +1,4 @@
+/** ReportErrorState - Error/processing state display for report generation with tips and retry options */
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";

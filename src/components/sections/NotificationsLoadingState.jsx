@@ -1,3 +1,4 @@
+/** NotificationsLoadingState - Loading state while notifications are being fetched with skeleton components */
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import PureFlowLogo from "@components/ui/UiHeader";
