@@ -155,7 +155,7 @@ class FCMService {
    * Send generic notification to FCM server
    */
   async sendGenericNotification(fcmToken, title, body, options = {}) {
-    return this._sendRequest('/send', {
+    return this._sendRetryRequest('/send', {
       fcmToken,
       title,
       body,
@@ -165,6 +165,39 @@ class FCMService {
         ...options
       }
     });
+  }
+
+  /**
+   * Retry wrapper for failed requests (improves reliability)
+   */
+  async _sendRetryRequest(endpoint, payload, maxRetries = 2) {
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        const result = await this._sendRequest(endpoint, payload);
+        if (result.success || !result.isNetworkError) {
+          return result; // Success or non-network error
+        }
+        lastError = result;
+      } catch (error) {
+        lastError = {
+          success: false,
+          error: error.message,
+          isNetworkError: true,
+          attempt
+        };
+      }
+
+      if (attempt <= maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff
+        console.log(`🔃 FCM request failed, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    console.warn('❌ All FCM retry attempts failed');
+    return lastError;
   }
 
   /**
@@ -221,7 +254,7 @@ class FCMService {
       console.log('📤 Sending to FCM server:', endpoint, payload.fcmToken ? '[TOKEN]' : '');
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout (better UX)
 
       const response = await fetch(`${this.serverUrl}${endpoint}`, {
         method: 'POST',

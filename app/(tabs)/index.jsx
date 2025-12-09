@@ -1,12 +1,15 @@
 import { useData } from "@contexts/DataContext";
+import { useWeather } from "@contexts/WeatherContext";
 import { useDeviceStatus } from "@hooks/useDeviceStatus";
+import useHomeInsights from "@hooks/useHomeInsights";
 import { useNotifications } from "@hooks/useNotifications";
 import { useNotificationSetup } from "@hooks/useNotificationSetup";
 import { useWaterQualityNotifications } from "@hooks/useWaterQualityNotifications";
-import { useWeather } from "@contexts/WeatherContext";
-import useHomeInsights from "@hooks/useHomeInsights";
 import React, { Suspense, useCallback, useMemo, useState } from "react";
 
+import FeatureRatingModal from "@components/modals/FeatureRatingModal";
+import IssueReportingModal from "@components/modals/IssueReportingModal";
+import SettingsModal from "@components/modals/SettingsModal";
 import SystemStatusSection from "@components/sections/SystemStatusSection";
 import { globalStyles } from "@styles/globalStyles";
 import ErrorBoundary from "@ui/ErrorBoundary";
@@ -18,9 +21,6 @@ import {
 } from "@ui/LoadingSkeletons";
 import RefreshControlWrapper from "@ui/RefreshControlWrapper";
 import PureFlowLogo from "@ui/UiHeader";
-import SettingsModal from "@components/modals/SettingsModal";
-import IssueReportingModal from "@components/modals/IssueReportingModal";
-import FeatureRatingModal from "@components/modals/FeatureRatingModal";
 import { getWeatherInfo } from "@utils/sensorDataUtils";
 import { ScrollView } from "react-native";
 

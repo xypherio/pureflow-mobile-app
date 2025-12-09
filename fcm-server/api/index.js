@@ -12,7 +12,7 @@ const compression = require('compression');
 const { initializeFirebase, checkFirebaseHealth } = require('../lib/firebase-admin');
 const { sendNotification, sendWaterQualityAlert, sendMaintenanceReminder, sendForecastAlert, sendCustomNotification } = require('../lib/notification-service');
 const { authenticateApiKey, corsMiddleware, notificationRateLimit, broadcastRateLimit, requestLogger, validateNotificationRequest, validateWaterQualityAlert, errorHandler } = require('../lib/middleware');
-const { addOrUpdateToken } = require('../lib/token-store');
+const { addOrUpdateToken, getAllTokens } = require('../lib/token-store');
 
 const app = express();
 
@@ -41,7 +41,8 @@ app.use(errorHandler);
     console.log('🚀 FCM Server initialized');
   } catch (error) {
     console.error('❌ FCM init failed:', error.message);
-    process.exit(1);
+    console.warn('⚠️ FCM initialization failed in serverless environment, continuing...');
+    // Don't call process.exit(1) in serverless functions - it crashes the function
   }
 })();
 
@@ -335,7 +336,7 @@ app.post('/register', [
 });
 
 /**
- * Broadcast Notification (Stub implementation)
+ * Broadcast Notification to all registered devices
  * POST /api/broadcast
  */
 app.post('/broadcast', [
@@ -345,14 +346,91 @@ app.post('/broadcast', [
   try {
     const { title = 'Broadcast', body = '', data = {} } = req.body;
 
-    // TODO: Retrieve registered tokens from database and send to all
-    console.log('📢 Broadcast requested but not implemented:', { title, body });
+    if (!title || !body) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        message: 'title and body are required for broadcast'
+      });
+    }
+
+    // Get all registered tokens
+    const registeredTokens = await getAllTokens();
+    console.log(`📢 Broadcasting to ${registeredTokens.length} registered devices`);
+
+    if (registeredTokens.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No registered tokens found',
+        recipientCount: 0
+      });
+    }
+
+    // Send notification to all registered tokens
+    const results = [];
+    const notificationPayload = {
+      notification: {
+        title,
+        body
+      },
+      data: {
+        ...data,
+        broadcast: true,
+        broadcastId: `broadcast_${Date.now()}`,
+        timestamp: new Date().toISOString()
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channel_id: 'alerts',
+          sound: 'default'
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            alert: { title, body },
+            sound: 'default',
+            'content-available': 1
+          }
+        }
+      }
+    };
+
+    for (const { token, userId, platform } of registeredTokens) {
+      try {
+        const result = await sendNotification(token, notificationPayload);
+        results.push({
+          token: token.substring(0, 10) + '...',
+          userId,
+          platform,
+          success: true,
+          messageId: result.messageId
+        });
+        console.log(`✅ Broadcast sent to ${userId || 'unknown'} (${platform})`);
+      } catch (error) {
+        results.push({
+          token: token.substring(0, 10) + '...',
+          userId,
+          platform,
+          success: false,
+          error: error.message
+        });
+        console.error(`❌ Failed to broadcast to ${userId || 'unknown'}:`, error.message);
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
 
     res.json({
       success: true,
-      message: 'Broadcast not implemented yet',
-      recipientCount: 0
+      message: `Broadcast sent to ${successCount}/${registeredTokens.length} devices`,
+      totalRecipients: registeredTokens.length,
+      successfulSends: successCount,
+      failedSends: registeredTokens.length - successCount,
+      results
     });
+
   } catch (error) {
     console.error('Error in /broadcast:', error);
     res.status(500).json({
@@ -395,9 +473,12 @@ app.get('/info', (req, res) => {
   });
 });
 
-// Export for Vercel
+// Export for Vercel (serverless functions)
 const serverless = require('serverless-http');
 module.exports = serverless(app);
+
+// Also export app for other platforms/direct usage
+module.exports.app = app;
 
 
 // For local development

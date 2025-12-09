@@ -26,7 +26,7 @@ const weatherIconMap = {
 };
 
 export default function AlertCardItem({ alert }) {
-  // Check if this is a weather alert (should use blue theme)
+  
   const isWeatherAlert =
     alert.parameter === "Weather" ||
     alert.parameter?.toLowerCase() === "israining" ||
@@ -114,7 +114,7 @@ export default function AlertCardItem({ alert }) {
   const getIndicatorColor = () => {
     // Weather alerts always use blue theme regardless of severity
     if (isWeatherAlert) {
-      return "#2563eb"; // Blue indicator for weather alerts
+      return "#2563eb";
     }
 
     switch (alert.type) {

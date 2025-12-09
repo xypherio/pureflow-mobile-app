@@ -110,12 +110,14 @@ class FCMService {
         const pushProvider = new PushNotificationProvider();
         await pushProvider.storeFCMToken(token);
 
-        // Try to register token with backend server
-        try {
-          await this.registerTokenWithServer({ deviceInfo: { source: 'app' } });
-        } catch (err) {
-          console.warn('⚠️ registerTokenWithServer failed:', err.message);
-        }
+        // Register FCM token with backend server for push notifications
+        await this.registerTokenWithServer({
+          deviceInfo: {
+            source: 'firebase_sdk',
+            appVersion: '4.2.0',
+            timestamp: new Date().toISOString()
+          }
+        });
 
         console.log('✅ FCM token obtained:', token.substring(0, 20) + '...');
         return token;
@@ -127,6 +129,68 @@ class FCMService {
       console.error('❌ Error getting FCM token:', error);
       return null;
     }
+  }
+
+  /**
+   * Send FCM token to server (for backend push targeting)
+   */
+  async registerTokenWithServer(deviceInfo = {}) {
+    if (!this.fcmToken) {
+      console.warn('🚫 No FCM token available for server registration');
+      return false;
+    }
+
+    const serverUrl = process.env.EXPO_PUBLIC_FCM_SERVER_URL || 'http://localhost:3001';
+    const apiKey = process.env.EXPO_PUBLIC_FCM_API_KEY || 'dev-key';
+
+    const payload = {
+      fcmToken: this.fcmToken,
+      userData: {
+        platform: Platform.OS,
+        deviceInfo: {
+          appVersion: '4.2.0',
+          timestamp: new Date().toISOString(),
+          ...deviceInfo
+        }
+      }
+    };
+
+    const url = `${serverUrl.replace(/\/$/, '')}/register`;
+
+    // Simple retry logic with exponential backoff
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`📡 Attempting FCM token registration (${attempt}/${maxAttempts}) to: ${url}`);
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          console.log('📡 FCM token registered with server successfully:', json.message);
+          return true;
+        }
+
+        const text = await res.text();
+        console.warn(`⚠️ registerTokenWithServer attempt ${attempt} failed: HTTP ${res.status} - ${text}`);
+      } catch (err) {
+        console.warn(`⚠️ registerTokenWithServer attempt ${attempt} error:`, err.message);
+      }
+
+      // Backoff
+      await new Promise(r => setTimeout(r, attempt * 500));
+    }
+
+    console.error('❌ registerTokenWithServer: all attempts failed');
+    return false;
   }
 
   /**
@@ -298,66 +362,6 @@ class FCMService {
   }
 
   /**
-   * Send FCM token to server (for backend push targeting)
-   */
-  async registerTokenWithServer(deviceInfo = {}) {
-    if (!this.fcmToken) {
-      console.warn('🚫 No FCM token available for server registration');
-      return false;
-    }
-
-    const serverUrl = process.env.EXPO_PUBLIC_FCM_SERVER_URL || 'http://localhost:3001';
-    const apiKey = process.env.EXPO_PUBLIC_FCM_API_KEY || process.env.API_SECRET_KEY || 'dev-key';
-
-    const payload = {
-      fcmToken: this.fcmToken,
-      userData: {
-        platform: Platform.OS,
-        deviceInfo: {
-          appVersion: '2.3.0',
-          timestamp: new Date().toISOString(),
-          ...deviceInfo
-        }
-      }
-    };
-
-    const url = `${serverUrl.replace(/\/$/, '')}/register`;
-
-    // Simple retry logic with exponential backoff
-    const maxAttempts = 3;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'x-api-key': apiKey
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          const json = await res.json();
-          console.log('📡 Token registered with server:', json);
-          return true;
-        }
-
-        const text = await res.text();
-        console.warn(`⚠️ registerTokenWithServer attempt ${attempt} failed: HTTP ${res.status} - ${text}`);
-      } catch (err) {
-        console.warn(`⚠️ registerTokenWithServer attempt ${attempt} error:`, err.message);
-      }
-
-      // Backoff
-      await new Promise(r => setTimeout(r, attempt * 500));
-    }
-
-    console.error('❌ registerTokenWithServer: all attempts failed');
-    return false;
-  }
-
-  /**
    * Get current FCM token
    */
   getCurrentToken() {
@@ -391,7 +395,6 @@ class FCMService {
 
   /**
    * Check if FCM is supported on this device
-   * Returns a boolean; uses the messaging() API safely.
    */
   async isSupported() {
     try {
@@ -413,7 +416,6 @@ class FCMService {
 
   /**
    * Set background message handler (for when app is terminated)
-   * This should be called early in the app lifecycle
    */
   setBackgroundMessageHandler(handler) {
     try {

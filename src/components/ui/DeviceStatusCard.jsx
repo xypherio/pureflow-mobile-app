@@ -1,3 +1,4 @@
+import { useData } from "@contexts/DataContext";
 import {
   CloudDrizzle,
   CloudRain,
@@ -6,7 +7,7 @@ import {
   Wifi,
   WifiOff
 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function StatusCard({
@@ -15,35 +16,47 @@ export default function StatusCard({
   temperature = null,
   lastDataTimestamp
 }) {
+  const { realtimeData } = useData();
   const [isDatmActive, setIsDatmActive] = useState(propIsDatmActive);
-  const [dataStale, setDataStale] = useState(false);
+  const timeoutRef = useRef();
+  const lastProcessedRef = useRef(null);
 
-  // Calculate freshness without side effects
-  const checkDataFreshness = useCallback(() => {
-    if (!lastDataTimestamp) {
-      return { isStale: true, isActive: false }; 
+  // Check if we have valid water quality data (matching RealtimeDataCards logic)
+  const hasData =
+    realtimeData &&
+    (realtimeData.pH !== undefined ||
+      realtimeData.temperature !== undefined ||
+      realtimeData.turbidity !== undefined ||
+      realtimeData.salinity !== undefined ||
+      realtimeData.reading?.pH !== undefined ||
+      realtimeData.reading?.temperature !== undefined ||
+      realtimeData.reading?.turbidity !== undefined ||
+      realtimeData.reading?.salinity !== undefined);
+
+  // Monitor for new data triggers (aligning with RealtimeDataCards rendering)
+  useEffect(() => {
+    if (realtimeData && hasData && realtimeData !== lastProcessedRef.current) {
+      // New data received that RealtimeDataCards would render - mark DATM as active
+      setIsDatmActive(true);
+      lastProcessedRef.current = realtimeData;
+
+      // Clear existing timeout and set new one
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      // Set timeout to mark inactive after 3 minutes without new data that RealtimeDataCards renders
+      timeoutRef.current = setTimeout(() => {
+        setIsDatmActive(false);
+      }, 180000); // 3 minutes
     }
 
-    const now = Date.now();
-    const lastUpdate = new Date(lastDataTimestamp).getTime();
-    const dataAge = now - lastUpdate;
-    const isStale = dataAge > 60 * 1000; // 1 minute threshold
-    
-    return { isStale, isActive: !isStale };
-  }, [lastDataTimestamp]);
-
-  // Update state based on freshness check
-  useEffect(() => {
-    const updateStatus = () => {
-      const { isStale, isActive } = checkDataFreshness();
-      setDataStale(isStale);
-      setIsDatmActive(isActive);
+    // Cleanup on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-
-    updateStatus();
-    const interval = setInterval(updateStatus, 5000);
-    return () => clearInterval(interval);
-  }, [checkDataFreshness]);
+  }, [realtimeData, hasData]);
 
   const [countdown, setCountdown] = useState(30);
 

@@ -1,6 +1,6 @@
+import StatusCard from "@ui/DeviceStatusCard";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import StatusCard from "@ui/DeviceStatusCard";
 
 /**
  * @param {Object} props - Component props

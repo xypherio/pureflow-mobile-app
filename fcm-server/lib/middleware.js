@@ -46,15 +46,19 @@ function authenticateApiKey(req, res, next) {
 }
 
 function corsMiddleware(req, res, next) {
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+  // Allow all origins for FCM server (adjust for production to restrict domains)
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ||
+    ['http://localhost:3000', 'http://localhost:8081', 'exp://*', 'pureflow://'];
 
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+
+  // Allow requests from React Native apps and web apps
+  if (!origin || allowedOrigins.includes(origin) || origin.match(/^exp:\/\/|^pureflow:|^http:\/\/192\.168\./) || origin === '*') {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, User-Agent');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {

@@ -1,283 +1,390 @@
 #!/usr/bin/env node
 
 /**
- * PureFlow FCM Backend Test Script
- *
- * This script demonstrates how to send FCM notifications using Firebase Admin SDK
- * with the service account key you downloaded from Firebase Console.
- *
- * Usage:
- * 1. Ensure you have the service account JSON file in the root folder
- * 2. Run: node test-fcm-backend.js
+ * FCM Server Backend Testing Script
+ * Test the FCM server endpoints including broadcast functionality
  */
 
-const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+const fetch = require("node-fetch");
+const fs = require("fs");
 
-// Configuration - Update these with your values
-const SERVICE_ACCOUNT_PATH = './pureflow-system-firebase-adminsdk-fbsvc-db5f8943ad.json'; // Your actual service account filename
-let TEST_FCM_TOKEN = 'YOUR_FCM_TOKEN_HERE'; // Get this from your app's Settings → Test FCM Notifications
+// Configuration - Update these with your actual values
+const FCM_CONFIG = {
+  // In test-fcm-backend.js, update line:
+  SERVER_URL:
+    'https://fcm-server-3x63pr2m8-xyphers-projects-a3902ca1.vercel.app/api', // Or your deployed URL
+  API_KEY: "PUREFLOW_FCM_API_SECURE_123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ_2024", // Matches FCM server .env
+  FCM_TOKEN: "your-test-fcm-token-here", // You'll need a real FCM token
+};
 
 /**
- * Initialize Firebase Admin SDK
+ * Test server health
  */
-function initializeFirebase() {
+async function testHealth() {
+  console.log("🩺 Testing server health...");
   try {
-    // Check if service account file exists
-    if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-      console.error(`❌ Service account file not found: ${SERVICE_ACCOUNT_PATH}`);
-      console.log('\nPlease:');
-      console.log('1. Download the service account JSON from Firebase Console');
-      console.log('2. Rename it to match the filename above');
-      console.log('3. Place it in the root folder of your project');
-      process.exit(1);
+    const response = await fetch(`${FCM_CONFIG.SERVER_URL}/`);
+    const data = await response.json();
+
+    if (data.status === "healthy") {
+      console.log("✅ Server is healthy");
+      console.log(`   Version: ${data.version}`);
+      console.log(`   Uptime: ${data.uptime?.toFixed(0)} seconds`);
+      console.log(`   Firebase: ${data.firebase}`);
+      return true;
+    } else {
+      console.log("❌ Server reported unhealthy status");
+      return false;
     }
-
-    // Initialize Firebase Admin SDK
-    const serviceAccount = require(path.resolve(SERVICE_ACCOUNT_PATH));
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id
-    });
-
-    console.log('✅ Firebase Admin SDK initialized successfully');
-    return true;
   } catch (error) {
-    console.error('❌ Failed to initialize Firebase Admin SDK:', error.message);
+    console.log("❌ Could not connect to server:", error.message);
     return false;
   }
 }
 
 /**
- * Send a basic test FCM notification
+ * Test FCM token registration
  */
-async function sendTestNotification(fcmToken) {
-  const message = {
-    token: fcmToken,
-    notification: {
-      title: 'PureFlow Backend Test',
-      body: 'FCM is working! 🎉'
+async function testRegistration(fcmToken, userData = {}) {
+  console.log("📝 Testing FCM token registration...");
+
+  const response = await fetch(`${FCM_CONFIG.SERVER_URL}/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": FCM_CONFIG.API_KEY,
     },
-    data: {
-      type: 'backend_test',
-      timestamp: new Date().toISOString(),
-      testId: 'fcm_backend_' + Date.now()
-    },
-    android: {
-      priority: 'high',
-      notification: {
-        channel_id: 'alerts',
-        color: '#2455a9'
-      }
-    }
-  };
-
-  try {
-    console.log('📤 Sending test FCM notification...');
-    const response = await admin.messaging().send(message);
-    console.log('✅ Test notification sent successfully!');
-    console.log('📋 Message ID:', response);
-    return { success: true, messageId: response };
-  } catch (error) {
-    console.error('❌ Failed to send test notification:', error.message);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Send a water quality alert notification
- */
-async function sendWaterQualityAlert(fcmToken, sensorData) {
-  const { sensorId = 'sensor-001', parameter = 'ph', value = 8.5, threshold = 7.5 } = sensorData;
-
-  const isHigh = value > threshold;
-  const parameterNames = {
-    ph: 'pH',
-    temperature: 'Temperature',
-    turbidity: 'Turbidity',
-    salinity: 'Salinity'
-  };
-
-  const parameterName = parameterNames[parameter] || parameter;
-  const status = isHigh ? 'HIGH' : 'LOW';
-  const severity = isHigh ? 'critical' : 'warning';
-
-  const message = {
-    token: fcmToken,
-    notification: {
-      title: `${parameterName} Alert!`,
-      body: `${parameterName} level is ${status}: ${value} (threshold: ${threshold})`
-    },
-    data: {
-      type: 'water_quality_alert',
-      sensorId: sensorId.toString(),
-      parameter: parameter,
-      value: value.toString(),
-      threshold: threshold.toString(),
-      severity: severity,
-      timestamp: new Date().toISOString()
-    },
-    android: {
-      priority: severity === 'critical' ? 'high' : 'normal',
-      notification: {
-        channel_id: severity === 'critical' ? 'alerts' : 'updates',
-        color: severity === 'critical' ? '#dc2626' : '#f59e0b'
-      }
-    },
-    apns: {
-      payload: {
-        aps: {
-          alert: {
-            title: `${parameterName} Alert!`,
-            body: `${parameterName} level is ${status}`
-          },
-          badge: severity === 'critical' ? 1 : 0,
-          sound: severity === 'critical' ? 'water-alert.mp3' : 'default',
-          'content-available': 1
-        }
-      }
-    }
-  };
-
-  try {
-    console.log(`🔔 Sending ${severity} ${parameterName} alert...`);
-    const response = await admin.messaging().send(message);
-    console.log('✅ Water quality alert sent successfully!');
-    console.log('📋 Message ID:', response);
-    return { success: true, messageId: response };
-  } catch (error) {
-    console.error('❌ Failed to send water quality alert:', error.message);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Main execution function
- */
-async function main() {
-  console.log('🚀 PureFlow FCM Backend Test Script');
-  console.log('=====================================\n');
-
-  // Step 1: Initialize Firebase
-  if (!initializeFirebase()) {
-    return;
-  }
-
-  // Step 2: Check FCM token
-  if (TEST_FCM_TOKEN === 'YOUR_FCM_TOKEN_HERE') {
-    console.log('⚠️  FCM Token not configured!');
-    console.log('\nTo get your FCM token:');
-    console.log('1. Open your PureFlow app');
-    console.log('2. Go to Settings');
-    console.log('3. Tap "Test FCM Notifications"');
-    console.log('4. Copy the token that appears');
-    console.log('5. Replace YOUR_FCM_TOKEN_HERE in this script\n');
-
-    // Try to read from a token file instead
-    const tokenFile = './fcm-token.txt';
-    if (fs.existsSync(tokenFile)) {
-      const savedToken = fs.readFileSync(tokenFile, 'utf8').trim();
-      if (savedToken && savedToken !== 'YOUR_FCM_TOKEN_HERE') {
-        console.log('📄 Found saved FCM token in fcm-token.txt');
-        await runTests(savedToken);
-        return;
-      }
-    }
-
-    console.log('❌ No FCM token found. Please update TEST_FCM_TOKEN in this script.');
-    return;
-  }
-
-  await runTests(TEST_FCM_TOKEN);
-}
-
-/**
- * Run the FCM tests
- */
-async function runTests(fcmToken) {
-  console.log(`📱 Using FCM token: ${fcmToken.substring(0, 20)}...\n`);
-
-  // Test 1: Basic notification
-  console.log('Test 1: Basic FCM Notification');
-  const test1Result = await sendTestNotification(fcmToken);
-  console.log('');
-
-  // Wait a moment between tests
-  await delay(2000);
-
-  // Test 2: Water quality alert - pH high
-  console.log('Test 2: Water Quality Alert (pH Critical)');
-  const test2Result = await sendWaterQualityAlert(fcmToken, {
-    sensorId: 'sensor-ph-001',
-    parameter: 'ph',
-    value: 9.2,
-    threshold: 8.5
+    body: JSON.stringify({
+      fcmToken,
+      userData: {
+        userId: userData.userId || "test-user-123",
+        platform: userData.platform || "test",
+        deviceInfo: {
+          appVersion: "4.2.0-test",
+          ...userData.deviceInfo,
+        },
+      },
+    }),
   });
-  console.log('');
 
-  // Test 3: Water quality alert - Temperature low
-  console.log('Test 3: Water Quality Alert (Temperature Warning)');
-  const test3Result = await sendWaterQualityAlert(fcmToken, {
-    sensorId: 'sensor-temp-001',
-    parameter: 'temperature',
-    value: 18.5,
-    threshold: 25.0
-  });
-  console.log('');
+  const data = await response.json();
 
-  // Test 4: Custom alert
-  console.log('Test 4: Maintenance Reminder');
-  const maintenanceAlert = {
-    token: fcmToken,
-    notification: {
-      title: 'Maintenance Reminder',
-      body: 'Time to calibrate your pH sensor!'
+  if (data.success) {
+    console.log("✅ Token registration successful");
+    console.log(`   Token last seen: ${data.lastSeen}`);
+    return true;
+  } else {
+    console.log("❌ Token registration failed:", data.message);
+    return false;
+  }
+}
+
+/**
+ * Send test notification to a specific device
+ */
+async function testSendNotification(
+  fcmToken,
+  title = "Test Notification",
+  body = "This is a test from FCM server"
+) {
+  console.log("📤 Testing single device notification...");
+
+  const response = await fetch(`${FCM_CONFIG.SERVER_URL}/send`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": FCM_CONFIG.API_KEY,
     },
-    data: {
-      type: 'maintenance_reminder',
-      action: 'calibrate_ph_sensor',
-      daysDue: '3',
-      timestamp: new Date().toISOString()
+    body: JSON.stringify({
+      fcmToken,
+      title,
+      body,
+      data: {
+        type: "test_notification",
+        timestamp: new Date().toISOString(),
+      },
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.success) {
+    console.log("✅ Notification sent successfully");
+    console.log(`   Message ID: ${data.messageId}`);
+    return true;
+  } else {
+    console.log("❌ Notification failed:", data.message);
+    return false;
+  }
+}
+
+/**
+ * Test broadcast notification
+ */
+async function testBroadcast(
+  title = "Broadcast Test",
+  body = "This is a broadcast test message"
+) {
+  console.log("📢 Testing broadcast notification...");
+
+  const response = await fetch(`${FCM_CONFIG.SERVER_URL}/broadcast`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": FCM_CONFIG.API_KEY,
+    },
+    body: JSON.stringify({
+      title,
+      body,
+      data: {
+        broadcastId: `test-broadcast-${Date.now()}`,
+        sentAt: new Date().toISOString(),
+      },
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.success) {
+    console.log("✅ Broadcast sent successfully");
+    console.log(`   Total recipients: ${data.totalRecipients}`);
+    console.log(`   Successful sends: ${data.successfulSends}`);
+    console.log(`   Failed sends: ${data.failedSends}`);
+
+    // Show detailed results if available
+    if (data.results && data.results.length > 0) {
+      console.log("   Details:");
+      data.results.forEach((result, index) => {
+        const status = result.success ? "✅" : "❌";
+        console.log(
+          `     ${index + 1}. ${result.token} (${result.platform}) - ${status}`
+        );
+      });
     }
+
+    return true;
+  } else {
+    console.log("❌ Broadcast failed:", data.message);
+    return false;
+  }
+}
+
+/**
+ * Test water quality alert notification
+ */
+async function testWaterQualityAlert(fcmToken, sensorData) {
+  console.log("🌊 Testing water quality alert notification...");
+
+  const response = await fetch(`${FCM_CONFIG.SERVER_URL}/alert`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": FCM_CONFIG.API_KEY,
+    },
+    body: JSON.stringify({
+      fcmToken,
+      sensorData: sensorData || {
+        pH: 7.2,
+        temperature: 28.5,
+        tds: 450,
+        turbidity: 2.1,
+        oxygen: 6.2,
+        status: "warning",
+      },
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.success) {
+    console.log("✅ Water quality alert sent successfully");
+    console.log(`   Message ID: ${data.messageId}`);
+    return true;
+  } else {
+    console.log("❌ Water quality alert failed:", data.message);
+    return false;
+  }
+}
+
+/**
+ * Test maintenance reminder
+ */
+async function testMaintenanceReminder(fcmToken, reminderData) {
+  console.log("🔧 Testing maintenance reminder...");
+
+  const response = await fetch(`${FCM_CONFIG.SERVER_URL}/maintenance`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": FCM_CONFIG.API_KEY,
+    },
+    body: JSON.stringify({
+      fcmToken,
+      reminderData: reminderData || {
+        type: "filter_cleaning",
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        description: "Time to clean water filters",
+      },
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.success) {
+    console.log("✅ Maintenance reminder sent successfully");
+    console.log(`   Message ID: ${data.messageId}`);
+    return true;
+  } else {
+    console.log("❌ Maintenance reminder failed:", data.message);
+    return false;
+  }
+}
+
+/**
+ * Get server information
+ */
+async function testServerInfo() {
+  console.log("📋 Getting server information...");
+
+  const response = await fetch(`${FCM_CONFIG.SERVER_URL}/info`);
+  const data = await response.json();
+
+  if (data.success) {
+    console.log("✅ Server information retrieved");
+    console.log(`   Service: ${data.service}`);
+    console.log(`   Version: ${data.version}`);
+    console.log(`   Endpoints: ${data.endpoints.join(", ")}`);
+    console.log(
+      `   Notification Types: ${data.supportedNotificationTypes.join(", ")}`
+    );
+    return data;
+  } else {
+    console.log("❌ Could not get server information");
+    return null;
+  }
+}
+
+// Main test runner
+async function runTests() {
+  console.log("🚀 Starting FCM Server Backend Tests\n");
+  console.log("=".repeat(50));
+
+  // Check configuration
+  if (FCM_CONFIG.FCM_TOKEN === "your-test-fcm-token-here") {
+    console.log(
+      "⚠️  WARNING: Using placeholder FCM token. Tests requiring tokens will be skipped."
+    );
+    console.log(
+      '   To get a real FCM token, run the app and check the console logs for "FCM token obtained"\n'
+    );
+  }
+
+  const results = {
+    health: false,
+    registration: false,
+    send: false,
+    broadcast: false,
+    alert: false,
+    maintenance: false,
+    info: false,
   };
 
-  try {
-    const response = await admin.messaging().send(maintenanceAlert);
-    console.log('✅ Maintenance reminder sent!');
-    console.log('📋 Message ID:', response);
-  } catch (error) {
-    console.error('❌ Failed to send maintenance reminder:', error.message);
+  // Test 1: Server Health
+  results.health = await testHealth();
+  console.log("");
+
+  // Test 2: Server Info
+  const info = await testServerInfo();
+  results.info = info !== null;
+  console.log("");
+
+  // Test 3: Token Registration (if token available)
+  if (FCM_CONFIG.FCM_TOKEN !== "your-test-fcm-token-here") {
+    results.registration = await testRegistration(FCM_CONFIG.FCM_TOKEN, {
+      userId: "test-user-123",
+      platform: "nodejs-test",
+    });
+    console.log("");
+  } else {
+    console.log("⏭️  Skipping token registration (no token provided)\n");
+  }
+
+  // Test 4: Broadcast (works even without registration)
+  results.broadcast = await testBroadcast(
+    "FCM Server Test Broadcast",
+    "This is a test broadcast message sent from the FCM server testing script"
+  );
+  console.log("");
+
+  // Test 5: Single Device Notification
+  if (FCM_CONFIG.FCM_TOKEN !== "your-test-fcm-token-here") {
+    results.send = await testSendNotification(FCM_CONFIG.FCM_TOKEN);
+    console.log("");
+  } else {
+    console.log(
+      "⏭️  Skipping single device notification (no token provided)\n"
+    );
+  }
+
+  // Test 6: Water Quality Alert
+  if (FCM_CONFIG.FCM_TOKEN !== "your-test-fcm-token-here") {
+    results.alert = await testWaterQualityAlert(FCM_CONFIG.FCM_TOKEN);
+    console.log("");
+  } else {
+    console.log("⏭️  Skipping water quality alert (no token provided)\n");
+  }
+
+  // Test 7: Maintenance Reminder
+  if (FCM_CONFIG.FCM_TOKEN !== "your-test-fcm-token-here") {
+    results.maintenance = await testMaintenanceReminder(FCM_CONFIG.FCM_TOKEN);
+    console.log("");
+  } else {
+    console.log("⏭️  Skipping maintenance reminder (no token provided)\n");
   }
 
   // Summary
-  console.log('\n🎉 FCM Backend Tests Complete!');
-  console.log('================================');
-  console.log('Check your app for notifications.');
-  console.log('Each test should trigger a push notification.');
-}
+  console.log("=".repeat(50));
+  console.log("📊 TEST RESULTS SUMMARY:");
+  console.log("=".repeat(50));
 
-/**
- * Utility delay function
- */
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+  Object.entries(results).forEach(([test, passed]) => {
+    const status = passed ? "✅ PASS" : "❌ FAIL";
+    console.log(`${status} ${test.charAt(0).toUpperCase() + test.slice(1)}`);
+  });
 
-// Handle command line arguments
-const args = process.argv.slice(2);
-if (args.length > 0) {
-  // If token provided as command line argument
-  const providedToken = args[0];
-  if (providedToken && providedToken !== 'YOUR_FCM_TOKEN_HERE') {
-    console.log(`📱 Using FCM token from command line: ${providedToken.substring(0, 20)}...`);
-    // Update the constant and run
-    TEST_FCM_TOKEN = providedToken;
-    main().catch(console.error);
-    return;
+  const passedCount = Object.values(results).filter(Boolean).length;
+  const totalCount = Object.keys(results).length;
+
+  console.log(`\nOverall: ${passedCount}/${totalCount} tests passed`);
+
+  if (passedCount < totalCount) {
+    console.log("\n🔧 TO FIX FAILING TESTS:");
+    console.log(
+      "1. Make sure FCM server is running: cd fcm-server && npm start"
+    );
+    console.log("2. Update FCM_CONFIG with your actual server URL and API key");
+    console.log("3. Get a real FCM token from your running app");
+    console.log("4. Check FCM server logs for detailed error messages");
   }
+
+  console.log("\n🎯 For broadcast testing on production:");
+  console.log("curl -X POST https://your-server-url.com/api/broadcast \\");
+  console.log('  -H "Content-Type: application/json" \\');
+  console.log('  -H "x-api-key: your-api-key" \\');
+  console.log('  -d \'{"title": "Hello", "body": "Broadcast test"}\'');
 }
 
-// Run the script
-main().catch(console.error);
+// Run if called directly
+if (require.main === module) {
+  runTests().catch(console.error);
+}
+
+module.exports = {
+  testHealth,
+  testRegistration,
+  testSendNotification,
+  testBroadcast,
+  testWaterQualityAlert,
+  testMaintenanceReminder,
+  testServerInfo,
+};

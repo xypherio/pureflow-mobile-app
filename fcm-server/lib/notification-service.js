@@ -83,7 +83,7 @@ async function sendMaintenanceReminder(fcmToken, reminderData) {
 
   const maintenanceNotification = {
     notification: {
-      title: '🔧 Maintenance Reminder',
+      title: 'Maintenance Reminder',
       body: `${task}${dueDate ? ` (Due: ${dueDate})` : ''}${daysDue > 0 ? ` (${daysDue} days)` : ''}`
     },
     data: {
@@ -105,7 +105,7 @@ async function sendMaintenanceReminder(fcmToken, reminderData) {
     apns: {
       payload: {
         aps: {
-          alert: { title: '🔧 Maintenance Reminder', body: task },
+          alert: { title: 'Maintenance Reminder', body: task },
           sound: 'default',
           'content-available': 1
         }
@@ -121,7 +121,7 @@ async function sendForecastAlert(fcmToken, forecastData) {
 
   const forecastNotification = {
     notification: {
-      title: '🔮 Forecast Alert',
+      title: 'Forecast Alert',
       body: `${parameter} predicted to ${prediction} within ${timeframe}. ${impact}`
     },
     data: {
@@ -136,7 +136,7 @@ async function sendForecastAlert(fcmToken, forecastData) {
     apns: {
       payload: {
         aps: {
-          alert: { title: '🔮 Forecast Alert', body: `${parameter} prediction: ${timeframe}` },
+          alert: { title: 'Forecast Alert', body: `${parameter} prediction: ${timeframe}` },
           sound: 'default',
           'content-available': 1
         }
@@ -148,11 +148,18 @@ async function sendForecastAlert(fcmToken, forecastData) {
 }
 
 async function sendCustomNotification(fcmToken, customData) {
-  const { title = 'PureFlow Notification', body = '', data = {}, priority = 'normal', sound = 'default' } = customData;
+  const { title = 'PureFlow Notification', body = '', data = {}, priority = 'normal', sound = 'default', type = 'custom' } = customData;
 
   const customNotification = {
-    notification: { title, body },
-    data: { type: 'custom', ...data, timestamp: new Date().toISOString() },
+    notification: {
+      title,
+      body
+    },
+    data: {
+      type: type,
+      ...data,
+      timestamp: new Date().toISOString()
+    },
     android: {
       priority,
       notification: {

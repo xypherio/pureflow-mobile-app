@@ -15,7 +15,6 @@ export default function AlertsCard({
 
   // Process alerts using the hook
   const displayAlerts = useMemo(() => {
-    // First, try to use alerts from props
     let processedAlerts = processAlerts(alerts);
 
     // If no alerts from props but we have realtimeData, generate alerts from it
