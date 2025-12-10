@@ -7,8 +7,8 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { getWaterQualityThresholdsFromSettings } from "../../constants/thresholds";
 import waterQualityNotificationService from "../../services/WaterQualityNotificationService";
 
-// DeviceStatusCard
 
+// Parameter configurations - CARD SETUP
 const PARAMETER_CONFIGS = [
   { key: "pH",
     label: "pH Level",
@@ -230,12 +230,12 @@ const ParameterCard = React.memo(({ param }) => {
   // Define gradient colors: white to main tint
   const getGradientColors = () => {
     if (isWarning) {
-      return ["#ffffff", "#fefac3"]; //yellow
+      return ["#ffffff", "#fefac3"]; // white to yellow
     }
     if (isCritical) {
-      return ["#ffffff", "#fecdcf"]; //red
+      return ["#ffffff", "#fecdcf"]; //white to red
     }
-    return ["#ffffff", "#cbffe3"]; //green
+    return ["#ffffff", "#cbffe3"]; //white to green
   };
 
   const WrappedCard = ({ children }) => {
